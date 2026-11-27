@@ -9,7 +9,7 @@ import { storageOwnerWhere } from "./storage-owner-key";
 
 type Coordinates = Pick<typeof operations.$inferSelect, "admission_epoch" | "settled_epoch" | "receipt_epoch"> & {
   pending: boolean;
-  ownerId?: number;
+  ownerId: number;
 };
 
 /** Foreign receipts need a selected epoch without claiming ownership of another host's command. */
@@ -33,7 +33,7 @@ export const createOrderedDependencyCache = (
       if (admitted) return admitted;
     }
     if (row?.receipt_epoch) return exact(id, row.receipt_epoch);
-    if (row && row.ownerId !== undefined) {
+    if (row) {
       const legacy = await readLegacyEpoch(tx, { ...owner, id: row.ownerId }, id);
       if (legacy) return exact(id, legacy);
     }
@@ -65,7 +65,7 @@ export const createOrderedDependencyCache = (
       if (current && current.id !== null) row = current;
       else {
         const saved = await retained(id);
-        if (saved) row = { ...saved, pending: false };
+        if (saved) row = { ...saved, ownerId: saved.owner_id, pending: false };
       }
       // This device's own save that never entered an order has no decision anywhere yet.
       if (row?.pending && !row.admission_epoch && !row.settled_epoch) return undefined;

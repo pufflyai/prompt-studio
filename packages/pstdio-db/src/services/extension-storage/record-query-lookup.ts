@@ -2,10 +2,10 @@ import { type SQL, sql } from "drizzle-orm";
 import type { StorageIndexField, StorageRecordIndex } from "pstdio-sync-contracts";
 import { expressionArray, expressionComparable } from "./query-expression-values";
 
-import { firstRecordByField } from "./record-first-match";
+import type { FirstRecordLookups } from "./record-first-match";
 
 export const recordLookupSql = (
-  fixedOwner: boolean,
+  lookups: FirstRecordLookups | undefined,
   source: StorageRecordIndex,
   field: StorageIndexField,
   alias: string,
@@ -47,12 +47,12 @@ export const recordLookupSql = (
   });
   const [join] = lookup.on;
   if (
-    fixedOwner &&
+    lookups &&
     lookup.on.length === 1 &&
     (join.op === undefined || join.op === "eq" || join.op === "contains") &&
     ![source.identity?.shorthandField, source.hierarchy?.breadcrumbField].includes(join.sourceField)
   ) {
-    const probe = firstRecordByField(
+    const probe = lookups.firstRecordByField(
       target,
       join.relatedField,
       targetAlias,

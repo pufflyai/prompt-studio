@@ -15,7 +15,6 @@ import { queryExpressionSql } from "./query-expression-sql";
 import { expressionComparable } from "./query-expression-values";
 import { recordTextMatch, stringBytesSql } from "./query-string-codec";
 import { typedComputedFieldSql } from "./record-computed-field";
-import { firstRecordByField } from "./record-first-match";
 import { formatCacheFields } from "./record-format-key";
 import { recordIdentityPrefixSql } from "./record-identity-order";
 import { identityPredicateSql } from "./record-identity-predicate";
@@ -83,7 +82,7 @@ export const recordFieldSql = (
     if (!resolve) throw new Error("Related field needs installed indexes");
     const outer = alias ?? "records";
     const value: SQL = recordLookupSql(
-      typeof owner?.workbenchId === "string",
+      owner?.firstMatches,
       index,
       field,
       outer,
@@ -104,8 +103,8 @@ export const recordFieldSql = (
       (field, left, right) =>
         recordEqualitySql(index, field, sql`coalesce(${left}, 'null'::jsonb)`, sql`coalesce(${right}, 'null'::jsonb)`),
       (alias, parent) =>
-        typeof owner?.workbenchId === "string"
-          ? firstRecordByField(
+        owner?.firstMatches
+          ? owner.firstMatches.firstRecordByField(
               index,
               index.hierarchy!.idField,
               alias,

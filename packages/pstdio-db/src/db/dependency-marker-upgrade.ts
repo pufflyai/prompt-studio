@@ -1,8 +1,14 @@
-import { and, eq, gt, inArray, isNull, sql } from "drizzle-orm";
+import { and, eq, gt, inArray, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import { readFileDocumentState } from "../services/extension-storage/document-file-persistence";
 import { documentFilesFor, trackDocumentFiles } from "../services/extension-storage/document-files";
 import { decodeOrderedJson, type OrderedTransaction } from "../services/extension-storage/ordered-sql";
+import {
+  hasRetainedOperations,
+  type RetainedOperationValue,
+  readRetainedOperation,
+} from "../services/extension-storage/retained-operations";
+import { createRetainedPages } from "../services/extension-storage/retained-pages";
 import type { DbClient } from "./connection.pglite";
 import { documents, operations, owners } from "./schemas.pg";
 
@@ -50,31 +56,46 @@ export const readLegacyEpoch = async (tx: OrderedTransaction, owner: StorageOwne
 };
 
 type MarkerOwners = Map<number, StorageOwner & { id: number }>;
+const copyRetainedEpochs = async (tx: OrderedTransaction, owner: StorageOwner & { id: number }, ids: string[]) => {
+  const edits: { key: string; value: RetainedOperationValue }[] = [];
+  for (const id of ids) {
+    const retained = await readRetainedOperation(tx, owner, id);
+    if (!retained || retained.settled_epoch || retained.receipt_epoch) continue;
+    const epoch = await readLegacyEpoch(tx, owner, id);
+    if (epoch === undefined) continue;
+    const { owner_id: _ownerId, ...value } = retained;
+    edits.push({ key: id, value: { ...value, receipt_epoch: epoch } });
+  }
+  if (edits.length) await createRetainedPages<RetainedOperationValue>(tx, owner, "authorship").set(edits);
+};
 const copyEpochs = async (
   tx: OrderedTransaction,
   addresses: MarkerOwners,
   operationsByOwner: Map<number, string[]>,
 ) => {
   for (const [ownerId, ids] of operationsByOwner) {
-    const needEpoch = await tx
-      .select({ id: operations.operation_id })
+    const owner = addresses.get(ownerId)!;
+    const live = await tx
+      .select({
+        id: operations.operation_id,
+        settled: operations.settled_epoch,
+        selected: operations.receipt_epoch,
+      })
       .from(operations)
-      .where(
-        and(
-          eq(operations.owner_id, ownerId),
-          inArray(operations.operation_id, ids),
-          isNull(operations.settled_epoch),
-          isNull(operations.receipt_epoch),
-        ),
-      );
-    for (const { id } of needEpoch) {
-      const epoch = await readLegacyEpoch(tx, addresses.get(ownerId)!, id);
+      .where(and(eq(operations.owner_id, ownerId), inArray(operations.operation_id, ids)));
+    for (const row of live) {
+      if (row.settled !== null || row.selected !== null) continue;
+      const epoch = await readLegacyEpoch(tx, owner, row.id);
       if (epoch !== undefined)
         await tx
           .update(operations)
           .set({ receipt_epoch: epoch })
-          .where(and(eq(operations.owner_id, ownerId), eq(operations.operation_id, id)));
+          .where(and(eq(operations.owner_id, ownerId), eq(operations.operation_id, row.id)));
     }
+    const present = new Set(live.map((row) => row.id));
+    const missing = ids.filter((id) => !present.has(id));
+    if (!missing.length || !(await hasRetainedOperations(tx, owner))) continue;
+    await copyRetainedEpochs(tx, owner, missing);
   }
 };
 const retirePage = async (

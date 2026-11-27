@@ -7,6 +7,7 @@ import { sql } from "drizzle-orm";
 import { createExtensionStorageFixture } from "../services/extension-storage/extension-storage.fixture";
 import { withOrderedOwner } from "../services/extension-storage/ordered-journal";
 import { saveOrderedMarker } from "../services/extension-storage/ordered-native-metadata";
+import { pruneSettledOperations } from "../services/extension-storage/prune-operations";
 import { createDb } from "./connection.pglite";
 import { createDependencyMarkerCleanup } from "./dependency-marker-upgrade";
 
@@ -140,5 +141,50 @@ test("an interrupted page keeps its original selector and resumes after earlier 
     ).toEqual([]);
   } finally {
     await f.close();
+  }
+});
+
+test("retained foreign operations keep their selected epoch through cleanup and restart", async () => {
+  const root = await mkdtemp(join(tmpdir(), "retained-selector-"));
+  const path = join(root, "database");
+  const fixture = await createExtensionStorageFixture(path);
+  const owner = { workbenchId: fixture.projectAId, extensionId: "example.records" };
+  let close = fixture.close;
+  try {
+    const id = "foreign";
+    await withOrderedOwner(fixture.db, owner, async (journal, tx) => {
+      for (const [epoch, state] of [
+        ["aaa", "accepted"],
+        ["zzz", "refused"],
+      ] as const) {
+        const decision = { operationId: id, fingerprint: "a".repeat(64), epoch, state };
+        const admissionFingerprint = "b".repeat(64);
+        await journal.recordDecision(decision, admissionFingerprint);
+        await journal.markIndexed([{ decision, admissionFingerprint }]);
+      }
+      await tx.execute(sql`UPDATE operations SET receipt_epoch=NULL WHERE operation_id=${id}`);
+      await saveOrderedMarker(tx, owner, JSON.stringify(["ordered-dependency", id]), { epoch: "aaa" });
+    });
+    const check = (db: typeof fixture.db) =>
+      withOrderedOwner(db, owner, async (journal) => {
+        expect((await journal.knownDependency(id))?.state).toBe("accepted");
+        expect((await journal.cachedDecision(id, "zzz"))?.state).toBe("refused");
+      });
+    await check(fixture.db);
+    expect(await pruneSettledOperations(fixture.db, owner, new Date(Date.now() + 10 * 86_400_000))).toBe(1);
+    await check(fixture.db);
+    await createDependencyMarkerCleanup(fixture.db, async () => {})(() => false);
+    expect(
+      (await fixture.db.execute(sql`SELECT id FROM documents WHERE key=${JSON.stringify(["ordered-dependency", id])}`))
+        .rows,
+    ).toEqual([]);
+    await check(fixture.db);
+    await close();
+    const reopened = await createDb({ path });
+    close = reopened.close;
+    await check(reopened.db);
+  } finally {
+    await close();
+    await rm(root, { recursive: true, force: true });
   }
 });

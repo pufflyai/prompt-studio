@@ -125,6 +125,20 @@ export type DbOpenPhase =
   | "database_migrated"
   | "database_index_nodes";
 
+const createDatabaseCloser = (db: { close(): Promise<void> }, cleanup: () => Promise<void>, releaseLock: () => void) => {
+  let closed = false;
+  return async () => {
+    if (closed) return;
+
+    closed = true;
+    try {
+      await cleanup().finally(() => db.close());
+    } finally {
+      releaseLock();
+    }
+  };
+};
+
 export const createDb = async (options?: {
   path?: string;
   onPhase?: (phase: DbOpenPhase) => void;
@@ -324,20 +338,8 @@ export const createDb = async (options?: {
     if (reimport) await fs.promises.rm(payload, { recursive: true, force: true });
     onPhase("database_migrated");
 
-    let closed = false;
-    const close = async () => {
-      if (closed) return;
-
-      closed = true;
-      try {
-        await cleanup.close().finally(() => openedPglite.close());
-      } finally {
-        releaseLock();
-      }
-    };
-
     return {
-      close,
+      close: createDatabaseCloser(openedPglite, () => cleanup.close(), releaseLock),
       db,
       path: dbPath,
       pglite: openedPglite,

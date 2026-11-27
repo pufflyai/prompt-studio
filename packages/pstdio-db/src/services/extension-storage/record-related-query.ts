@@ -3,7 +3,6 @@ import { loadQueryIndexDependencies } from "pstdio-sync/records";
 import type { StoragePredicate, StorageRecordIndex } from "pstdio-sync-contracts";
 import { queryExpressionSql } from "./query-expression-sql";
 import { expressionArray, expressionComparable } from "./query-expression-values";
-import { firstRecordByField } from "./record-first-match";
 import { predicateSql, recordEqualitySql, recordFieldSql, recordScopeSql } from "./record-query-sql";
 import { relatedScalarMembershipSql } from "./record-related-membership";
 import { relatedReferenceCandidatesSql } from "./record-related-reference-candidates";
@@ -87,13 +86,13 @@ export const relatedRecordPredicateSql = (
         });
         const [join] = selection.on;
         if (
-          typeof owner.workbenchId === "string" &&
+          owner.firstMatches &&
           selection.on.length === 1 &&
           join.op === "contains" &&
           !selection.every &&
           !selection.where
         ) {
-          const probe = firstRecordByField(
+          const probe = owner.firstMatches.firstRecordByField(
             target,
             join.relatedField,
             targetAlias,

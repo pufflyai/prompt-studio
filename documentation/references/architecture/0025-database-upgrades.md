@@ -175,9 +175,8 @@ supported; Windows power-loss durability remains unqualified under
 The interactive host opens restored journals immediately. Its quiet maintenance pass retires old local
 `["ordered-dependency", operationId]` documents in batches. For an operation
 without a settled or selected receipt epoch, it copies the marker’s epoch into
-the journal. A journal selection already present takes precedence. Selectors
-without a current operation row expire, as do missing or malformed selector
-values. This can end legacy dependency lookup for an operation whose only
+the live journal row or its retained authorship entry. An existing selection takes precedence.
+Selectors with neither a live nor a retained operation expire, as do missing or malformed selector values. This can end legacy dependency lookup for an operation whose only
 selection was in that marker. The upgrade preserves operation receipts and
 pending saves. Each batch commits the selection and marker removal together.
 Until its batch commits, a surviving marker can still resolve the operation’s
