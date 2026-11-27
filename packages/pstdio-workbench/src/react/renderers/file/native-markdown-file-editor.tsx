@@ -15,6 +15,7 @@ interface NativeMarkdownFileEditorProps {
   connect: () => NativeDocumentSession;
   presence: WorkbenchPresence;
   open: boolean;
+  focusOnOpen?: MarkdownEditorProps["focusOnOpen"];
   placeholder?: string;
   sectionNavigation?: MarkdownEditorProps["sectionNavigation"];
   onActiveSectionChange?: MarkdownEditorProps["onActiveSectionChange"];
@@ -26,7 +27,8 @@ const getEmpty = () => empty;
 const decode = (value: string) => Uint8Array.from(atob(value), (character) => character.charCodeAt(0));
 
 export const NativeMarkdownFileEditor = (props: NativeMarkdownFileEditorProps) => {
-  const { connect, presence, open, placeholder, sectionNavigation, onActiveSectionChange, errorNotice } = props;
+  const { connect, focusOnOpen, presence, open, placeholder, sectionNavigation, onActiveSectionChange, errorNotice } =
+    props;
   const connectRef = useRef(connect);
   connectRef.current = connect;
   const openRef = useRef(open);
@@ -81,6 +83,7 @@ export const NativeMarkdownFileEditor = (props: NativeMarkdownFileEditorProps) =
               },
             }}
             defaultState=""
+            focusOnOpen={focusOnOpen}
             placeholder={placeholder}
             sectionNavigation={sectionNavigation}
             onActiveSectionChange={onActiveSectionChange}

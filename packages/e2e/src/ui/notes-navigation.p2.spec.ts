@@ -101,7 +101,12 @@ test("opens notes in the project Sidenav tree and follows the active note throug
       .locator('[data-workbench-panel-header="main"]')
       .getByRole("button", { name: "Page actions", exact: true })
       .click();
-    await expect(page.getByRole("menuitem", { name: "New note", exact: true })).toBeVisible();
+    await page.getByRole("menuitem", { name: "New note", exact: true }).click();
+    const form = page.getByRole("dialog", { name: "New note", exact: true });
+    await form.getByRole("textbox", { name: "Title", exact: true }).fill("Page action note");
+    await form.getByRole("button", { name: "Run", exact: true }).click();
+    await expectOpenNote(page, "Page action note");
+    await expect(nativePublicTextEditor(page)).toBeFocused();
   } finally {
     await request.delete(`${uiOrigin}/v1/projects/${project.id}`);
     rmSync(repoRoot, { recursive: true, force: true });
@@ -268,13 +273,15 @@ test("keeps typing in the same editor when the first line names a new note", asy
     await sidebar.getByRole("button", { name: "New note", exact: true }).click();
     const editor = nativePublicTextEditor(page);
     await expect(editor).toBeEmpty({ timeout: 15_000 });
+    await expect(editor).toBeFocused();
     await resolutionReady.promise;
     const mountedEditor = await editor.elementHandle();
     const documentReads: string[] = [];
     page.on("request", (request) => {
       if (request.url().includes("pstdio.notes.view.note-editor.file.load/execute")) documentReads.push(request.url());
     });
-    await editor.fill("First line title");
+    await page.keyboard.type("First line title");
+    await expect(editor).toHaveText("First line title");
     releaseResolution.resolve();
     await resolutionForwarded.promise;
     await expectOpenNote(page, "First line title");
@@ -287,6 +294,49 @@ test("keeps typing in the same editor when the first line names a new note", asy
     await expect(editor).toHaveText("First line title and keep typing");
   } finally {
     releaseResolution.resolve();
+    await page.unrouteAll({ behavior: "wait" });
+    await request.delete(`${uiOrigin}/v1/projects/${project.id}`);
+    rmSync(repoRoot, { recursive: true, force: true });
+  }
+});
+
+test("keeps focus on a navigation control chosen while a note opens", async ({ page, request }) => {
+  const repoRoot = mkdtempSync(join(tmpdir(), "pstdio-note-focus-"));
+  const response = await request.post(`${uiOrigin}/v1/projects`, {
+    data: folderProjectInput({ name: "Notes focus" }, repoRoot),
+  });
+  expect(response.ok()).toBe(true);
+  const project = (await response.json()) as { id: string };
+  const opening = Promise.withResolvers<void>();
+  const releaseOpen = Promise.withResolvers<void>();
+  try {
+    await page.route(
+      `**/projects/${project.id}/text-editing/open`,
+      async (route) => {
+        opening.resolve();
+        await releaseOpen.promise;
+        await route.continue();
+      },
+      { times: 1 },
+    );
+    await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
+    await page.goto(`/projects/${project.id}/extensions/pstdio.notes/notes`);
+    const sidebar = page.locator('[data-workbench-region="sidenav"]');
+    await sidebar.getByRole("option", { name: "Notes", exact: true }).click();
+    await sidebar.getByRole("button", { name: "New note", exact: true }).click();
+    await opening.promise;
+    const back = page.getByRole("button", { name: "Navigate back", exact: true });
+    await back.focus();
+    await expect(back).toBeFocused();
+
+    releaseOpen.resolve();
+    await expect(nativePublicTextEditor(page)).toHaveAttribute("contenteditable", "true");
+    await page.evaluate(
+      () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))),
+    );
+    await expect(back).toBeFocused();
+  } finally {
+    releaseOpen.resolve();
     await page.unrouteAll({ behavior: "wait" });
     await request.delete(`${uiOrigin}/v1/projects/${project.id}`);
     rmSync(repoRoot, { recursive: true, force: true });

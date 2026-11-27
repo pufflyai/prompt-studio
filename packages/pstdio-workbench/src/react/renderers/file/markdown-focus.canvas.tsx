@@ -27,7 +27,11 @@ const MarkdownFocus = () => {
       <Box ref={panel} tabIndex={-1} h="64">
         {state === "loading" && "Opening note…"}
         {state === "ready" && (
-          <LazyMarkdownEditor autoFocus={document.activeElement === panel.current} defaultState="" isEditable />
+          <LazyMarkdownEditor
+            focusOnOpen={(root) => root.ownerDocument.activeElement === panel.current}
+            defaultState=""
+            isEditable
+          />
         )}
       </Box>
     </Stack>
@@ -35,7 +39,7 @@ const MarkdownFocus = () => {
 };
 
 export default {
-  title: "Proposals/PS-307 Markdown focus",
+  title: "Product/Workbench/File editor/Markdown focus",
   component: MarkdownFocus,
 } satisfies CanvasMeta;
 

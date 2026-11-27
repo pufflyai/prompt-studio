@@ -162,6 +162,20 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
           content={currentLoaded}
           position={position}
           editorKey={editorKey}
+          focusOnOpen={(editor) => {
+            const panelRegion = props.presentationInput?.panel.region;
+            const region = editor.closest("[data-workbench-focus-region]");
+            const active = editor.ownerDocument.activeElement;
+            return (
+              open &&
+              props.presentationInput?.visible !== false &&
+              workbench.activation.isActive() &&
+              !workbench.keyboard.store.getState().active &&
+              workbench.focus.getActiveRegion() === panelRegion &&
+              region?.getAttribute("data-workbench-focus-region") === panelRegion &&
+              (active === region || active === editor.ownerDocument.body)
+            );
+          }}
           errorNotice={errorNotice}
           contributionCanSave={Boolean(contribution.save)}
           onActiveSectionChange={

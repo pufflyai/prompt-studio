@@ -11,6 +11,7 @@ import { usePublicTextPresentation } from "./use-public-text-presentation";
 interface PublicMarkdownFileEditorProps {
   connect: () => NativeTextPresentation;
   open: boolean;
+  focusOnOpen?: MarkdownEditorProps["focusOnOpen"];
   placeholder?: string;
   sectionNavigation?: MarkdownEditorProps["sectionNavigation"];
   onActiveSectionChange?: MarkdownEditorProps["onActiveSectionChange"];
@@ -20,7 +21,7 @@ const subscribeEmpty = () => () => {};
 const empty = () => undefined;
 
 export const PublicMarkdownFileEditor = (props: PublicMarkdownFileEditorProps) => {
-  const { connect, open, placeholder, sectionNavigation, onActiveSectionChange, errorNotice } = props;
+  const { connect, focusOnOpen, open, placeholder, sectionNavigation, onActiveSectionChange, errorNotice } = props;
   const { session, openingError, presentation, retry } = usePublicTextPresentation(connect, open);
   const state = useSyncExternalStore(session?.subscribe ?? subscribeEmpty, session?.getSnapshot ?? empty, empty);
   useEffect(() => {
@@ -48,6 +49,7 @@ export const PublicMarkdownFileEditor = (props: PublicMarkdownFileEditorProps) =
                 session.setSelection(selection ? { anchor: selection.anchor, head: selection.focus } : null),
             }}
             defaultState=""
+            focusOnOpen={focusOnOpen}
             placeholder={placeholder}
             sectionNavigation={sectionNavigation}
             onActiveSectionChange={onActiveSectionChange}

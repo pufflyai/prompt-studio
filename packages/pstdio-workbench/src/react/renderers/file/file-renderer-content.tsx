@@ -17,6 +17,7 @@ export interface FileRendererContentViewProps {
   open: boolean;
   position?: FileSourcePosition;
   editorKey: string;
+  focusOnOpen?: (root: HTMLElement) => boolean;
   errorNotice: ReactNode;
   contributionCanSave: boolean;
   onActiveSectionChange?: (sectionId: string | null) => void;
