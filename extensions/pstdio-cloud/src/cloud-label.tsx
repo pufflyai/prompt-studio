@@ -6,7 +6,15 @@ import type { useCloud } from "./use-cloud";
 
 export const CloudIcon = (props: { name: string; compact?: boolean }) => {
   const { name } = props;
-  return <Icon as={resolveIconComponent(name)} boxSize={props.compact ? "3" : "4"} aria-hidden="true" />;
+  const boxSize = props.compact ? "3" : "4";
+  if (name.startsWith("data:image/svg+xml;base64,"))
+    return (
+      <Icon boxSize={boxSize} colorScheme="light" _dark={{ colorScheme: "dark" }} aria-hidden="true" asChild>
+        <img src={name} alt="" />
+      </Icon>
+    );
+  const component = resolveIconComponent(name) ?? resolveIconComponent("package");
+  return component ? <Icon as={component} boxSize={boxSize} aria-hidden="true" /> : null;
 };
 
 const CloudStatusIcon = (props: { status?: ReturnType<typeof cloudStatus>; active?: boolean; error?: string }) => {
@@ -21,7 +29,7 @@ const CloudStatusIcon = (props: { status?: ReturnType<typeof cloudStatus>; activ
 export const CloudLabel = (props: { data: ReturnType<typeof useCloud>["data"]; online: boolean; error?: string }) => {
   const { data, online, error } = props;
   const { t } = useCloudContext();
-  const status = cloudStatus(data?.account, data?.sync, data?.project, online);
+  const status = cloudStatus(data?.account, data?.sync, data?.project, online, data?.projectRelay);
   let label = t("status.loading", "Cloud");
   if (status?.key === "offline") label = t("status.offline", "Connection lost");
   else if (error) label = t("status.attention", "Needs attention");

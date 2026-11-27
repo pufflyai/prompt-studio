@@ -197,9 +197,16 @@ const buildApp = async (
   });
   const { fileService, notificationService, projectService, workspaceSessionService, workspaceService } = core;
   await fileService.recoverRemovals();
+  const account = await createAccountWithRemovalBarrier(
+    input.config,
+    dbs.environmentDBService,
+    projectService,
+    environmentId,
+  );
   let deps!: RouteDeps;
   const { extensionRuntime, extensionStartup, extensionRuntimeCatalog, unsubscribeExtensionEvents, ...extensionDeps } =
     await wireAppExtensionServices({
+      accountService: account.accountService,
       preferences: dbs.preferencesDBService,
       config: input.config.extensions,
       db,
@@ -247,12 +254,6 @@ const buildApp = async (
     onCapacityAvailable: () => sessions.drainSessionQueue(),
   });
   const terminalSupervisor = createAppTerminalSupervisor();
-  const account = await createAccountWithRemovalBarrier(
-    input.config,
-    dbs.environmentDBService,
-    projectService,
-    environmentId,
-  );
 
   const { nativeDocuments, textEditing } = createAppNativeDocuments(
     environmentId,

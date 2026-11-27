@@ -90,12 +90,19 @@ export const createNativeTeams = (input: {
     owner,
     acceptDiscovery,
     prepareProject,
+    async localProjectNames(managerOrigin: string, accountId: string) {
+      const rows = (await input.copies.teamProjects()).filter(
+        (row) => row.managerOrigin === managerOrigin && row.accountId === accountId,
+      );
+      const projects = await Promise.all(rows.map(({ projectId }) => input.project(projectId)));
+      return new Map(projects.flatMap((project) => (project ? [[project.id, project.name]] : [])));
+    },
     async changeMembership(projectId: string, remove = false) {
       const login = await owner(await input.current(), projectId);
       const path = `/v1/workbenches/${encodeURIComponent(identitySchema.parse(projectId))}`;
       await input.call(
         accountScopedPath(path + (remove ? "/remove" : ""), scopedAccountId(login)),
-        {},
+        login.userId && !remove ? { grantSelf: true } : {},
         login.token,
         undefined,
         signedInIdentity(login),

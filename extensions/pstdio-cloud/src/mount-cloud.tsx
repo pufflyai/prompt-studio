@@ -10,6 +10,7 @@ import { CloudDetails } from "./cloud-details";
 import { CloudLabel } from "./cloud-label";
 import { CloudSettings } from "./cloud-settings";
 import type { cloudCommands } from "./project-state";
+import { TeamSettings } from "./team-settings";
 import { useCloud } from "./use-cloud";
 
 const Status = (props: { projectId?: string }) => {
@@ -22,7 +23,7 @@ const Status = (props: { projectId?: string }) => {
   );
 };
 
-export const cloudView = (screen: "status" | "details" | "settings") =>
+export const cloudView = (screen: "status" | "details" | "settings" | "team" | "managed") =>
   defineExtensionView<WebviewHostProps>({
     render(context) {
       const client = createWebviewClient<typeof cloudCommands>(context.host);
@@ -32,6 +33,8 @@ export const cloudView = (screen: "status" | "details" | "settings") =>
         let content = <Status key={projectId} projectId={projectId} />;
         if (screen === "details") content = <CloudDetails key={projectId} projectId={projectId} />;
         if (screen === "settings") content = <CloudSettings key={projectId} projectId={projectId} />;
+        if (screen === "team" || screen === "managed")
+          content = <TeamSettings key={projectId} projectId={projectId} managed={screen === "managed"} />;
         return (
           <ChakraProvider value={psTheme}>
             <CloudContext value={{ client, t: context.t }}>

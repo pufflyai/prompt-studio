@@ -39,6 +39,8 @@ export const createExtensionEnablement = (deps: {
   emitExtensionInstance: (instance: unknown) => void;
   onDefaultAdopted: (sourcePath: string) => Promise<void>;
   validateResourcePrefixes?: (projectId: string, source: InstalledSource) => Promise<void>;
+  assertProjectChoice?: (projectId: string, extensionId: string) => Promise<void>;
+  isProjectExtensionManaged?: (projectId: string, extensionId: string) => Promise<boolean>;
 }) => {
   const pendingClaims = new Map<string, Promise<unknown>>();
   const assertOptional = async (source: InstalledSource) => {
@@ -56,6 +58,7 @@ export const createExtensionEnablement = (deps: {
     const claim = (pendingClaims.get(key) ?? Promise.resolve())
       .catch(() => {})
       .then(async () => {
+        await deps.assertProjectChoice?.(instance.scope_id, source.extension_id);
         for (const existing of await deps.installedExtensionSourcesService.list()) {
           if (existing.id !== source.id && existing.extension_id === source.extension_id)
             await assertOptional(existing);
@@ -83,6 +86,7 @@ export const createExtensionEnablement = (deps: {
     if (!instance) return null;
     const source = await deps.installedExtensionSourcesService.get(instance.installed_extension_id);
     if (!source) return null;
+    if (instance.scope_type === "project") await deps.assertProjectChoice?.(instance.scope_id, source.extension_id);
     if (!enabled) await assertOptional(source);
     if (instance.scope_type === "project")
       await deps.extensionInstancesService.recordProjectDefaultChoice(instance.scope_id, source.extension_id);
@@ -98,6 +102,7 @@ export const createExtensionEnablement = (deps: {
   const adoptDefaultSourceForProject = async (projectId: string, installedSourceId: string) => {
     const source = await deps.installedExtensionSourcesService.get(installedSourceId);
     if (!source) return null;
+    if (await deps.isProjectExtensionManaged?.(projectId, source.extension_id)) return null;
     if (await deps.extensionInstancesService.hasProjectDefaultChoice(projectId, source.extension_id)) return null;
     await deps.validateResourcePrefixes?.(projectId, source);
     const instance = await deps.extensionInstancesService.adoptProjectDefault({

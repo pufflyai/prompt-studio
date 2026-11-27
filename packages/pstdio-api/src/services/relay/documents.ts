@@ -1,7 +1,7 @@
-import { fetchSyncSpaces } from "pstdio-sync/relay";
 import type { LiveServerMessage } from "pstdio-sync-contracts";
 import { type ExtensionDocumentSyncInput, initializeDocumentPass } from "./document-pass";
 import { documentProgress } from "./document-progress";
+import { fetchNativeSyncSpaces } from "./native-relay-access";
 import { createSourceActivity } from "./source-activity";
 
 interface SyncInput extends ExtensionDocumentSyncInput {
@@ -66,7 +66,7 @@ export const createExtensionDocumentSync = (input: SyncInput) => {
       const { config } = input;
       const spaces = await activity.run(
         "loading-keys",
-        () => fetchSyncSpaces({ ...config, credential: config.renewalGrant, signal }),
+        () => fetchNativeSyncSpaces({ ...config, credential: config.renewalGrant, signal }),
         signal,
       );
       const space = input.privateSpace ? spaces.personal : spaces.project;

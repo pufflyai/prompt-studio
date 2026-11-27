@@ -1,14 +1,10 @@
 import { rm } from "node:fs/promises";
-import type { Asset } from "pstdio-sync-contracts";
+import { canonicalJson } from "pstdio-sync-contracts";
 import { scheduleProjectWorkspaceProvisioning } from "../../workspaces/provision-coordinator";
 import type { ExtensionsRouteDeps } from "../deps";
-import { openPublishedCatalog, type Publication } from "./catalog";
+import { effectivePublicationSet, type PublicationEntry, publicationRemovalPlans } from "./effective-set";
 import { preparePublicationActivation } from "./prepare-activation";
 
-interface Entry {
-  publication: Publication;
-  asset: Asset;
-}
 const activationQueues = new WeakMap<ExtensionsRouteDeps["extensionService"], Map<string, Promise<unknown>>>();
 
 const discardUnregisteredStages = async (deps: ExtensionsRouteDeps, projectId: string, stages: string[]) => {
@@ -21,11 +17,19 @@ const discardUnregisteredStages = async (deps: ExtensionsRouteDeps, projectId: s
 const applySet = async (
   deps: ExtensionsRouteDeps,
   projectId: string,
-  entries: Entry[],
+  entries: PublicationEntry[],
   signal?: AbortSignal,
   adopt: boolean | string = false,
   beforeCommit?: () => Promise<void>,
 ) => {
+  const policy = await deps.accountService.readManagedProjectPolicy(projectId, signal);
+  entries = await effectivePublicationSet(deps, projectId, entries, policy, signal);
+  const required = new Set(policy.filter((row) => row.required).map((row) => row.extensionId));
+  const checkPolicy = async () => {
+    signal?.throwIfAborted();
+    if (canonicalJson(await deps.accountService.readManagedProjectPolicy(projectId, signal)) !== canonicalJson(policy))
+      throw new Error("Team extension policy changed during activation; retry");
+  };
   const stages: string[] = [];
   const plans: Parameters<ExtensionsRouteDeps["extensionService"]["activatePublishedExtensions"]>[0] = [];
   const statuses: string[] = [];
@@ -40,23 +44,13 @@ const applySet = async (
         signal,
         adopt,
         beforeCommit,
+        required.has(publication.extensionId),
       );
       if (prepared.plan) plans.push(prepared.plan);
       statuses.push(prepared.status);
     }
     const selectedIds = new Set(entries.map((entry) => entry.publication.extensionId));
-    const catalog = await openPublishedCatalog(deps, projectId);
-    for (const current of await deps.extensionService.listProjectExtensionInstances(projectId)) {
-      if (selectedIds.has(current.installedSource.extension_id) || !current.instance.enabled) continue;
-      if ((await catalog.records.read(current.installedSource.extension_id)).deleted)
-        plans.push({
-          projectId,
-          instanceId: current.instance.id,
-          enabled: false,
-          source: { kind: "existing", id: current.installedSource.id },
-          beforeActivate: async () => signal?.throwIfAborted(),
-        });
-    }
+    plans.push(...(await publicationRemovalPlans(deps, projectId, selectedIds, policy, signal)));
     const proposed = new Map<
       string,
       Parameters<ExtensionsRouteDeps["extensionRuntimeCatalog"]["validateResourcePrefixSet"]>[0][number]
@@ -81,6 +75,15 @@ const applySet = async (
     await deps.extensionRuntimeCatalog.validateResourcePrefixSet([...proposed.values()]);
     await beforeCommit?.();
     for (const plan of plans) await plan.beforeActivate();
+    await checkPolicy();
+    const last = plans.at(-1);
+    if (last) {
+      const beforeActivate = last.beforeActivate;
+      last.beforeActivate = async () => {
+        await beforeActivate();
+        await checkPolicy();
+      };
+    }
     await deps.extensionService.activatePublishedExtensions(plans);
     if (stages.length) {
       deps.extensionRuntimeCatalog.invalidate({ projectId, reason: "source_changed" });

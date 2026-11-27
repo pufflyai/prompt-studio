@@ -54,7 +54,7 @@ resource "digitalocean_database_firewall" "cloud" {
   }
 }
 
-# Only encrypted current state, grace-period state, updates and blobs live here.
+# Encrypted relay state, updates, blobs and manager-owned managed-packages/ objects live here.
 resource "digitalocean_spaces_bucket" "relay" {
   name          = var.bucket_name
   region        = var.spaces_region

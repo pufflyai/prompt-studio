@@ -84,6 +84,26 @@ In a Cloud project's Danger zone, **Delete local version** removes this device's
 
 After signing in, create a team through `pst teams create "Studio Team"`. When Cloud early access is enabled for the team, select it in the project picker and create a project in a new folder. Your second signed-in device can select the team and open the same Cloud project. Personal projects remain available under Personal.
 
-The first team release supports one owner. Invitations, project sharing and ownership transfer follow in later releases.
+## Team invitations
+
+A team owner can create a link for a verified Google email address or for a Microsoft work account using its Entra tenant ID and user object ID. Your Entra administrator can provide those IDs. Send the link to that person privately. The link expires after seven days and the owner can cancel it while it is pending. Joining lets the recipient see the team roster. The owner shares projects separately.
+
+Open the link, sign in with the account that received it, check the team name, and select **Join team**. If a different account is signed in, the invitation lets you switch accounts. If the join response is interrupted, opening the same link again shows whether that signed-in person already joined.
+
+An owner can remove a member, and a member can leave. The sole owner needs to transfer ownership before leaving. A removed member needs a fresh invitation to rejoin.
+
+## Share a team project
+
+A team owner can open **Project access** in Cloud settings for the owning team. Choose a project and grant access to the people who should edit it. A team member sees only projects shared with them. If an owner removes their own grant, they can still manage grants and can explicitly grant their access again.
+
+Revoking project access stops new keys and access renewals. The previously issued access lasts until its expiry. Remaining devices fetch fresh keys before resuming sync with a new lease. Everyone keeps material previously downloaded. Device management, command access and personal sessions stay with their signed-in user.
+
+Leaving a team or removing a member revokes that person's grants for every team project and keeps the projects available to the other members.
+
+## Transfer team ownership
+
+The owner can select an active member under **Team members** in Cloud settings and offer them ownership. Roles stay the same until that person accepts. The owner can cancel the offer and the recipient can decline it. One offer can be pending at a time.
+
+After acceptance, the former owner becomes a member. Both people keep the project grants they already had. The new owner can change the team's grants and membership. The former owner can choose **Leave team**. Leaving ends their remaining grants under the same revocation rules as other team members.
 
 *Updated at: 2026-11-24*

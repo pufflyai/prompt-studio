@@ -112,7 +112,7 @@ test(
       expect(status.download!.completed).toBe(status.download!.total!);
       const space = await createSyncSpace({ projectId: project.id, spaceOwner: null, keys: [packagedProjectKey] });
       const streamId = await space.documentId(JSON.stringify(["example.shared-notes", "record-stream-v2"]));
-      const stream = peer.documents.get(`~${streamId}`)!;
+      const stream = peer.document(streamId)!;
       const previousState = stream.state!.stateId;
       const previousUpdates = stream.updates.length;
       // The grouped save exceeds both the inline frame limit and the founding state's size.

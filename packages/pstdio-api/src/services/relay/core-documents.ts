@@ -5,13 +5,13 @@ import {
   createDocumentRelayConnection,
   createDocumentSync,
   createLiveConnection,
-  fetchSyncSpaces,
 } from "pstdio-sync/relay";
 import { announceProjectCompositionChange } from "../../features/projects/project-composition";
 import { apiLogger } from "../../lib/logger";
 import type { RelayDeps } from "./deps";
 import { documentProgress } from "./document-progress";
 import { createNativeDocumentChannel } from "./native-document-channel";
+import { fetchNativeSyncSpaces } from "./native-relay-access";
 import { reconcileProjectInfo } from "./project-info-owner";
 import { createSyncQuarantine } from "./quarantine";
 import { createResourceNumberSync } from "./resource-number-sync";
@@ -81,7 +81,7 @@ export const startCoreDocumentSync = (input: {
       const { project: space } = await activity.run(
         "loading-keys",
         () =>
-          fetchSyncSpaces({
+          fetchNativeSyncSpaces({
             ...config,
             credential: config.renewalGrant,
             signal: attemptSignal,

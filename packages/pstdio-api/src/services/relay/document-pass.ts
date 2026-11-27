@@ -21,6 +21,7 @@ export interface ExtensionDocumentSyncInput {
   owner: { workbenchId: string; extensionId: string };
   deps: ExtensionsRouteDeps;
   access: () => Promise<{ token: string; expiresAt: string }>;
+  canWrite?: () => Promise<boolean>;
   discoveryNeeded?: () => void;
   subscribe?: SubscribeDocument;
   statusChanged?: () => void;
@@ -76,6 +77,7 @@ export const initializeDocumentPass = async (
         store: deps.extensionStorageService.documents.open(name),
         assets: createRecordAssets(deps.assetTransferService, owner, workSignal),
         relay: relay(documentId),
+        canWrite: input.canWrite,
         quarantine: quarantine(documentId),
       });
       return { documentId, sync: traceDocumentSync(owner, name === "records" ? "directory" : "document", sync) };
@@ -85,6 +87,7 @@ export const initializeDocumentPass = async (
     space,
     documentId: recordStreamId,
     relay: relay(recordStreamId),
+    canWrite: input.canWrite,
     store: traceRecordStreamStore(
       owner,
       deps.extensionStorageService.documents.recordStream(owner),

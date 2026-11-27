@@ -1,5 +1,6 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { accountSignInProviderSchema, deviceCommandSchema } from "pstdio-api-contracts";
+import { teamMembershipReadSchema, teamMembershipWriteSchema } from "pstdio-sync-contracts";
 import { managerOriginSchema } from "../../services/account/manager-client";
 import {
   AccountRequestError,
@@ -132,6 +133,42 @@ export const createAccountRoutes = (service: ReturnType<typeof createNativeAccou
     async (c) => {
       const { name, expected } = c.req.valid("json");
       return c.json(await service.createTeam(name, expected), 200);
+    },
+  );
+  routes.openapi(
+    createRoute({
+      method: "post",
+      path: "/account/team-membership/read",
+      tags,
+      request: {
+        body: {
+          required: true,
+          ...json(z.strictObject({ request: teamMembershipReadSchema, expected: expectedAccountIdentity.optional() })),
+        },
+      },
+      responses,
+    }),
+    async (c) => {
+      const { request, expected } = c.req.valid("json");
+      return c.json(await service.readTeamMembership(request, expected, c.req.raw.signal), 200);
+    },
+  );
+  routes.openapi(
+    createRoute({
+      method: "post",
+      path: "/account/team-membership/write",
+      tags,
+      request: {
+        body: {
+          required: true,
+          ...json(z.strictObject({ request: teamMembershipWriteSchema, expected: expectedAccountIdentity.optional() })),
+        },
+      },
+      responses,
+    }),
+    async (c) => {
+      const { request, expected } = c.req.valid("json");
+      return c.json(await service.writeTeamMembership(request, expected), 200);
     },
   );
   routes.openapi(

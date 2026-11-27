@@ -23,6 +23,8 @@ import { toProjectExtensionInstance } from "./project-extension-instance";
 import { openPublishedCatalog } from "./publication/catalog";
 import { removeSharedSelection, shareEnabledChoice } from "./publication/change-catalog";
 import { selectPublicationSource } from "./publication/prepare-activation";
+import { publishedRevisionOf } from "./publication/source";
+import { PublicationAccessDenied } from "./publication/types";
 
 type LifecycleDeps = ExtensionsRouteDeps & {
   installedExtensionSourcesService: RouteDeps["installedExtensionSourcesService"];
@@ -112,6 +114,15 @@ export const createProjectExtensionLifecycle = (deps: LifecycleDeps) => {
       ({ installedSource }) => installedSource.extension_id === extensionId,
     );
 
+  const sharedCatalogFor = async (projectId: string, source: { extension_id: string; source_ref: string | null }) => {
+    const catalog = await openPublishedCatalog(deps, projectId);
+    const record = await catalog.records.read(source.extension_id);
+    if (!record.exists || record.deleted) return;
+    if (await deps.accountService.canPublishProjectExtensions(projectId)) return catalog;
+    // A private override can still be changed or removed on this device.
+    if (publishedRevisionOf(source.source_ref)) throw new PublicationAccessDenied();
+  };
+
   const install = async (projectId: string, input: InstallExtensionRequest | UploadExtensionRequest) => {
     if (!deps.extensionUpgradeService)
       throw new ExtensionUpgradeUnavailableError("Extension installation is unavailable.");
@@ -131,12 +142,13 @@ export const createProjectExtensionLifecycle = (deps: LifecycleDeps) => {
     const requiresProvisioning = await changesWorkspaceProvisioning(existing.installedSource);
 
     const extensionId = existing.installedSource.extension_id;
+    const catalog = await sharedCatalogFor(projectId, existing.installedSource);
     const updated = await deps.extensionService.setProjectExtensionEnabled(instanceId, enabled);
     if (!updated) return null;
     await refreshProviderWorkspaces(deps, projectId, extensionId);
     // Shared only after this device accepted the change, so other devices never get a state it refused.
     // A leftover copy that this device does not run leaves the shared choice alone.
-    if (selectPublicationSource(await copiesOf(projectId, extensionId))?.instance.id === instanceId)
+    if (catalog && selectPublicationSource(await copiesOf(projectId, extensionId))?.instance.id === instanceId)
       await shareEnabledChoice(deps, projectId, extensionId, enabled);
 
     await provisionWhenRequired(projectId, requiresProvisioning);
@@ -193,9 +205,8 @@ export const createProjectExtensionLifecycle = (deps: LifecycleDeps) => {
     const runsSelectedCopy =
       selectPublicationSource(await copiesOf(input.projectId, extensionId))?.instance.id === input.instanceId;
     // The shared removal comes first, so a sync cannot reinstall the extension in between.
-    const restoreSharedSelection = runsSelectedCopy
-      ? await removeSharedSelection(await openPublishedCatalog(deps, input.projectId), extensionId)
-      : undefined;
+    const catalog = runsSelectedCopy && (await sharedCatalogFor(input.projectId, existing.installedSource));
+    const restoreSharedSelection = catalog ? await removeSharedSelection(catalog, extensionId) : undefined;
     let result: Awaited<ReturnType<LifecycleDeps["extensionService"]["uninstallProjectExtension"]>>;
     try {
       result = await deps.extensionService.uninstallProjectExtension(input);

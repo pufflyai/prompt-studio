@@ -2,4 +2,4 @@
 "cloud": minor
 ---
 
-Choose Microsoft or Google from the Prompt Studio Cloud Account card.
+Choose Microsoft or Google from a sign-in dialog with provider icons in Prompt Studio Cloud.

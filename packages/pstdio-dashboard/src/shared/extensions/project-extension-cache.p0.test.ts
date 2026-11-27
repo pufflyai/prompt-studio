@@ -62,6 +62,21 @@ const harness = () => {
 };
 
 describe("project extension cache", () => {
+  test("an enablement response retains the source policy until authoritative inventory refresh", async () => {
+    const { catalog, cache } = harness();
+    const restricted = { ...extension(true), sourceRestriction: "team-managed" as const };
+    catalog.extensions.accept({ ...response(true), extensions: [restricted] });
+    await cache.storeExtension(extension(false));
+    expect(catalog.extensions.getSnapshot().data?.extensions[0]).toMatchObject({
+      enabled: false,
+      sourceRestriction: "team-managed",
+      canUpgrade: false,
+    });
+    const released = { ...extension(false), canUpgrade: true };
+    catalog.extensions.accept({ ...response(false), extensions: [released] });
+    expect(catalog.extensions.getSnapshot().data?.extensions[0]).not.toHaveProperty("sourceRestriction");
+  });
+
   test("keeps all known automations when metadata refresh is pending after re-enabling", async () => {
     const { catalog, cache } = harness();
     const automations = ["refine", "implement", "review", "merge"].map((id) => ({
