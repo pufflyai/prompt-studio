@@ -137,17 +137,24 @@ const traceShutdownPhase = async <T>(phase: string, close: () => Promise<T>) => 
   }
 };
 
+// Slow harness cleanup is not a shutdown failure: after the allowance, shutdown stops
+// waiting and only logs what the cleanup reports later, so the process can still exit cleanly.
 const drainHarnesses = async (close: () => Promise<void>, graceMs: number) => {
-  const deadline = Promise.withResolvers<void>();
-  const timer = setTimeout(
-    () => deadline.reject(new Error("Harness cleanup did not finish before the shutdown deadline.")),
-    graceMs,
-  );
+  const deadline = Promise.withResolvers<"timed_out">();
+  const timer = setTimeout(() => deadline.resolve("timed_out"), graceMs);
+  const disposal = close();
   try {
-    await Promise.race([close(), deadline.promise]);
+    if ((await Promise.race([disposal, deadline.promise])) !== "timed_out") return;
   } finally {
     clearTimeout(timer);
   }
+  const fields = { event: "runtime.shutdown.phase", phase: "harnesses", grace_ms: graceMs };
+  shutdownLogger.warn({ ...fields, state: "timed_out" }, "Harness cleanup is still running; stopping backend workers");
+  disposal.then(
+    () => shutdownLogger.info({ ...fields, state: "late_settled" }, "Harness cleanup finished after its allowance"),
+    (err) =>
+      shutdownLogger.warn({ ...fields, state: "late_failed", err }, "Harness cleanup failed after its allowance"),
+  );
 };
 
 export const createAppCloser = (input: {

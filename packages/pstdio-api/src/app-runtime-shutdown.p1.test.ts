@@ -120,7 +120,7 @@ test.each(
         harnessEntered.resolve();
         await releaseHarness.promise;
         order.push("harness");
-        if (harnessOutcome === "rejected") throw harnessFailure;
+        if (harnessOutcome) throw harnessFailure;
       },
     } as never,
     extensionInstallations: { dispose: done } as never,
@@ -131,12 +131,17 @@ test.each(
   try {
     await harnessEntered.promise;
     if (harnessOutcome === "timed_out") {
-      expect(await closing).toEqual(new Error("Harness cleanup did not finish before the shutdown deadline."));
+      // Missing the allowance is not a failure: shutdown stops waiting and exits cleanly.
+      expect(await closing).toBeUndefined();
       expect(order).toEqual(["processes", "workers", "account", "database"]);
+      releaseHarness.resolve();
+      // The late harness failure is logged, not recorded or left unhandled.
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      expect(order).toEqual(["processes", "workers", "account", "database", "harness"]);
       return;
     }
     // Give synchronous cleanup and its promise continuations a turn while the harness is held.
-    await new Promise<void>((resolve) => setImmediate(resolve));
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
     expect(order).toEqual(["processes"]);
   } finally {
     releaseHarness.resolve();
