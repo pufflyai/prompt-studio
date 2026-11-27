@@ -1,9 +1,73 @@
 import { describe, expect, test } from "bun:test";
+import { createScopedQueryClient } from "@pstdio/sdk/extensions";
 import type { WorkbenchExtensionKanbanRendererRecord } from "pstdio-api-contracts";
 import { createWorkbench, getWorkbenchRenderers } from "../../core";
+import { getWorkbenchOperations } from "../../core/registries/mutations/operations";
 import { registerWorkbenchExtensionKanbanRenderers } from "./kanban-renderer-contributions";
 
 describe("registerWorkbenchExtensionKanbanRenderers create forms", () => {
+  test("opens the saved ticket while the board and attachments are still updating", async () => {
+    const queries = createScopedQueryClient({ runtimeId: "desktop", extensionId: "pstdio" });
+    const workbench = createWorkbench({ queries });
+    const operations = getWorkbenchOperations(queries);
+    const write = Promise.withResolvers<{ id: string; title: string }>();
+    const refreshStarted = Promise.withResolvers<void>();
+    const refresh = Promise.withResolvers<void>();
+    const attachment = Promise.withResolvers<void>();
+    const calls: string[] = [];
+    const record = {
+      id: "tickets",
+      extensionId: "planner",
+      title: "Tickets",
+      queryHandlerId: "query",
+      rowActivationHandlerId: "activate",
+      createRow: { commandId: "create" },
+    } satisfies WorkbenchExtensionKanbanRendererRecord;
+    registerWorkbenchExtensionKanbanRenderers(
+      {
+        projectId: "project",
+        workbench,
+        metadata: { commands: [{ id: "create", extensionId: "planner", title: "Create ticket", mutating: true }] },
+        operations,
+        createCommandIds: new Set(["create"]),
+        executeCommand: async (id) => {
+          calls.push(id);
+          if (id === "create") return write.promise;
+        },
+      },
+      [record],
+      {
+        onAfterCreate: () => attachment.promise,
+      },
+    );
+    const creation = getWorkbenchRenderers(workbench).getKanbanRenderer("tickets")!.onCreateRow!({
+      columnId: "backlog",
+      values: {},
+      attributeValues: {},
+      files: [new File(["evidence"], "evidence.txt")],
+      originatingRead: {
+        key: "board",
+        refresh() {
+          refreshStarted.resolve();
+          return refresh.promise;
+        },
+      },
+    });
+    try {
+      expect(calls).not.toContain("activate");
+      write.resolve({ id: "saved", title: "New ticket" });
+      await refreshStarted.promise;
+      expect(calls).toEqual(["create", "activate"]);
+    } finally {
+      refresh.resolve();
+      attachment.resolve();
+      await creation;
+      await workbench.dispose();
+      queries.dispose();
+    }
+    expect(calls).toEqual(["create", "activate"]);
+  });
+
   test("creates and finishes attachments without activating when opening is declined", async () => {
     const workbench = createWorkbench();
     const calls: string[] = [];
