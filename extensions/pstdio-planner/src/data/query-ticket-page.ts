@@ -10,6 +10,7 @@ import {
   reviewRequestCountSummary,
   reviewSummaryBadgeItems,
 } from "./review-request-summary";
+import { selectedTicketComputedFields } from "./ticket-computed-selection";
 import {
   appendLegacyPullRequestBadges,
   loadTicketLinkedResources,
@@ -43,6 +44,15 @@ export const readTicketViewPage = async (
   // The same bounded review counts supply the card badges and the selected attribute.
   const reuseReviewCounts = showReviews && scope.fields?.includes("reviewRequests");
   if (reuseReviewCounts) scope.fields = scope.fields?.filter((field) => field !== "reviewRequests");
+  // Do not inspect relationships belonging only to unselected attributes.
+  scope.computed = selectedTicketComputedFields(scope.computed ?? {}, [
+    ...(scope.fields ?? Object.keys(scope.computed ?? {})).map((field) => ({ field })),
+    ...(scope.groups ?? []).map(({ indexField }) => ({ field: indexField })),
+    scope.where,
+    scope.search,
+    scope.visible,
+    scope.orderBy,
+  ]);
   const selected = await readCollectionPage(ctx.storage, scope);
   const tickets = selected.records.flatMap(({ fields }) => {
     const ticket = ticketQuerySummary(fields);

@@ -36,6 +36,9 @@ test("ticket properties expose milestone, date, progress, and attention from the
     milestone: "",
     milestoneState: "unscheduled",
   });
+  const plan = await readPlanCommand.run(ctx, {});
+  for (const row of plan.ticketRows)
+    expect(query.rows.find(({ id }) => id === row.id)?.attributes.needsAttention).toBe(row.attributes.needsAttention);
   await moveTicketCommand.run(ctx, { ticket: open.id, deadline: milestone.id });
   const next = await runTicketsQuery({
     storage,
@@ -47,6 +50,9 @@ test("ticket properties expose milestone, date, progress, and attention from the
     milestoneState: "open",
     needsAttention: "yes",
   });
+  const nextPlan = await readPlanCommand.run(ctx, {});
+  for (const row of nextPlan.ticketRows)
+    expect(next.rows.find(({ id }) => id === row.id)?.attributes.needsAttention).toBe(row.attributes.needsAttention);
   await deleteDeadlineCommand.run(ctx, { deadline: milestone.id });
   expect(
     (

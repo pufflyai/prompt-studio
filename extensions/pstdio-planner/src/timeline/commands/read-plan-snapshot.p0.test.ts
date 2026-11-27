@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { expect, setSystemTime, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { makeCommandContext } from "../../commands/command-context.fixture";
 import { putTag } from "../../data/collections";
@@ -136,4 +136,33 @@ test("a tag definition edit after the query snapshot rejects the stale page mapp
   };
   await expect(readPlanCommand.run(ctx, {})).rejects.toThrow("stale");
   expect(edited).toBe(true);
+});
+
+test("a read crossing midnight keeps the attention filter and returned flags on one day", async () => {
+  const start = new Date("2026-01-01T12:00:00Z");
+  setSystemTime(start);
+  try {
+    const { storage, ctx, deadline, today } = await fixture();
+    await writePlanMetadata(storage, { deadlines: [{ ...deadline, date: addDays(today, 8) }] });
+    const query = storage.records.query;
+    let crossed = false;
+    storage.records.query = (request) => {
+      if (!crossed && request.index === "ticket-view" && request.fields?.includes("hasUnfinishedDependent")) {
+        crossed = true;
+        setSystemTime(new Date(start.getTime() + 86_400_000));
+      }
+      return query(request);
+    };
+    const result = await readPlanCommand.run(ctx, {
+      filter: { conjunction: "and", rules: [{ attributeId: "needsAttention", condition: "is-any-of", value: ["no"] }] },
+    });
+    expect(crossed).toBe(true);
+    expect(result.today).toBe(today);
+    expect(result.ticketRows.find(({ id }) => id === "placed")?.attributes.needsAttention).toBe("no");
+    expect(result.sections.flatMap(({ rows }) => rows).find(({ id }) => id === "placed")?.flags).not.toContain(
+      "due-soon",
+    );
+  } finally {
+    setSystemTime();
+  }
 });

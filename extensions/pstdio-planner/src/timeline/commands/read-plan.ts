@@ -15,6 +15,7 @@ import { planPlacements } from "./placement-store";
 import { planPageRows } from "./plan-page-rows";
 import { planQuerySummary } from "./plan-query-summary";
 import { planReadWindow } from "./plan-read-window";
+import { planTicketRows } from "./plan-ticket-rows";
 import { readTrack } from "./track-commands";
 
 export interface PlanDisplay extends MilestoneDisplay {
@@ -132,7 +133,7 @@ export const readPlanCommand = defineCommand({
         "milestone",
         "milestoneDate",
         "milestoneState",
-        "needsAttention",
+        "hasUnfinishedDependent",
         "reviewRequests",
         "blockedReason",
         "independentBlockedReason",
@@ -177,7 +178,7 @@ export const readPlanCommand = defineCommand({
       }),
       projectId: ctx.projectId,
       savedViews: input.ticketId ? { views: [], defaultViewId: null } : await ctx.views.list(timelineBoard),
-      ticketRows: view.result.rows,
+      ticketRows: planTicketRows(view, page.rows),
       ticketAttributes: view.result.attributes,
       page: view.result.page,
     };

@@ -194,6 +194,11 @@ export const ticketViewState = async (
     otherwise: false,
   };
   computed.hasUnmetDependency = { type: "boolean", cases: [{ when: waiting, value: true }], otherwise: false };
+  computed.hasUnfinishedDependent = {
+    type: "boolean",
+    cases: [{ when: relatedUnfinished(true), value: true }],
+    otherwise: false,
+  };
   computed.hasLaterDependency = {
     type: "boolean",
     cases: [
@@ -237,5 +242,5 @@ export const ticketViewState = async (
       return [name, { field: `flag:${name}`, op: "eq", value: true } satisfies StoragePredicate];
     }),
   ) as Record<keyof typeof conditions, StoragePredicate>;
-  return { computed, metadata, conditions, predicates: { ...predicates, unfinished, waiting } };
+  return { computed, metadata, today, conditions, predicates: { ...predicates, unfinished, waiting } };
 };

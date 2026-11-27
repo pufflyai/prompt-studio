@@ -380,11 +380,15 @@ test("answering one request keeps another open request awaiting input", async ()
   expect(row?.target.page.id).toBe("ticket");
   expect(selectedDocumentFromResource(row?.target.resource)).toBe(TICKET_BODY_DOCUMENT);
   expect(await reviewState()).toBe("requested");
+  expect(plan.ticketRows.find((row) => row.id === ticket.id)?.attributes.needsAttention).toBe("yes");
   expect(plan.sections.find((section) => section.rows.includes(row!))?.counts.reviewNeeded).toBe(1);
 
   const handoffId = requestPage.requests.find((request) => request.state === "open")!.id;
   await reviewCommand.run(ctx, { requestId: handoffId, response: { answers: { result: "Merged A1." } } });
   expect(await reviewState()).toBe("answered");
+  expect(
+    (await readPlanCommand.run(ctx, {})).ticketRows.find((row) => row.id === ticket.id)?.attributes.needsAttention,
+  ).toBe("no");
   const stateWith = async (statusId: string) => {
     await putTicket(storage, { ...(await ticketsCollection(storage).get(ticket.id))!, statusId });
     const rows = (await readPlanCommand.run(ctx, {})).sections.flatMap((section) => section.rows);
@@ -408,4 +412,18 @@ test("timeline child resources retain the supplied owner's hierarchy", async () 
       metadata: { resourceParent: { type: "view", viewId: "pstdio.planner.view.tickets" } },
     },
   });
+});
+
+test("attention includes unfinished dependents outside the selected Timeline row", async () => {
+  const storage = createMemoryStorage();
+  const [ctx] = makeCommandArgs({ storage, params: {} });
+  const parent = await createTicketCommand.run(ctx, { title: "Prerequisite", statusId: "ready" });
+  const child = await createTicketCommand.run(ctx, { title: "Dependent", statusId: "ready", dependsOn: [parent.id] });
+  const read = () => readPlanCommand.run(ctx, { ticketId: parent.id });
+  const selected = await read();
+  expect(selected.ticketRows).toHaveLength(1);
+  expect(selected.ticketRows[0].attributes.needsAttention).toBe("yes");
+  expect(selected.sections.flatMap((section) => section.rows)[0].blocks).toEqual([]);
+  await ticketsCollection(storage).put(child.id, { ...child, archived: true });
+  expect((await read()).ticketRows[0].attributes.needsAttention).toBe("no");
 });

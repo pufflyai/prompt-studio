@@ -147,6 +147,7 @@ export const prepareTicketViewQuery = async (
     workflow: usableWorkflowStatuses(workflow),
     computed,
     metadata,
+    today: state.today,
     fields,
     predicates: state.predicates,
     conditions: state.conditions,
