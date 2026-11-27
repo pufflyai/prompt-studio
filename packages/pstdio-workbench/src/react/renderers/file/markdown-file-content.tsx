@@ -19,6 +19,7 @@ export const MarkdownFileContent = (props: MarkdownFileContentProps) => {
     positionNotice,
     rendererRef,
     editorKey,
+    focusOnOpen,
     connectText,
     connectDocument,
     presence,
@@ -35,6 +36,7 @@ export const MarkdownFileContent = (props: MarkdownFileContentProps) => {
         <PublicMarkdownFileEditor
           key={editorKey}
           connect={connectText}
+          focusOnOpen={focusOnOpen}
           open={open}
           placeholder={content.placeholder ?? "Write…"}
           sectionNavigation={sectionNavigation}
@@ -51,6 +53,7 @@ export const MarkdownFileContent = (props: MarkdownFileContentProps) => {
         <NativeMarkdownFileEditor
           key={editorKey}
           connect={connectDocument}
+          focusOnOpen={focusOnOpen}
           presence={presence}
           open={open}
           placeholder={content.placeholder ?? "Write…"}
@@ -68,6 +71,7 @@ export const MarkdownFileContent = (props: MarkdownFileContentProps) => {
         <LazyMarkdownEditor
           key={editorKey}
           defaultState={content.content ?? ""}
+          focusOnOpen={focusOnOpen}
           isEditable={editable}
           sectionNavigation={sectionNavigation}
           placeholder={editable ? (content.placeholder ?? "Write…") : undefined}

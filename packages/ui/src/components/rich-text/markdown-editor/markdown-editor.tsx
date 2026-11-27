@@ -32,6 +32,7 @@ import { joinFrontmatter, splitFrontmatter } from "../utils/markdown";
 import { MarkdownSectionNavigationPlugin } from "./plugins/MarkdownSectionNavigationPlugin";
 import { MarkdownSlashCommandPlugin } from "./plugins/MarkdownSlashCommandPlugin";
 import { type MarkdownCollaboration, MarkdownCollaborationPlugin } from "./plugins/markdown-collaboration-plugin";
+import { MarkdownFocusOnOpenPlugin } from "./plugins/markdown-focus-on-open-plugin";
 import { MarkdownHistoryPlugin } from "./plugins/markdown-history-plugin";
 import { MarkdownPresencePlugin } from "./plugins/markdown-presence-plugin";
 import type { MarkdownSectionNavigation } from "./plugins/markdown-section-navigation";
@@ -41,6 +42,8 @@ const INITIAL_IMPORT_TAG = "markdown-initial-import";
 export interface MarkdownEditorProps {
   ariaLabel?: string;
   autoFocus?: boolean;
+  /** Decide whether to take focus when the document first becomes editable. */
+  focusOnOpen?: (root: HTMLElement) => boolean;
   debug?: boolean;
   defaultState: string;
   fullWidth?: boolean;
@@ -59,6 +62,7 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
   const {
     ariaLabel,
     autoFocus = false,
+    focusOnOpen,
     debug = false,
     defaultState = "",
     fullWidth = false,
@@ -126,7 +130,8 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
                 onActiveSectionChange={onActiveSectionChange}
               />
             ) : null}
-            {autoFocus ? <AutoFocusPlugin /> : null}
+            {autoFocus && <AutoFocusPlugin />}
+            {!autoFocus && focusOnOpen && <MarkdownFocusOnOpenPlugin shouldFocus={focusOnOpen} />}
             {!collaboration && <MarkdownHistoryPlugin />}
             <LinkPlugin />
             <ListPlugin />

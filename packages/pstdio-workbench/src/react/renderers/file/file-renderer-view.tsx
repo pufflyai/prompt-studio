@@ -1,5 +1,5 @@
 import { Box, Button, Center, Flex, Text } from "@chakra-ui/react";
-import { useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import type {
   RegisteredFileRendererContribution,
   WorkbenchCore,
@@ -106,6 +106,10 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
     authority,
   });
   const rendererRef = useRef<HTMLDivElement>(null);
+  const focusHandoff = useRef({ cacheKey, attempted: false });
+  useLayoutEffect(() => {
+    if (focusHandoff.current.cacheKey !== cacheKey) focusHandoff.current = { cacheKey, attempted: false };
+  }, [cacheKey]);
   useFileSectionSelection(workbench, resource, sectionNavigation);
   const currentLoaded = isCurrentLoadedFile(loaded, loadKey) ? loaded : null;
   const loadError = error?.loadKey === loadKey ? error.message : undefined;
@@ -162,6 +166,23 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
           content={currentLoaded}
           position={position}
           editorKey={editorKey}
+          focusOnOpen={(editor) => {
+            // Refreshes can remount the editor without opening another document.
+            if (focusHandoff.current.attempted) return false;
+            focusHandoff.current.attempted = true;
+            const panelRegion = props.presentationInput?.panel.region;
+            const region = editor.closest("[data-workbench-focus-region]");
+            const active = editor.ownerDocument.activeElement;
+            return (
+              open &&
+              props.presentationInput?.visible !== false &&
+              workbench.activation.isActive() &&
+              !workbench.keyboard.store.getState().active &&
+              workbench.focus.getActiveRegion() === panelRegion &&
+              region?.getAttribute("data-workbench-focus-region") === panelRegion &&
+              (active === region || active === editor.ownerDocument.body)
+            );
+          }}
           errorNotice={errorNotice}
           contributionCanSave={Boolean(contribution.save)}
           onActiveSectionChange={

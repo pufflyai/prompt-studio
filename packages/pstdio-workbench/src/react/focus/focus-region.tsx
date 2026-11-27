@@ -28,6 +28,7 @@ export const WorkbenchFocusRegion = (props: WorkbenchFocusRegionProps) => {
     <Box
       ref={ref}
       tabIndex={-1}
+      data-workbench-focus-region={region}
       outline="none"
       position="relative"
       onFocusCapture={(event) => {
