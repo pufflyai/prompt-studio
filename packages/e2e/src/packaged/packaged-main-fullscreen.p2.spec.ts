@@ -61,9 +61,10 @@ test("packaged Main fullscreen exits with Escape and resets on reload", async ()
     const project = (await response.json()) as { id: string };
     await expect(page.getByRole("option", { name: "Home", exact: true })).toBeVisible();
     await expect(homePage(page)).toBeVisible();
-    const closeSide = page.getByRole("button", { name: "Close Side Panel", exact: true });
-    await expect(closeSide).toBeVisible();
-    await closeSide.click();
+    const attachedSide = page.getByTestId("workbench-side-panel-attached");
+    await expect(attachedSide).toBeVisible();
+    await page.getByRole("button", { name: "Hide Side Panel", exact: true }).click();
+    await expect(attachedSide).toBeHidden();
     const enter = page.getByRole("button", { name: "Enter Main fullscreen", exact: true });
     await enter.click();
     await expect(page.getByRole("button", { name: "Exit Main fullscreen", exact: true })).toBeVisible();
