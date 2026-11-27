@@ -2,7 +2,11 @@ import { Button, HStack, Spinner, Text } from "@chakra-ui/react";
 import { AlertMessage } from "@pstdio/ui";
 import { useSyncExternalStore } from "react";
 import type { WorkbenchCore } from "../../core";
-import type { OperationRecovery, OperationSourceCommand } from "../../core/registries/mutations/operation-types";
+import type {
+  OperationPreview,
+  OperationRecovery,
+  OperationSourceCommand,
+} from "../../core/registries/mutations/operation-types";
 import { getWorkbenchOperations } from "../../core/registries/mutations/operations";
 import { getWorkbenchQueries } from "../../core/workbench-queries";
 import { extensionCommandOperation } from "../../extensions/host/workbench-command-operation";
@@ -14,6 +18,9 @@ const inProject = (entry: { projectId?: string }, projectId?: string) =>
 
 const isVisibleRecovery = (entry: OperationRecovery, projectId?: string) =>
   entry.projectUnavailable || inProject(entry, projectId);
+
+const isVisibleProgress = (entry: OperationPreview, projectId?: string) =>
+  entry.showPending && inProject(entry, projectId) && entry.status !== "unknown" && entry.status !== "unconfirmed";
 
 const findVisibleRecovery = (workbench: WorkbenchCore, id: symbol) => {
   const operations = getWorkbenchOperations(getWorkbenchQueries(workbench));
@@ -35,14 +42,13 @@ export const useOperationActivity = (workbench: WorkbenchCore) => {
   const projectId = useWorkbenchStore(workbench.pages.store, (state) => state.projectId);
   const snapshot = useSyncExternalStore(operations.subscribe, operations.getSnapshot, operations.getSnapshot);
   return {
-    pending: snapshot.pending.filter(
-      (entry) =>
-        entry.showPending &&
-        inProject(entry, projectId) &&
-        entry.status !== "unknown" &&
-        entry.status !== "unconfirmed",
-    ),
+    pending: snapshot.pending.filter((entry) => isVisibleProgress(entry, projectId)),
     recovery: snapshot.recovery.filter((entry) => isVisibleRecovery(entry, projectId)),
+    dismissProgress: (id: symbol) => {
+      const currentProject = workbench.pages.store.getState().projectId;
+      if (operations.getSnapshot().pending.some((entry) => entry.id === id && isVisibleProgress(entry, currentProject)))
+        operations.dismissProgress(id);
+    },
     dismissRecovery: (id: symbol) => dismissVisibleRecovery(workbench, id),
   };
 };

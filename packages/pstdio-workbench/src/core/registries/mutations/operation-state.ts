@@ -38,6 +38,12 @@ export const emptySnapshot: OperationSnapshot = { pending: [], recovery: [] };
 export const recoveryStatus = (status: OperationPreview["status"]) =>
   status === "unknown" || status === "rejected" || status === "unconfirmed" ? status : undefined;
 
+export const dismissOperationProgress = (entry: Entry | undefined, owner: string) => {
+  if (entry?.owner !== owner || !entry.preview.showPending || recoveryStatus(entry.preview.status)) return false;
+  entry.preview = { ...entry.preview, showPending: undefined };
+  return true;
+};
+
 export const changeStatus = (entry: Entry, status: OperationPreview["status"]) => {
   entry.preview = { ...entry.preview, status, intent: status === "rejected" ? undefined : entry.preview.intent };
 };

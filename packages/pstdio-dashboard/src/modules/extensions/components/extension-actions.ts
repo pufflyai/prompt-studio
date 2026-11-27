@@ -26,7 +26,7 @@ const needsUpgradeReview = (error: unknown) =>
   error instanceof PstdioApiError && error.code === extensionUpgradeNeedsReviewCode;
 
 const domain = "extension.inventory";
-const unresolvedHint = "Inspect Extensions or discard this attempt in System activity.";
+const unresolvedHint = "Inspect Extensions, or use System activity or Recover changes to discard this attempt.";
 
 export const canStartExtensionUpgrade = (action?: ExtensionActionState) =>
   !action?.needsReview && action?.status !== "running" && action?.status !== "queued" && action?.retryable !== false;

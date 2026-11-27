@@ -1,6 +1,7 @@
 import { type QueryScope, type ResourceRef, resourceKey, type ScopedQueryClient } from "@pstdio/sdk/extensions";
 import {
   changeStatus,
+  dismissOperationProgress,
   type Entry,
   emptySnapshot,
   initialPreview,
@@ -24,8 +25,8 @@ export class OperationCapacityError extends Error {
   constructor(otherAuthority = false) {
     super(
       otherAuthority
-        ? "The workbench is holding its limit of pending changes and drafts. Free space in System activity, or switch to the account that owns the other drafts."
-        : "The workbench is holding its limit of pending changes and drafts. Open the project's System activity to recover a draft and free space.",
+        ? "The workbench is holding its limit of pending changes and drafts. Use System activity or Recover changes to free space, or switch to the account that owns the other drafts."
+        : "The workbench is holding its limit of pending changes and drafts. Use System activity or Recover changes to recover a draft and free space.",
     );
     this.name = "OperationCapacityError";
   }
@@ -160,14 +161,12 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
     const previousOwner = owner;
     owner = operationAuthorityKey(scope);
     retireOperations(entries.values(), retired, owner !== previousOwner ? owner : undefined);
-    publish();
-    schedule();
+    changed();
   });
 
   const findRecovery = (id: symbol) => {
     const entry = entries.get(id);
-    if (entry?.owner === owner && recoveryStatus(entry.preview.status) && !queries.isDisposed()) return entry;
-    return undefined;
+    return entry?.owner === owner && recoveryStatus(entry.preview.status) && !queries.isDisposed() ? entry : undefined;
   };
 
   const clearDraft = (entry: Entry) => {
@@ -312,6 +311,9 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
         const entry = version === authorityVersion && findRecovery(id);
         if (entry && entry.preview.status !== "rejected") finish(entry);
       };
+    },
+    dismissProgress(id: symbol) {
+      if (!queries.isDisposed() && dismissOperationProgress(entries.get(id), owner)) publish();
     },
     dismiss(id: symbol) {
       const entry = findRecovery(id);

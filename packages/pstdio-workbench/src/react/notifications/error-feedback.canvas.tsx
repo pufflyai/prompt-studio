@@ -1,6 +1,6 @@
 import { Box, Button, HStack, Stack } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { createWorkbench } from "../../core";
 import { getWorkbenchOperations } from "../../core/registries/mutations/operations";
 import { getWorkbenchQueries } from "../../core/workbench-queries";
@@ -16,6 +16,7 @@ const ErrorFeedback = (props: {
   showLocalFailure?: boolean;
 }) => {
   const { errorCount = 0, longMessages = false, statusHidden = false, showLocalFailure = false } = props;
+  const finishOperation = useRef<() => void>(undefined);
   const [workbench] = useState(() => {
     const workbench = createWorkbench();
     if (statusHidden) {
@@ -108,6 +109,30 @@ const ErrorFeedback = (props: {
           }}
         >
           Report failed upgrade
+        </Button>
+        <Button
+          size="sm"
+          onClick={() => {
+            if (finishOperation.current) return;
+            const result = Promise.withResolvers<void>();
+            finishOperation.current = () => {
+              finishOperation.current = undefined;
+              result.resolve();
+            };
+            const operations = getWorkbenchOperations(getWorkbenchQueries(workbench));
+            void operations.submit({
+              domain: "canvas.example",
+              subjects: ["report"],
+              title: "Publish report",
+              showPending: true,
+              write: () => result.promise,
+            }).result;
+          }}
+        >
+          Start operation
+        </Button>
+        <Button size="sm" onClick={() => finishOperation.current?.()}>
+          Finish operation
         </Button>
         <Button size="sm" onClick={() => workbench.notifications.dismiss("extension-crash")}>
           Recover system
