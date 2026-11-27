@@ -26,6 +26,7 @@ const fixture = (
     startupUrl?: (worker: number) => string | undefined;
     onWorkerReady?: (worker: number) => void;
     beforeWorkerTermination?: (worker: number) => Promise<void> | undefined;
+    watchCleanupMarker?: string;
   } = {},
 ) => {
   let workers = 0;
@@ -34,10 +35,9 @@ const fixture = (
     () => {
       const index = ++workers;
       const startupUrl = options.startupUrl?.(index);
-      const worker = new Worker(
-        new URL("./preparation-worker.fixture.ts", import.meta.url),
-        startupUrl ? { workerData: { startupUrl } } : {},
-      );
+      const worker = new Worker(new URL("./preparation-worker.fixture.ts", import.meta.url), {
+        workerData: { startupUrl, watchCleanupMarker: options.watchCleanupMarker },
+      });
       if (options.onWorkerReady)
         worker.on("message", (message) => {
           if (message.kind === "ready") options.onWorkerReady?.(index);
@@ -373,6 +373,20 @@ test("worker exit settles active and queued callers, and a new request can recov
   expect(((await failed) as Error).message).toContain("exited");
   expect(((await queued) as Error).message).toContain("exited");
   expect(await client.run("value", { name: "recovered" })).toMatchObject({ name: "recovered" });
+});
+
+test("shutdown closes preparation watches before retiring their worker", async () => {
+  const root = mkdtempSync(join(tmpdir(), "pstdio-preparation-watch-stop-"));
+  const marker = join(root, "watch-closed");
+  const client = fixture({ watchCleanupMarker: marker });
+  try {
+    await client.run("value", {});
+    await client.stop();
+    expect(readFileSync(marker, "utf8")).toBe("closed");
+  } finally {
+    await client.stop();
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test("shutdown settles pending work even when extension evaluation never resolves", async () => {
