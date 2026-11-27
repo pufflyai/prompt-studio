@@ -16,7 +16,7 @@ import { createTerminalShellState } from "./terminal-shell-state";
 
 // Single-consumer async queue bridging Bun.Terminal callbacks to events().
 // `exit` is pushed last, then close() ends iteration.
-const createEventQueue = () => {
+export const createEventQueue = () => {
   const buffer: TerminalEvent[] = [];
   let closed = false;
   let wake: (() => void) | null = null;
@@ -29,6 +29,7 @@ const createEventQueue = () => {
 
   return {
     push(event: TerminalEvent) {
+      if (closed) return;
       buffer.push(event);
       notify();
     },

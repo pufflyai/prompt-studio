@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import type { ExtensionLoggerApi, TerminalEvent } from "pstdio-api-contracts/extension-kernel";
-import { createTerminalSupervisor } from "./extension-terminal-runtime";
+import { createEventQueue, createTerminalSupervisor } from "./extension-terminal-runtime";
 
 interface LogRecord {
   message: string;
@@ -57,6 +57,18 @@ const waitForInitialOutput = async (events: TerminalEvent[]) => {
     await Bun.sleep(10);
   }
 };
+
+test("ignores PTY data that arrives after the exit event", async () => {
+  const queue = createEventQueue();
+  const events = queue.drain();
+  const exit = { kind: "exit", code: 0, signal: null } as const;
+  queue.push(exit);
+  queue.close();
+
+  expect(await events.next()).toEqual({ done: false, value: exit });
+  queue.push({ kind: "data", chunk: Uint8Array.of(65) });
+  expect((await events.next()).done).toBe(true);
+});
 
 test("stops accepting terminal input and resize when shutdown begins", async () => {
   const { logger } = createRecordingLogger();
