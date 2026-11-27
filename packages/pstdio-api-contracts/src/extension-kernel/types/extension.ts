@@ -247,6 +247,8 @@ export interface ExtensionConnectionContribution extends ContributionDefinition<
   check?: {
     method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
     path: string;
+    /** Protocol headers needed by the health endpoint, such as an API version. */
+    headers?: Record<string, string>;
   };
   supportsStreaming?: boolean;
 }

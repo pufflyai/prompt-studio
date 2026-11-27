@@ -225,7 +225,11 @@ export const createExtensionConnectionRequestService = (
       throw new Error(`Connection does not declare a check: ${input.connectionId}`);
     await request({
       ...input,
-      input: { method: contribution.check.method, path: contribution.check.path },
+      input: {
+        method: contribution.check.method,
+        path: contribution.check.path,
+        headers: contribution.check.headers,
+      },
     }).catch(() => undefined);
     const stored = await deps.connectionsDBService.get(connectionKey(input, contribution.scope));
     if (!stored) throw new Error(`Connection is not configured: ${input.connectionId}`);
