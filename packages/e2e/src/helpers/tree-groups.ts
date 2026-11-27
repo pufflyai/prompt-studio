@@ -23,11 +23,13 @@ export const verifyTreeGroups = async (page: Page, tree: Locator, source: Locato
   await page.mouse.down();
   await page.mouse.move(from.x + 40, from.y + from.height / 2 + 8, { steps: 4 });
   await page.mouse.move(from.x + 40, to.y + to.height / 2, { steps: 12 });
-  // A long tree auto-scrolls near its edge and moves the group, so follow it until it stops moving.
+  // A long tree auto-scrolls near its edge, and late navigation contributions insert rows above
+  // the group, so follow it until the pointer rests on it and it offers the drop.
   await expect(async () => {
     const before = (await group.boundingBox())!;
     await page.mouse.move(from.x + 40, before.y + before.height / 2);
     expect((await group.boundingBox())!.y).toBe(before.y);
+    await expect(tree.locator("[data-tree-list-drop-group]")).toHaveCount(1, { timeout: 1_000 });
   }).toPass();
   await expect(tree.locator("[data-tree-list-drop-group]")).toHaveCount(1);
   await page.mouse.up();
