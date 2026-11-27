@@ -1,6 +1,7 @@
+import { mkdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { isMainThread } from "node:worker_threads";
-import { isPackagedRuntime } from "pstdio-paths";
+import { isPackagedRuntime, resolvePstdioHome } from "pstdio-paths";
 import { withExtensionWebviewBuildSlot } from "./extension-webview-builder";
 import { runCommand } from "./install-extension-dependencies";
 import { hashWebviewDependencyInputsAsync } from "./webview-dependency-inputs";
@@ -14,6 +15,9 @@ export const inspectWebviewDependencyInputs = async (
   batch = false,
 ) => {
   signal?.throwIfAborted();
+  // Managed callers own recoverable compiler stages even with an external DB.
+  // The standalone inspector bypasses this boundary and leaves the app home untouched.
+  mkdirSync(resolvePstdioHome(), { recursive: true });
   if (isMainThread) return hashWebviewDependencyInputsAsync(packagePath, entryPaths, batch);
   return withExtensionWebviewBuildSlot(async () => {
     signal?.throwIfAborted();

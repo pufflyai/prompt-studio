@@ -13,7 +13,7 @@ import {
 import { tmpdir } from "node:os";
 import { basename, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { promisify } from "node:util";
-import { isPackagedRuntime } from "pstdio-paths";
+import { isPackagedRuntime, resolvePstdioHome } from "pstdio-paths";
 import { trackPreparationStage } from "./preparation-stages";
 import { extensionWebviewBuildOptions } from "./webview-build-options";
 import { createNativeWebviewIdentity, nativeWebviewContext } from "./webview-native-context";
@@ -21,7 +21,9 @@ import { createNativeWebviewIdentity, nativeWebviewContext } from "./webview-nat
 const execute = promisify(execFile);
 const createBuild = (packagePath: string, entryPaths: string[], batch: boolean) => {
   const root = realpathSync(mkdtempSync(join(tmpdir(), "pstdio-webview-input-build-")));
-  const stage = trackPreparationStage([root]);
+  // Managed preparation already owns a home. A standalone inspection must not
+  // initialize one just to register its temporary compiler output.
+  const stage = existsSync(resolvePstdioHome()) ? trackPreparationStage([root]) : undefined;
   mkdirSync(join(root, "entries"));
   // One unsplit inspection entry avoids duplicate output and Bun's path-based split-entry IDs.
   const wrapper = join(root, "entries", "inspection.ts");
@@ -144,7 +146,7 @@ const createBuild = (packagePath: string, entryPaths: string[], batch: boolean) 
     digest,
     close: () => {
       rmSync(root, { recursive: true, force: true });
-      stage.release();
+      stage?.release();
     },
   };
 };

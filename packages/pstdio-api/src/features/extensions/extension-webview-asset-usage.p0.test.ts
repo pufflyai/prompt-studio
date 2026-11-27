@@ -150,3 +150,39 @@ test("resolves the requested view's current entry stylesheet after checking its 
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("observes a replacement failure reported while preparing an entry request", async () => {
+  const root = mkdtempSync(join(tmpdir(), "webview-current-failure-"));
+  const sourcePath = join(root, "extension");
+  const cacheRoot = join(root, "cache");
+  const source = {
+    id: "installed-lab",
+    install_name: "extension-lab",
+    source_path: sourcePath,
+    last_error_json: undefined as unknown,
+  };
+  writeExtension(sourcePath, "./src/main.tsx");
+  const dist = join(cacheRoot, "installed-lab", "pstdio.lab.view.labPage", "dist");
+  mkdirSync(dist, { recursive: true });
+  writeFileSync(join(dist, "module.js"), "export default 'previous';");
+  const app = createApp({
+    cacheRoot,
+    sourcePath,
+    sources: [source],
+    ensureWebviews: async () => {
+      source.last_error_json = {
+        code: "extension_webview_build_failed",
+        webviewId: "pstdio.lab.view.labPage",
+        message: "Current replacement failed",
+      };
+    },
+  });
+  try {
+    const entry = await app.request(`${webviewBasePath}/assets/module.js`);
+    expect(entry.status).toBe(200);
+    expect(await entry.text()).toContain("Current replacement failed");
+    expect((await app.request(`${webviewBasePath}/stylesheet`)).status).toBe(404);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
