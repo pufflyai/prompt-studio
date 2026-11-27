@@ -28,6 +28,7 @@ interface EditingDocument {
   version: number;
   revision: number;
   savedRevision: number;
+  resetVersion?: number;
   save: WebviewCommandsExecuteParams;
   execute: (input: WebviewCommandsExecuteParams) => Promise<unknown>;
   members: Set<Member>;
@@ -51,6 +52,7 @@ const snapshot = (document: EditingDocument) =>
     version: document.version,
     revision: document.revision,
     savedRevision: document.savedRevision,
+    ...(document.resetVersion === undefined ? {} : { resetVersion: document.resetVersion }),
   }) satisfies WebviewEditingSnapshot;
 const publish = (document: EditingDocument, accepted?: { member: Member; sequence: number }) => {
   document.version++;
@@ -234,6 +236,7 @@ export const createLegacyEditingSessions = (retiring: () => boolean) => {
             draft.value = structuredClone(draft.saved);
             draft.revision = draft.savedRevision;
             draft.previews.clear();
+            draft.resetVersion = draft.version + 1;
             publish(draft);
           },
         });
