@@ -68,6 +68,8 @@ interface LiveConnectionInput {
   projectId: string;
   access: () => Promise<{ token: string; expiresAt: string }>;
   signal: AbortSignal;
+  /** Drop old team sync attempts and their keys when the socket lease expires. */
+  restartSyncOnRenewal?: boolean;
   onError?: () => void;
   onStatusChange?: () => void;
 }
@@ -130,7 +132,8 @@ export const createLiveConnection = (input: LiveConnectionInput) => {
     calls.clear();
     for (const invocation of invocations.values()) invocation.abort();
     invocations.clear();
-    for (const listener of listeners) listener({ type: "disconnected", reason });
+    const syncReason = reason === "renewal" && input.restartSyncOnRenewal ? "offline" : reason;
+    for (const listener of listeners) listener({ type: "disconnected", reason: syncReason });
   };
   const result = (event: Extract<LiveServerMessage, { type: "result" | "call-error" }>) => {
     const call = calls.get(event.id);

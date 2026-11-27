@@ -97,6 +97,14 @@ for this host.
 
 Installs and updates are explicit. Source that appears in the extensions root is never adopted on its own.
 
+Team owners can require a frozen package through **Settings → Managed extensions**. The host installs
+that verified revision automatically in projects the signed-in member can access. Extension inventory
+reports `choiceRestriction` for the project's enablement choice and `sourceRestriction` for updating,
+reloading or uninstalling a source shared with a required team instance. `team-managed` explains the
+owner's requirement; `policy-unavailable` means Cloud access must be verified first. A personal instance
+can remain disableable while its shared source is protected. These optional presentation fields refresh
+with account policy changes; the native host authorizes every mutation again.
+
 Packaged builds include their host catalog extension sources and lockfiles. These install from the app's bundled packages and retain the build's source commit. Registry packages and local folder installs also work without Git.
 
 Explicit Git refs and other repository sources use the system Git executable. When Git is missing or cannot run, Git workspaces are unavailable and explicit Git operations report that Git is required. On macOS, the host checks the selected developer tools before invoking Apple's Git stub, so normal startup does not open the developer-tools installer.
@@ -122,10 +130,8 @@ Explicit Git refs and other repository sources use the system Git executable. Wh
   source. Registry inventory can prefetch both before the user clicks. Those artifacts skip
   dependency installation and webview builds when they match the selected release and host.
   Source-only releases still prepare and validate on the device.
-- After a managed upgrade reports **Local files kept**, choose **Review upgrade** to compare
-  the local, original, and incoming files. The review combines independent edits and asks for
-  choices where both versions changed the same content. **Apply upgrade** validates the staged
-  result and checks the live source again before replacing it.
+- A catalog extension rediscovered in its standard user installation folder can upgrade directly when the entire folder matches a previously installed release. The host checks that fingerprint again before replacing files.
+- When the original source cannot be verified, **Choose version** lets you keep the current provider or use the published version. A verified difference from the original enables conflict resolution. The review combines independent edits and **Apply upgrade** checks the live source again before replacement.
 - **Resolve with agent** opens an unsent session draft containing the staged comparison.
   Edit and send it, then paste the reply into **Import agent proposal**. The review checks the
   proposal's revision and lets you inspect or validate it before applying. Closing the
@@ -525,6 +531,8 @@ sync through the owner's encrypted record stream
 ([ADR 0102](../../adrs/0102-record-stream-sync.md)). Each package travels as an encrypted
 blob before the save that uses it. The relay cannot read extension names, versions or
 code.
+
+In a team Cloud project, the team owner can publish, roll back, enable, disable, or remove an extension from the shared set. This requires an active device and project grant. Project members can install and adopt the shared package, use it, and keep private source overrides.
 
 Installing, editing and reloading a source stay local. Explicitly publish a portable
 source when other devices should use it:

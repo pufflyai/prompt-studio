@@ -18,17 +18,26 @@ if (rawArgs.length === 1 && rawArgs[0] === "extension-input-inspector") {
   await runExtensionInputInspector();
 } else if (rawArgs.length === 1 && rawArgs[0] === "extension-backend-worker") {
   // Extension backend code runs here, outside the API process and without its environment secrets.
-  const { runBackendWorker } = await import("pstdio-extensions");
+  const { runBackendWorker } = await import("pstdio-extensions/preparation-server");
   runBackendWorker();
 } else if (rawArgs.length === 1 && rawArgs[0] === "extension-bundler") {
   // Bundling can run extension macros, so it runs here with the extension's environment, not the host's.
-  const { runBundleChild } = await import("pstdio-extensions");
+  const { runBundleChild } = await import("pstdio-extensions/preparation-server");
   await runBundleChild();
 } else if (rawArgs.length === 1 && rawArgs[0] === "performance-observer") {
   // The desktop's private sampler must answer its first probe without loading
   // commands, the API, and embedded extension assets alongside the starting app.
   const { runProcessObserver } = await import("./features/performance/process-observer");
   await runProcessObserver();
+} else if (rawArgs[0] === "serve") {
+  const { exit } = bindCliOutput();
+  const { shouldLoadEmbedManifest } = await import("./features/should-load-embed-manifest");
+  if (shouldLoadEmbedManifest()) await import("./_embed-manifest.generated");
+  const [{ createCliParser, parseCli }, serve] = await Promise.all([
+    import("./cli-parser"),
+    import("./adapters/cli/commands/serve"),
+  ]);
+  await parseCli(createCliParser(rawArgs).command(serve), exit);
 } else {
   // Bind before importing commands: their defaults capture `console.log` when they load.
   const { exit } = bindCliOutput();

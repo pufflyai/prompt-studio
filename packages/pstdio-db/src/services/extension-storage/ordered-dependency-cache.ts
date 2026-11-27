@@ -1,15 +1,15 @@
 import { and, eq, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import type { OrderedDecision } from "pstdio-sync/records";
+import { readLegacyEpoch } from "../../db/dependency-marker-upgrade";
 import { storage_ordered_operations as operations, owners } from "../../db/schemas.pg";
-import { readOrderedMarker } from "./ordered-native-metadata";
 import type { OrderedTransaction } from "./ordered-sql";
 import type { RetainedOperation } from "./retained-operations";
 import { storageOwnerWhere } from "./storage-owner-key";
 
-const marker = (id: string) => JSON.stringify(["ordered-dependency", id]);
 type Coordinates = Pick<typeof operations.$inferSelect, "admission_epoch" | "settled_epoch" | "receipt_epoch"> & {
   pending: boolean;
+  ownerId: number;
 };
 
 /** Foreign receipts need a selected epoch without claiming ownership of another host's command. */
@@ -33,9 +33,10 @@ export const createOrderedDependencyCache = (
       if (admitted) return admitted;
     }
     if (row?.receipt_epoch) return exact(id, row.receipt_epoch);
-    // Released homes retain the original selector until their document archive is restored.
-    const remembered = await readOrderedMarker<{ epoch: string }>(tx, owner, marker(id));
-    return remembered ? exact(id, remembered.value.epoch) : undefined;
+    if (row) {
+      const legacy = await readLegacyEpoch(tx, { ...owner, id: row.ownerId }, id);
+      if (legacy) return exact(id, legacy);
+    }
   };
   return {
     async remember(decision: OrderedDecision) {
@@ -48,6 +49,7 @@ export const createOrderedDependencyCache = (
       const [current] = await tx
         .select({
           epoch: owners.epoch,
+          ownerId: owners.id,
           id: operations.operation_id,
           pending: sql<boolean>`${operations.envelope} IS NOT NULL`,
           admission_epoch: operations.admission_epoch,
@@ -63,7 +65,7 @@ export const createOrderedDependencyCache = (
       if (current && current.id !== null) row = current;
       else {
         const saved = await retained(id);
-        if (saved) row = { ...saved, pending: false };
+        if (saved) row = { ...saved, ownerId: saved.owner_id, pending: false };
       }
       // This device's own save that never entered an order has no decision anywhere yet.
       if (row?.pending && !row.admission_epoch && !row.settled_epoch) return undefined;

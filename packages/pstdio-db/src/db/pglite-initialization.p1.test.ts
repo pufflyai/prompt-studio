@@ -15,7 +15,7 @@ test("source memory creation loads full ICU only for the active engine", async (
       return super.arrayBuffer();
     }
   }
-  const db = await openPglite(":memory:", { ...runtime, icuDataDir: new CountedLocaleData([runtime.icuDataDir]) });
+  const db = await openPglite(":memory:", { ...runtime, icuDataDir: new CountedLocaleData([runtime.icuDataDir!]) });
   try {
     await db.waitReady;
     expect(fullDataReads).toBe(1);
@@ -57,7 +57,7 @@ test("first creation loads runtime assets once for the active engine and support
   const options = {
     ...runtime,
     fsBundle: new CountedRuntimeData([Bun.file(join(packageRoot, "dist/pglite.data"))]),
-    icuDataDir: new CountedLocaleData([runtime.icuDataDir]),
+    icuDataDir: new CountedLocaleData([runtime.icuDataDir!]),
   };
   try {
     await prepareCurrentPgliteHome({ activePath: path, runtime: options, embedded: [], onImageRestored: () => {} });

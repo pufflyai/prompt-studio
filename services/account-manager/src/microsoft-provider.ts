@@ -29,7 +29,12 @@ export const microsoftAccountIdentity = (key: string) => {
   return subject.success ? { issuer: microsoftIssuer(subject.data.tid), subject: subject.data.sub } : null;
 };
 
-export const microsoftSignIn = (clientId: string): BetterAuthPlugin => ({
+type DirectoryClaim = { issuer: string; subject: string; tenantId: string; objectId: string };
+
+export const microsoftSignIn = (
+  clientId: string,
+  rememberDirectoryClaim: (claim: DirectoryClaim) => Promise<boolean>,
+): BetterAuthPlugin => ({
   id: "cloud-microsoft-sign-in",
   init(context) {
     const provider = context.socialProviders.find(({ id }) => id === "microsoft");
@@ -74,6 +79,18 @@ export const microsoftSignIn = (clientId: string): BetterAuthPlugin => ({
         });
         const profile = claims.parse(payload);
         if (payload.aud !== clientId || profile.nonce !== expectedIdTokenNonce) return null;
+
+        const objectId = z.string().toLowerCase().pipe(z.guid()).safeParse(payload.oid);
+        if (
+          objectId.success &&
+          !(await rememberDirectoryClaim({
+            issuer,
+            subject: profile.sub,
+            tenantId: profile.tid,
+            objectId: objectId.data,
+          }))
+        )
+          return null;
 
         // Better Auth requires a unique email. Use a reserved provider-scoped value so unverified
         // and optional email claims cannot occupy another provider's address or block account creation.

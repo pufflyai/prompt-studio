@@ -28,5 +28,15 @@ export const createRequestQuietPeriod = () => {
       if (!read) lastWrite = Date.now();
     }
   };
-  return { observe, isQuiet: () => active === 0 && Date.now() - lastWrite >= QUIET_PERIOD_MS };
+  const isQuiet = () => active === 0 && Date.now() - lastWrite >= QUIET_PERIOD_MS;
+  const whenQuiet = (run: () => void) => {
+    const timer = setInterval(() => {
+      if (!isQuiet()) return;
+      clearInterval(timer);
+      run();
+    }, QUIET_PERIOD_MS);
+    timer.unref();
+    return () => clearInterval(timer);
+  };
+  return { observe, isQuiet, whenQuiet };
 };

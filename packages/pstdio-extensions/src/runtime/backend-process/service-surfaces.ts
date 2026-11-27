@@ -94,6 +94,8 @@ export const serviceSurfaces: Members = {
     calls(
       "status",
       "createTeam",
+      "readTeamMembership",
+      "writeTeamMembership",
       "login",
       "loginStatus",
       "cancelLogin",

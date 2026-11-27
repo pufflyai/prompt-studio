@@ -4,6 +4,7 @@ import { testUtils } from "better-auth/plugins";
 import * as schema from "./auth-schema";
 import { connectManager } from "./database";
 import { createManagerAuthentication } from "./manager-authentication";
+import { googleIdentityClaims } from "./schema";
 
 export const authenticationConfig = (
   databaseUrl: string,
@@ -49,6 +50,9 @@ export const createAuthenticationFixture = (
         createdAt: new Date(),
         updatedAt: new Date(),
       });
+      await connection.db
+        .insert(googleIdentityClaims)
+        .values({ subject, verifiedEmail: email.toLowerCase(), issuedAt: Math.floor(Date.now() / 1000) });
       return { ...(await test.login({ userId: user.id })), subject };
     },
     close: () => Promise.all([auth.close(), connection.close()]),

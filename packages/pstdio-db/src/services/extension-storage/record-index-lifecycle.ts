@@ -1,8 +1,10 @@
 import { type SQL, sql } from "drizzle-orm";
+import { resourceActivityOwnerId } from "pstdio-api-contracts";
 import type { StorageOwner } from "pstdio-sync";
 import { fingerprint, type Json, type StorageRecordIndex } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import { dropCountIndex, installCountIndex } from "./record-count-index";
+import { formatDatabasePrefix } from "./record-format-key";
 import { saveRecordIndexRow, recordIndexRows as storage_record_indexes } from "./record-index-rows";
 import { encodeProjectionValue } from "./record-projection-codec";
 import { arrayIndexFields, recordFieldSql, recordIndexKeys, recordScopeSql } from "./record-query-sql";
@@ -14,7 +16,10 @@ export const dropRecordIndexObjects = async (
   layout: "released" | "current" = "current",
 ) => {
   for (const index of indexes) {
-    const countedLayout = index.database_name.startsWith("storage_query_v4_");
+    // Query definitions and formatting caches are metadata, with no SQL objects to drop.
+    if (index.database_name.startsWith("storage_view_") || index.database_name.startsWith(formatDatabasePrefix))
+      continue;
+    const countedLayout = /^storage_(?:query|host)_v4_[a-f0-9]{32}$/.test(index.database_name);
     if (countedLayout) await dropCountIndex(db, index.definition, index.database_name, layout);
     await db.execute(sql`DROP INDEX IF EXISTS ${sql.identifier(index.database_name)}`);
     await db.execute(sql`DROP INDEX IF EXISTS ${sql.identifier(`${index.database_name}_o`)}`);
@@ -41,8 +46,37 @@ export const dropRecordIndexes = async (db: Pick<DbClient, "select" | "execute">
 export const recordIndexName = async (
   owner: StorageOwner & { ownerId?: number; coreOwnerId?: number | null },
   index: StorageRecordIndex,
-) =>
-  `storage_query_${index.countBy?.length || index.alternateOrders?.length ? "v4" : "v3"}_${(await fingerprint({ owner: { workbenchId: owner.workbenchId, extensionId: owner.extensionId, ownerId: owner.ownerId ?? null }, coreOwnerId: index.identity ? (owner.coreOwnerId ?? null) : null, integerOwner: "v1", definition: index as unknown as Json, recordIdentityOrder: "prefix-v1" })).slice(0, 32)}`;
+) => {
+  // Preserve the physical names of released core Activity indexes across upgrades.
+  const prefix = owner.extensionId === resourceActivityOwnerId ? "storage_query" : "storage_host";
+  const layout = index.countBy?.length || index.alternateOrders?.length ? "v4" : "v3";
+  const digest = await fingerprint({
+    owner: { workbenchId: owner.workbenchId, extensionId: owner.extensionId, ownerId: owner.ownerId ?? null },
+    coreOwnerId: index.identity ? (owner.coreOwnerId ?? null) : null,
+    integerOwner: "v1",
+    definition: index as unknown as Json,
+    recordIdentityOrder: "prefix-v1",
+  });
+  return `${prefix}_${layout}_${digest.slice(0, 32)}`;
+};
+
+/** A definition identifies a query and its cursor generation without allocating a SQL object. */
+export const queryDefinitionName = async (owner: StorageOwner, ownerId: number, index: StorageRecordIndex) =>
+  `storage_view_${await fingerprint([owner.workbenchId, owner.extensionId, ownerId, index as unknown as Json])}`;
+
+export const saveQueryDefinition = async (
+  tx: Pick<DbClient, "execute" | "insert" | "select">,
+  owner: StorageOwner,
+  index: StorageRecordIndex,
+) => {
+  const ownerId = await ensureStorageOwner(tx, owner);
+  await saveRecordIndexRow(tx, {
+    owner_id: ownerId,
+    name: index.name,
+    database_name: await queryDefinitionName(owner, ownerId, index),
+    definition: encodeProjectionValue(index as unknown as Json) as unknown as StorageRecordIndex,
+  });
+};
 
 export const installRecordIndex = async (
   tx: Pick<DbClient, "execute" | "insert" | "select">,

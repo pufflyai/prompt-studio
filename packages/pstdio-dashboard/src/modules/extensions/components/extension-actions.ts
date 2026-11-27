@@ -22,6 +22,17 @@ export interface ExtensionUpgradeBatch {
 const failureLabel = (label: string | ((error: unknown) => string), error: unknown) =>
   typeof label === "function" ? label(error) : label;
 
+export const confirmedExtensionEdits = (error: unknown) => {
+  if (!(error instanceof PstdioApiError) || error.code !== extensionUpgradeNeedsReviewCode) return false;
+  const details = error.details;
+  return (
+    typeof details === "object" &&
+    details !== null &&
+    "localEditsConfirmed" in details &&
+    details.localEditsConfirmed === true
+  );
+};
+
 const needsUpgradeReview = (error: unknown) =>
   error instanceof PstdioApiError && error.code === extensionUpgradeNeedsReviewCode;
 
@@ -172,6 +183,7 @@ export const createExtensionActions = (tracker?: InventoryTracker) => {
         status: "error",
         label: failureLabel(labels.failed, error),
         needsReview: needsUpgradeReview(error),
+        localEditsConfirmed: confirmedExtensionEdits(error),
         error: error instanceof Error ? error.message : String(error),
       });
       return false;

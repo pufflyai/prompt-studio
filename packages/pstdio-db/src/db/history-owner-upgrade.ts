@@ -1,5 +1,5 @@
 import { isDeepStrictEqual } from "node:util";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { ensureStorageOwner } from "../services/extension-storage/storage-owner-key";
 import type { DbClient } from "./connection.pglite";
 import { prepareOwnedRowUpgrade } from "./owned-row-upgrade";
@@ -15,6 +15,15 @@ const same = (actual: unknown, expected: unknown) => {
 
 /** Preserve device history across the DDL. The 0.48 local-only cutoff retires relay contributions. */
 export const prepareHistoryOwnerUpgrade = async (db: DbClient, path: string, localOnly = false) => {
+  // After DDL commits the released prefix has advanced. The durable schema marker
+  // still owns the local cutoff until the interrupted restore and cleanup finish.
+  const cutoff =
+    localOnly ||
+    (
+      await db.execute<{ pending: boolean }>(
+        sql`SELECT to_regnamespace('pstdio_local_upgrade_049') IS NOT NULL AS pending`,
+      )
+    ).rows[0]?.pending === true;
   const restoreRows = await prepareOwnedRowUpgrade(db, path, {
     source: {
       table: "storage_personal_history",
@@ -25,7 +34,8 @@ export const prepareHistoryOwnerUpgrade = async (db: DbClient, path: string, loc
     projectKey: "workbench_id",
     conflict: "Private history restoration conflict",
     keys: ["kind", "device_id", "record_id"],
-    fields: ["device_id", "kind", "record_id", "value", "seed_id", "pending_id"],
+    fields: ["device_id", "kind", "record_id", "value", "seed_id", ...(cutoff ? [] : ["pending_id"])],
+    normalize: cutoff ? (row) => ({ ...row, pending_id: null }) : undefined,
   });
   const restoreSources = localOnly
     ? undefined
@@ -79,6 +89,10 @@ export const prepareHistoryOwnerUpgrade = async (db: DbClient, path: string, loc
   );
   if (!restoreRows && !restoreSources && !restorePositions) return;
   return async () => {
+    // An older build can leave restored receipts beside its retained snapshot.
+    // Normalize those rows before comparing them with the device-only history.
+    if (cutoff && restoreRows)
+      await db.execute(sql`UPDATE history_rows SET pending_id=NULL WHERE pending_id IS NOT NULL`);
     await restoreRows?.resume();
     await restoreSources?.resume();
     await restorePositions?.(true);

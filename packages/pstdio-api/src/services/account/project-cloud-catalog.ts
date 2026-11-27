@@ -96,7 +96,7 @@ const catalogProjectsForCopies = async (
     if (
       memberIds === undefined ||
       copy.phase === "removing" ||
-      (copy.phase === "downloading" && (await projectById(copy.projectId)))
+      (copy.userId === undefined && copy.phase === "downloading" && (await projectById(copy.projectId)))
     )
       ids.add(copy.projectId);
   }

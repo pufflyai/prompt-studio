@@ -8,6 +8,8 @@ import { accounts, projectMembers, spaceKeys, teamMembers, teams } from "./schem
 type Reader = Pick<ManagerDatabase, "select">;
 export const teamNameSchema = z.string().trim().min(1).max(100);
 
+export class TeamMembershipDenied extends Error {}
+
 export const listTeams = (db: Reader, userId: string) =>
   db
     .select({

@@ -54,6 +54,7 @@ const idleExtensionService = {
   getInstalledSource: async () => null as never,
   getProjectExtensionInstance: async () => null as never,
   listProjectExtensionInstances: async () => [],
+  assertInstalledSourceChoice: async () => {},
   registerInstalledSource: async () => {
     throw new Error("should not register");
   },
@@ -370,7 +371,7 @@ test("requires review when the project is using a separate local copy with the s
     workspaceService: emptyWorkspaceService,
   });
 
-  await expect(service.upgrade("project-1", "instance-1")).rejects.toThrow("using a local copy of Local Planner");
+  await expect(service.upgrade("project-1", "instance-1")).rejects.toThrow("Choose which version of Local Planner");
   expect(installExtensionSource).not.toHaveBeenCalled();
 });
 
@@ -487,7 +488,9 @@ describe("catalog extension installation and upgrades", () => {
       workspaceService: emptyWorkspaceService,
     });
 
-    await expectRejection(service.upgrade("project-1", "instance-1")).toThrow("local copy");
+    await expectRejection(service.upgrade("project-1", "instance-1")).toThrow(
+      "Choose which version of Project Planner",
+    );
     expect(installExtensionSource).not.toHaveBeenCalled();
     expect(registerInstalledSource).not.toHaveBeenCalled();
   });

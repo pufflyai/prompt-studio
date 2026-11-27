@@ -1,12 +1,19 @@
 import { and, eq, like, type SQL, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
+import { createAutomationDBService, RUN_RETENTION_MS } from "../services/automation/automation";
 import { compactStorageTombstones } from "../services/extension-storage/compact-tombstones";
+import {
+  createDeferredDocumentSweep,
+  pruneAllDocumentFiles,
+} from "../services/extension-storage/document-file-retention";
 import { legacyNodeRows } from "../services/extension-storage/index-node-upgrade";
 import { pruneStorageOperations } from "../services/extension-storage/prune-operations";
 import { purgeStorageTombstones } from "../services/extension-storage/purge-tombstones";
 import { storageOwnerKey } from "../services/extension-storage/storage-owner-key";
 import type { DbClient } from "./connection.pglite";
 import { deleteStorageDocuments } from "./delete-storage-documents";
+import { createDependencyMarkerCleanup } from "./dependency-marker-upgrade";
+import { createExtensionIndexCleanup } from "./retire-extension-indexes";
 import { documents } from "./schemas/documents";
 import { invalidateMaintenance, legacyOwnerPrefix } from "./startup-maintenance";
 
@@ -63,12 +70,42 @@ export const createRetiredStorageCleanup = (db: DbClient, path: string, owners: 
   };
 };
 
-export const createStorageCleanup = (db: DbClient, path: string, owners: StorageOwner[], defer: boolean) => {
+export const createStorageCleanup = (
+  db: DbClient,
+  path: string,
+  owners: StorageOwner[],
+  defer: boolean,
+  collectFiles: (stopped: () => boolean) => Promise<void>,
+) => {
   const retiredRows = defer ? createRetiredStorageCleanup(db, path, owners) : async () => {};
-  return async (stopped: () => boolean) => {
-    await retiredRows(stopped);
-    if (!stopped()) await compactStorageTombstones(db, stopped);
-    if (!stopped()) await purgeStorageTombstones(db, stopped);
-    if (!stopped()) await pruneStorageOperations(db, stopped);
+  const extensionIndexes = createExtensionIndexCleanup(db);
+  const markers = createDependencyMarkerCleanup(db, () => invalidateMaintenance(path));
+  const sweep = defer ? createDeferredDocumentSweep(db) : undefined;
+  return {
+    async prepare() {
+      if (defer) return;
+      await extensionIndexes(() => false);
+      await markers(() => false);
+      await pruneAllDocumentFiles(db);
+      await collectFiles(() => false);
+    },
+    async run(stopped: () => boolean) {
+      await retiredRows(stopped);
+      await extensionIndexes(stopped);
+      await markers(stopped);
+      await sweep?.run(stopped);
+      await collectFiles(stopped);
+      const before = new Date(Date.now() - RUN_RETENTION_MS).toISOString();
+      const automation = createAutomationDBService(db);
+      while (!stopped() && (await automation.pruneTerminalRuns(before, BATCH_SIZE)).length === BATCH_SIZE) {
+        await Bun.sleep(0);
+      }
+      if (!stopped()) await compactStorageTombstones(db, stopped);
+      if (!stopped()) await purgeStorageTombstones(db, stopped);
+      if (!stopped()) await pruneStorageOperations(db, stopped);
+    },
+    async close() {
+      await sweep?.close();
+    },
   };
 };

@@ -32,6 +32,8 @@ export interface DocumentSyncInput {
   space: SyncSpace;
   documentId: string;
   relay: DocumentRelay;
+  /** A team publication reader may download but cannot found, push or checkpoint this stream. */
+  canWrite?: () => Promise<boolean>;
   assets?: AssetStore;
   /** Owners with encrypted blob graphs retain their roots in the same document
    * envelopes. Upload acknowledgement precedes publication; downloads precede merge. */

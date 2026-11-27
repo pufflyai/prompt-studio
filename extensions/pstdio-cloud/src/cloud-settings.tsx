@@ -214,7 +214,7 @@ export const CloudSettings = (props: { projectId?: string }) => {
               </SimpleCardBody>
             </SimpleCard>
           )}
-          {earlyAccess && account?.login && data && (
+          {account?.login && data && (
             <>
               <SimpleCard>
                 <SimpleCardBody>
@@ -226,7 +226,7 @@ export const CloudSettings = (props: { projectId?: string }) => {
                   </Stack>
                 </SimpleCardBody>
               </SimpleCard>
-              {projectId && (
+              {earlyAccess && projectId && (
                 <>
                   <SimpleCard>
                     <SimpleCardBody>

@@ -53,6 +53,35 @@ const AgentReplyStatus = ({
   return null;
 };
 
+const ReviewSummary = ({ review, stale }: { review: ExtensionUpgradeReview; stale: boolean }) => {
+  const { t } = useTranslation("projects", { keyPrefix: "projectSettings.extensionsPanel.upgradeReview" });
+  return (
+    <>
+      <Text>
+        {t("summary", "Incoming version {{version}}. Your extension stays active until you apply.", {
+          version: review.incomingVersion,
+        })}
+      </Text>
+      {review.separateLocalProvider && (
+        <Text>
+          {t("localProviderPath", "This project uses the local copy at {{path}}.", {
+            path: review.localPath,
+          })}
+        </Text>
+      )}
+      {!review.hasOriginal && <Text>{t("unknownOriginal", "Original release unavailable")}</Text>}
+      {stale && (
+        <AlertMessage status="warning" title={t("sourceChanged", "The extension source changed during this review")}>
+          {t("agentRefresh", "A new session will use the latest files.")}
+        </AlertMessage>
+      )}
+    </>
+  );
+};
+
+const hasLocalEdits = (review?: ExtensionUpgradeReview) =>
+  Boolean(review?.hasOriginal && review.changes.some(({ status }) => status !== "incoming"));
+
 export const ExtensionUpgradeReviewDialog = ({ projectId, target, onClose, onApplied, onCompose }: Props) => {
   const { t } = useTranslation("projects", { keyPrefix: "projectSettings.extensionsPanel.upgradeReview" });
   const [review, setReview] = useState<ExtensionUpgradeReview>();
@@ -63,7 +92,8 @@ export const ExtensionUpgradeReviewDialog = ({ projectId, target, onClose, onApp
   const [keeping, setKeeping] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const apply = useApplyExtensionUpgradeReview(projectId);
-  const reply = useUpgradeAgentReply(projectId, review);
+  const localEdits = hasLocalEdits(review);
+  const reply = useUpgradeAgentReply(projectId, localEdits ? review : undefined);
   const instanceId = target.extension.id;
   const resolutions = reply.data?.state === "ready" ? reply.data.resolutions : (review?.resolutions ?? []);
   const resolvedPaths = new Set(resolutions.map(({ path }) => path));
@@ -72,7 +102,9 @@ export const ExtensionUpgradeReviewDialog = ({ projectId, target, onClose, onApp
   );
   const busy = submitting || starting || keeping;
   const working = reply.data?.state === "working";
-  const showAgentAction = Boolean(onCompose);
+  const canApplyMerge = localEdits && ready;
+  const noComposer = localEdits && !onCompose && !ready;
+  const showAgentAction = localEdits && Boolean(onCompose);
 
   useEffect(() => {
     let current = true;
@@ -206,33 +238,9 @@ export const ExtensionUpgradeReviewDialog = ({ projectId, target, onClose, onApp
                 {!review && (
                   <Text>{t("currentStaysActive", "Your extension stays active until you apply the upgrade.")}</Text>
                 )}
-                {review && (
-                  <>
-                    <Text>
-                      {t("summary", "Incoming version {{version}}. Your extension stays active until you apply.", {
-                        version: review.incomingVersion,
-                      })}
-                    </Text>
-                    {review.separateLocalProvider && (
-                      <Text>
-                        {t("localProviderPath", "This project uses the local copy at {{path}}.", {
-                          path: review.localPath,
-                        })}
-                      </Text>
-                    )}
-                    {!review.hasOriginal && <Text>{t("unknownOriginal", "Original release unavailable")}</Text>}
-                    {stale && (
-                      <AlertMessage
-                        status="warning"
-                        title={t("sourceChanged", "The extension source changed during this review")}
-                      >
-                        {t("agentRefresh", "A new session will use the latest files.")}
-                      </AlertMessage>
-                    )}
-                    <AgentReplyStatus ready={ready} stale={stale} reply={reply} />
-                  </>
-                )}
-                {!onCompose && !ready && (
+                {review && <ReviewSummary review={review} stale={stale} />}
+                {localEdits && <AgentReplyStatus ready={ready} stale={stale} reply={reply} />}
+                {noComposer && (
                   <Text>{t("agentUnavailable", "The session composer is unavailable in this project.")}</Text>
                 )}
                 {showAgentAction && !working && (
@@ -261,7 +269,7 @@ export const ExtensionUpgradeReviewDialog = ({ projectId, target, onClose, onApp
               >
                 {t("useTheirVersion", "Use their version")}
               </Button>
-              {ready && (
+              {canApplyMerge && (
                 <Button loading={submitting} disabled={busy || working} onClick={() => void submit()}>
                   {t("apply", "Apply upgrade")}
                 </Button>

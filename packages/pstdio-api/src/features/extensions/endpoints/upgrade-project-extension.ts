@@ -5,11 +5,15 @@ import { extensionUpgradeConcurrency } from "pstdio-extensions/preparation-clien
 import { ExtensionUpgradeUnavailableError } from "../../../services/extension-upgrade-unavailable-error";
 import type { AppRouteHandler } from "../../../types";
 import { scheduleProjectWorkspaceProvisioning } from "../../workspaces/provision-coordinator";
+import { AlwaysEnabledExtensionError } from "../always-on-extensions";
 import type { ExtensionsRouteDeps } from "../deps";
 import { extensionChangesWorkspaceProvisioning } from "../extension-skill-cleanup";
 import { toProjectExtensionInstance } from "../project-extension-instance";
 
-export const extensionUpgradeErrorSchema = z.object({ error: z.string(), code: z.string().optional() });
+export const extensionUpgradeErrorSchema = z.object({
+  error: z.string(),
+  code: z.string().optional(),
+});
 
 export const upgradeProjectExtensionRoute = createRoute({
   method: "post",
@@ -39,7 +43,13 @@ export const upgradeProjectExtensionRoute = createRoute({
     },
     409: {
       description: "Extension source cannot be upgraded by this host.",
-      content: { "application/json": { schema: extensionUpgradeErrorSchema } },
+      content: {
+        "application/json": {
+          schema: extensionUpgradeErrorSchema.extend({
+            details: z.object({ localEditsConfirmed: z.boolean() }).optional(),
+          }),
+        },
+      },
     },
   },
 });
@@ -103,11 +113,26 @@ export const upgradeProjectExtensionHandler = (
       if (!result) return c.json({ error: `Extension instance not found: ${instanceId}` }, 404);
       return c.json(result, 200);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      if (error instanceof Error && error.name === "ExtensionUpgradeNeedsReviewError")
-        return c.json({ error: message, code: extensionUpgradeNeedsReviewCode }, 409);
-      if (error instanceof ExtensionUpgradeUnavailableError) return c.json({ error: message }, 409);
-      return c.json({ error: message }, 400);
+      const failure = upgradeFailure(error);
+      return c.json(failure.body, failure.status);
     }
+  };
+};
+
+const upgradeFailure = (error: unknown) => {
+  const message = error instanceof Error ? error.message : String(error);
+  if (error instanceof Error && error.name === "ExtensionUpgradeLocalEditsError")
+    return {
+      body: { error: message, code: extensionUpgradeNeedsReviewCode, details: { localEditsConfirmed: true } },
+      status: 409 as const,
+    };
+  if (error instanceof Error && error.name === "ExtensionUpgradeNeedsReviewError")
+    return { body: { error: message, code: extensionUpgradeNeedsReviewCode }, status: 409 as const };
+  return {
+    body: { error: message },
+    status:
+      error instanceof ExtensionUpgradeUnavailableError || error instanceof AlwaysEnabledExtensionError
+        ? (409 as const)
+        : (400 as const),
   };
 };

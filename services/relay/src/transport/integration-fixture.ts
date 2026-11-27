@@ -169,6 +169,7 @@ export const createTransportFixture = () => {
         limits?: RelayLimits;
         projectDeletionRelayToken?: string;
         objectEndpoint?: string;
+        microsoft?: Parameters<typeof createManagerAuthentication>[0]["microsoft"];
       } = {},
     ) {
       const manager = createAccountManager(managerDatabase.url);
@@ -189,6 +190,7 @@ export const createTransportFixture = () => {
         projectDeletionRelayToken: options.projectDeletionRelayToken,
         googleClientId: "owned-fixture-client",
         googleClientSecret: "owned-fixture-secret",
+        microsoft: options.microsoft,
         sessionLifetimeSeconds: 120,
         sessionUpdateAgeSeconds: 60,
         accessLifetimeSeconds: options.accessLifetimeSeconds ?? 30,
@@ -233,7 +235,8 @@ export const createTransportFixture = () => {
           assets,
           ...sync,
           verifyAccess: createEnvironmentAccessVerifier(trust),
-          managerHandler: createManagerHandler(auth, "https://manager.fixture.test"),
+          managerOrigin: trust.issuer,
+          managerHandler: createManagerHandler(auth, trust.issuer),
           renew: () => auth.renew(device.token, scope.workbenchId),
           issue: (token: string) => auth.renew(token, scope.workbenchId),
           manager,

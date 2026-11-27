@@ -1,6 +1,7 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import { projectExtensionInstanceSchema } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
+import { AlwaysEnabledExtensionError } from "../always-on-extensions";
 import type { ExtensionsRouteDeps } from "../deps";
 import { toProjectExtensionInstance } from "../project-extension-instance";
 
@@ -28,6 +29,10 @@ export const reloadProjectExtensionRoute = createRoute({
       description: "Extension instance not found for project.",
       content: { "application/json": { schema: errorSchema } },
     },
+    409: {
+      description: "Extension source is managed by the team owner.",
+      content: { "application/json": { schema: errorSchema } },
+    },
   },
 });
 
@@ -40,13 +45,19 @@ export const reloadProjectExtensionHandler = (
     const existing = await deps.extensionService.getProjectExtensionInstance(projectId, instanceId);
     if (!existing) return c.json({ error: `Extension instance not found: ${instanceId}` }, 404);
 
-    const result = await deps.extensionService.reloadInstalledSourceBySourcePath(existing.installedSource.source_path);
-
-    return c.json(
-      toProjectExtensionInstance(existing.instance, result.installedSource, undefined, {
-        canUpgrade: await deps.extensionUpgradeService?.canUpgrade(result.installedSource),
-      }),
-      200,
-    );
+    try {
+      const result = await deps.extensionService.reloadInstalledSourceBySourcePath(
+        existing.installedSource.source_path,
+      );
+      return c.json(
+        toProjectExtensionInstance(existing.instance, result.installedSource, undefined, {
+          canUpgrade: await deps.extensionUpgradeService?.canUpgrade(result.installedSource),
+        }),
+        200,
+      );
+    } catch (error) {
+      if (error instanceof AlwaysEnabledExtensionError) return c.json({ error: error.message }, 409);
+      throw error;
+    }
   };
 };

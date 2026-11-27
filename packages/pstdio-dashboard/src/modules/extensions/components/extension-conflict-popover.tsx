@@ -13,6 +13,12 @@ export const ExtensionConflictPopover = ({
 }) => {
   const { t } = useTranslation("projects");
   const [open, setOpen] = useState(false);
+  if (!action.localEditsConfirmed)
+    return (
+      <Button size="xs" variant="outline" disabled={!onResolve} onClick={onResolve}>
+        {t("projectSettings.extensionsPanel.upgrade.chooseVersion", "Choose version")}
+      </Button>
+    );
   return (
     <Popover.Root open={open} onOpenChange={({ open }) => setOpen(open)} positioning={{ placement: "bottom-end" }}>
       <Popover.Trigger asChild>

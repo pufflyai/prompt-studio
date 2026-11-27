@@ -5,10 +5,13 @@ import { ManagerRequestDenied, managerRequest } from "./manager-client";
 import { matchesDeviceAccount } from "./native-device-read";
 import { type DeviceLogin, type ScopedDeviceLogin, scopedAccountId, signedInIdentity } from "./native-store";
 
-const workbenchesSchema = z.array(z.object({ workbenchId: identitySchema }));
+export const managerWorkbenchesSchema = z.array(
+  z.object({ workbenchId: identitySchema, grantId: identitySchema.optional() }),
+);
 const accountSchema = z.object({
   features: z.object({ relay: z.boolean() }),
   projectDeletion: z.boolean().optional(),
+  profile: z.object({ email: z.email() }).optional(),
 });
 
 const deletionsSchema = z.array(projectDeletionStatusSchema);
@@ -32,7 +35,7 @@ export const readManagerAccount = async (login: ScopedDeviceLogin, signal?: Abor
       accountSchema.parse(data),
     ),
     managerRequest(login.managerOrigin, path("/v1/workbenches"), login.token, undefined, signal).then((data) =>
-      workbenchesSchema.parse(data),
+      managerWorkbenchesSchema.parse(data),
     ),
   ]);
   const deletions =
@@ -53,6 +56,11 @@ export const readManagerAccount = async (login: ScopedDeviceLogin, signal?: Abor
     deviceId: login.deviceId,
     credential: login.token,
     ids: projects.map((row) => row.workbenchId),
+    ...(login.userId && {
+      grantIds: Object.fromEntries(
+        projects.flatMap(({ workbenchId, grantId }) => (grantId ? [[workbenchId, grantId]] : [])),
+      ),
+    }),
     ...account,
     projectDeletion: account.projectDeletion ?? false,
     deletions,

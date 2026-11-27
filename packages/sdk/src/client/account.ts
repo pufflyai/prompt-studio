@@ -18,6 +18,10 @@ import {
   type RemoveLocalProjectInput,
   type RemoveLocalProjectResult,
   type TeamAccount,
+  type TeamMembershipRead,
+  type TeamMembershipReadResult,
+  type TeamMembershipWrite,
+  type TeamMembershipWriteResult,
 } from "pstdio-api-contracts";
 import { verifyAccountLogin } from "../internal/account-login";
 import { PstdioApiError, type RequestFn } from "./request";
@@ -108,6 +112,16 @@ export const createAccountClient = (request: RequestFn) => {
     teams: (options?: AccountReadOptions) => request<TeamAccount[]>("/v1/account/teams", options),
     createTeam: (name: string, expected?: AccountReadIdentity) =>
       request<TeamAccount>("/v1/account/teams", { method: "POST", body: { name, expected } }),
+    readTeamMembership: <Input extends TeamMembershipRead>(input: Input, expected?: AccountReadIdentity) =>
+      request<TeamMembershipReadResult<Input>>("/v1/account/team-membership/read", {
+        method: "POST",
+        body: { request: input, expected },
+      }),
+    writeTeamMembership: <Input extends TeamMembershipWrite>(input: Input, expected?: AccountReadIdentity) =>
+      request<TeamMembershipWriteResult<Input>>("/v1/account/team-membership/write", {
+        method: "POST",
+        body: { request: input, expected },
+      }),
     /** Reads known Cloud membership, device presence, and outstanding deletion operations. */
     projectsCatalog: (options?: ProjectCopyOptions & { accountId?: string }) =>
       request<CloudProjectCatalog>(`/v1/account/projects${projectCopyQuery(options)}`, { signal: options?.signal }),

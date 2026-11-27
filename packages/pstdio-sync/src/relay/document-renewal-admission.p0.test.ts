@@ -116,3 +116,54 @@ test.each([
     await server.stop(true);
   }
 }, 20000);
+
+test("a renewed team socket aborts work with the old keys before starting another pass", async () => {
+  const controller = new AbortController();
+  const before = Promise.withResolvers<AbortSignal>();
+  const after = Promise.withResolvers<void>();
+  let renewals = 0;
+  let passes = 0;
+  const server = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch(request, server) {
+      if (server.upgrade(request)) return;
+      return new Response(null, { status: 426 });
+    },
+    websocket: {
+      open(socket) {
+        socket.send(JSON.stringify({ type: "ready", protocolVersion: liveProtocolVersion }));
+      },
+      message() {},
+    },
+  });
+  const access = async () => ({
+    token: `fixture-${++renewals}`,
+    expiresAt: new Date(Date.now() + (renewals === 1 ? 300 : 30_000)).toISOString(),
+  });
+  const source = { origin: server.url.origin, projectId: "team-project", access, signal: controller.signal };
+  const live = createLiveConnection({ ...source, restartSyncOnRenewal: true });
+  const connection = createDocumentRelayConnection({
+    ...source,
+    live,
+    async synchronize(signal) {
+      if (++passes === 1) {
+        before.resolve(signal);
+        await new Promise<void>((resolve) => signal.addEventListener("abort", () => resolve(), { once: true }));
+      } else {
+        expect((await before.promise).aborted).toBe(true);
+        after.resolve();
+      }
+    },
+  });
+  try {
+    const previous = await before.promise;
+    expect(previous.aborted).toBe(false);
+    await after.promise;
+    expect(renewals).toBe(2);
+  } finally {
+    controller.abort();
+    await Promise.all([live.done, connection.done]);
+    await server.stop(true);
+  }
+});

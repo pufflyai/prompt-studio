@@ -6,8 +6,10 @@ import type {
 } from "@pstdio/sdk/api";
 import { ChakraProvider, psTheme } from "@pstdio/ui";
 import { renderToStaticMarkup } from "react-dom/server";
+import { ExtensionActionButton } from "./extension-action-button";
 import type { ExtensionActionState } from "./extension-action-feedback";
 import type { ExtensionUpgradeBatch } from "./extension-actions";
+import { ExtensionDetailControls } from "./extension-detail-controls";
 import { ExtensionsPanelView } from "./extensions-panel-view";
 
 test("installed extensions expose author and scope independently", () => {
@@ -167,6 +169,43 @@ const groupedExtension = (
   updateAvailable: false,
 });
 
+test("team requirements disable the project switch while a shared source preserves a personal switch", () => {
+  const required = {
+    ...groupedExtension("a-required", true, "global", false),
+    choiceRestriction: "team-managed" as const,
+    sourceRestriction: "team-managed" as const,
+  };
+  const personal = {
+    ...groupedExtension("b-personal", true, "global", false),
+    sourceRestriction: "team-managed" as const,
+  };
+  const markup = renderToStaticMarkup(
+    <ChakraProvider value={psTheme}>
+      <ExtensionsPanelView extensions={[required, personal]} marketplace={[]} diagnostics={[]} automations={[]} />
+    </ChakraProvider>,
+  );
+  const switches = [...markup.matchAll(/<input\b[^>]*type="checkbox"[^>]*>/g)].map(([tag]) => tag);
+  expect(switches).toHaveLength(2);
+  expect(switches[0]).toContain("disabled");
+  expect(switches[1]).not.toContain("disabled");
+  for (const extension of [required, personal]) {
+    const detail = renderToStaticMarkup(
+      <ChakraProvider value={psTheme}>
+        <ExtensionDetailControls
+          extension={extension}
+          changing={false}
+          showReload
+          onReload={() => {}}
+          onUpgrade={() => {}}
+          onToggle={() => {}}
+        />
+      </ChakraProvider>,
+    );
+    const reload = detail.match(/<button\b[^>]*data-testid="extension-reload"[^>]*>/)?.[0];
+    expect(reload).toContain("disabled");
+  }
+});
+
 test.each([
   { name: "one update", count: 1, paused: 0, visible: false },
   { name: "all updates paused", count: 2, paused: 2, visible: false },
@@ -248,4 +287,19 @@ test("groups enabled before other installed extensions and searches across autho
   expect(ids(render("personal"))).toEqual(["z-personal-project", "personal-global"]);
   expect(ids(render("PUBLISHER"))).toEqual(["publisher-global", "a-publisher-project"]);
   expect(ids(render("absent"))).toEqual([]);
+});
+
+test.each([false, true])("shows conflict controls only with a confirmed edit (%s)", (localEditsConfirmed) => {
+  const markup = renderToStaticMarkup(
+    <ChakraProvider value={psTheme}>
+      <ExtensionActionButton
+        action={{ status: "error", label: "Update paused", needsReview: true, localEditsConfirmed }}
+        onRetry={() => {}}
+      >
+        Upgrade
+      </ExtensionActionButton>
+    </ChakraProvider>,
+  );
+  expect(markup.includes('data-testid="extension-upgrade-conflict"')).toBe(localEditsConfirmed);
+  expect(markup.includes("Choose version")).toBe(!localEditsConfirmed);
 });

@@ -51,6 +51,9 @@ export const projectExtensionInstanceSchema = z.object({
   lastError: jsonObjectSchema.nullable().optional(),
   enabled: z.boolean(),
   config: z.record(z.string(), z.unknown()),
+  /** Native policy restrictions on this project's enablement choice and on replacing its shared source. */
+  choiceRestriction: z.enum(["team-managed", "policy-unavailable"]).optional(),
+  sourceRestriction: z.enum(["team-managed", "policy-unavailable"]).optional(),
   /** A newer pinned release is available for this extension's source. */
   canUpgrade: z.boolean(),
   hasPublishedAlternative: z.boolean().optional(),

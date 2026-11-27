@@ -10,7 +10,7 @@ export const MAX_INPUT_BYTES = 64 * 1024;
 const MAX_RESULT_BYTES = 64 * 1024;
 const MAX_ERROR_BYTES = 8 * 1024;
 export const DEFAULT_RUNS_PER_MINUTE = 60;
-export const RUN_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+export { RUN_RETENTION_MS } from "pstdio-db";
 export const DEFAULT_SHUTDOWN_GRACE_MS = 5_000;
 export const automationTextEncoder = new TextEncoder();
 

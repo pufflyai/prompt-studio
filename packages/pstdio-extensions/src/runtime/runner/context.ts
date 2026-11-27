@@ -92,6 +92,8 @@ const unavailableAccountCall = (): never => {
 const unavailableAccount: ExtensionAccountApi = {
   status: unavailableAccountCall,
   createTeam: unavailableAccountCall,
+  readTeamMembership: unavailableAccountCall,
+  writeTeamMembership: unavailableAccountCall,
   login: unavailableAccountCall,
   loginStatus: unavailableAccountCall,
   cancelLogin: unavailableAccountCall,

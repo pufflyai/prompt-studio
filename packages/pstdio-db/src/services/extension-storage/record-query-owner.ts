@@ -2,9 +2,15 @@ import { eq, type SQL, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import type { DbClient } from "../../db/connection.pglite";
 import { owners } from "../../db/schemas/owners";
+import type { FirstRecordLookups } from "./record-first-match";
 import { storageOwnerKey } from "./storage-owner-key";
 
-export type QuerySqlOwner = { workbenchId: string | SQL; extensionId: string | SQL; ownerId?: number | SQL };
+export type QuerySqlOwner = {
+  workbenchId: string | SQL;
+  extensionId: string | SQL;
+  ownerId?: number | SQL;
+  firstMatches?: FirstRecordLookups;
+};
 export const queryOwnerKey = (owner: QuerySqlOwner) => {
   if (owner.ownerId === undefined)
     return sql`(SELECT id FROM owners WHERE project_id=${owner.workbenchId} AND extension_id=${owner.extensionId})`;

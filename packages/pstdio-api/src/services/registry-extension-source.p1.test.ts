@@ -120,6 +120,7 @@ const fixture = async () => {
       workspaceService: { getDefault: async () => null },
       extensionService: {
         getProjectExtensionInstance: async () => ({ instance: { id: "test-instance" }, installedSource: old }),
+        assertInstalledSourceChoice: async () => {},
         registerInstalledSource: async (source: Parameters<ExtensionService["registerInstalledSource"]>[0]) => ({
           ...old,
           version: source.version,
