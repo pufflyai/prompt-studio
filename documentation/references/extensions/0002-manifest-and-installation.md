@@ -122,10 +122,8 @@ Explicit Git refs and other repository sources use the system Git executable. Wh
   source. Registry inventory can prefetch both before the user clicks. Those artifacts skip
   dependency installation and webview builds when they match the selected release and host.
   Source-only releases still prepare and validate on the device.
-- After a managed upgrade reports **Local files kept**, choose **Review upgrade** to compare
-  the local, original, and incoming files. The review combines independent edits and asks for
-  choices where both versions changed the same content. **Apply upgrade** validates the staged
-  result and checks the live source again before replacing it.
+- A catalog extension rediscovered in its standard user installation folder can upgrade directly when the entire folder matches a previously installed release. The host checks that fingerprint again before replacing files.
+- When the original source cannot be verified, **Choose version** lets you keep the current provider or use the published version. A verified difference from the original enables conflict resolution. The review combines independent edits and **Apply upgrade** checks the live source again before replacement.
 - **Resolve with agent** opens an unsent session draft containing the staged comparison.
   Edit and send it, then paste the reply into **Import agent proposal**. The review checks the
   proposal's revision and lets you inspect or validate it before applying. Closing the

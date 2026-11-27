@@ -52,7 +52,7 @@ test("keeps a local conflict in the batch review count while other upgrades fini
     }),
   );
   expect(actions.getSnapshot().batch).toMatchObject({ running: false, completed: 2, failed: 0, reviewRequired: 1 });
-  expect(actions.getSnapshot().actions.local?.needsReview).toBe(true);
+  expect(actions.getSnapshot().actions.local).toMatchObject({ needsReview: true, localEditsConfirmed: false });
   expect(actions.getSnapshot().actions.clean).toBeUndefined();
 });
 

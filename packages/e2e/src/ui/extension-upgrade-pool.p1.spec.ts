@@ -6,6 +6,12 @@ import { extensionUpgradeNeedsReviewCode } from "pstdio-api-contracts/extension-
 import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin } from "../ui-server";
 
+const confirmedConflict = {
+  code: extensionUpgradeNeedsReviewCode,
+  error: "The installed files differ from their original release.",
+  details: { localEditsConfirmed: true },
+};
+
 const completedProposal = (reviewId: string, kind: "local" | "incoming") =>
   JSON.stringify({ reviewId, revision: "refreshed", resolutions: [{ kind, path: "src/extension.ts" }] });
 
@@ -113,7 +119,7 @@ test("keeps individual recovery after completed bulk upgrade progress disappears
     const local = waiting[2]!.extension;
     await waiting[2]!.route.fulfill({
       status: 409,
-      json: { code: extensionUpgradeNeedsReviewCode, error: "This project is using a local copy." },
+      json: confirmedConflict,
     });
     const batchButton = page.getByTestId("extensions-upgrade-all");
     await expect(batchButton).toHaveCount(0);

@@ -7,6 +7,7 @@ export interface ExtensionActionState {
   enabled?: boolean;
   retryable?: boolean;
   needsReview?: boolean;
+  localEditsConfirmed?: boolean;
   status: "queued" | "running" | "error";
   label: string;
   error?: string;
@@ -24,6 +25,12 @@ export const ExtensionActionFeedback = (props: ExtensionActionFeedbackProps) => 
   const { t } = useTranslation("projects");
   if (action?.status !== "error") return null;
 
+  const retryLabel = () => {
+    if (!action.needsReview) return t("projectSettings.extensionsPanel.feedback.retry", "Retry");
+    return action.localEditsConfirmed
+      ? t("projectSettings.extensionsPanel.upgrade.resolve", "Resolve")
+      : t("projectSettings.extensionsPanel.upgrade.chooseVersion", "Choose version");
+  };
   return (
     <ActionErrorSlot edge="top">
       <AlertMessage
@@ -35,9 +42,7 @@ export const ExtensionActionFeedback = (props: ExtensionActionFeedbackProps) => 
           action.retryable !== false &&
           onRetry && (
             <Button onClick={onRetry} disabled={retryDisabled}>
-              {action.needsReview
-                ? t("projectSettings.extensionsPanel.upgrade.resolve", "Resolve")
-                : t("projectSettings.extensionsPanel.feedback.retry", "Retry")}
+              {retryLabel()}
             </Button>
           )
         }

@@ -30,7 +30,7 @@ export type InstallExtensionSourceInput = {
   installedSourcePath?: string;
   /** An Upgrade action may refresh the same version or replace it with a newer one. */
   upgradeFromVersion?: string | null;
-  upgradeBase?: { path: string; ref: string | null };
+  upgradeBase?: { path: string; ref: string | null; rememberedFingerprint?: string };
   /** Host-internal inputs from a reviewed, pinned, private staging directory. */
   reviewedUpgrade?: { workingFingerprint: string; stagedFingerprint: string; originalReleasePath: string };
   /** Worker-inspected owner whose destination family was reserved before preparation. */
