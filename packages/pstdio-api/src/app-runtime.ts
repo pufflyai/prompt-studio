@@ -22,6 +22,8 @@ import type { createSessionService } from "./services/session-service";
 import { runStartupTasks } from "./startup";
 
 const EXTENSION_SCHEDULE_WATERMARK_FILE = "extension-schedule-watermarks.json";
+// Leave time to stop backend workers before the outer fatal shutdown deadline.
+const HARNESS_SHUTDOWN_GRACE_MS = 1_000;
 
 export { closeBeforeFatalExit } from "./fatal-close";
 
@@ -124,6 +126,9 @@ const traceShutdownPhase = async <T>(phase: string, close: () => Promise<T>) => 
   shutdownLogger.info({ ...fields, state: "started" }, "Runtime shutdown step started");
   try {
     return await close();
+  } catch (err) {
+    shutdownLogger.error({ ...fields, state: "failed", err }, "Runtime shutdown step failed");
+    throw err;
   } finally {
     shutdownLogger.info(
       { ...fields, state: "settled", duration_ms: Math.round(performance.now() - startedAt) },
@@ -132,8 +137,29 @@ const traceShutdownPhase = async <T>(phase: string, close: () => Promise<T>) => 
   }
 };
 
+// Slow harness cleanup is not a shutdown failure: after the allowance, shutdown stops
+// waiting and only logs what the cleanup reports later, so the process can still exit cleanly.
+const drainHarnesses = async (close: () => Promise<void>, graceMs: number) => {
+  const deadline = Promise.withResolvers<"timed_out">();
+  const timer = setTimeout(() => deadline.resolve("timed_out"), graceMs);
+  const disposal = close();
+  try {
+    if ((await Promise.race([disposal, deadline.promise])) !== "timed_out") return;
+  } finally {
+    clearTimeout(timer);
+  }
+  const fields = { event: "runtime.shutdown.phase", phase: "harnesses", grace_ms: graceMs };
+  shutdownLogger.warn({ ...fields, state: "timed_out" }, "Harness cleanup is still running; stopping backend workers");
+  disposal.then(
+    () => shutdownLogger.info({ ...fields, state: "late_settled" }, "Harness cleanup finished after its allowance"),
+    (err) =>
+      shutdownLogger.warn({ ...fields, state: "late_failed", err }, "Harness cleanup failed after its allowance"),
+  );
+};
+
 export const createAppCloser = (input: {
   closeBackendWorkers: () => Promise<void>;
+  harnessShutdownGraceMs?: number;
   startupAbort: AbortController;
   startupDone: Promise<void>;
   getStartupBackgroundDone: () => Promise<void>;
@@ -157,9 +183,6 @@ export const createAppCloser = (input: {
   textEditing: Pick<RouteDeps["textEditing"], "dispose">;
 }) => {
   let closePromise: Promise<void> | null = null;
-  let backendsStopped: Promise<void> | undefined;
-  const stopBackendWorkers = () =>
-    (backendsStopped ??= traceShutdownPhase("extension_backends", input.closeBackendWorkers));
   return async () => {
     closePromise ??= (async () => {
       // A vacuum holds PGlite's only thread, so database cleanup stops before any other part waits on it.
@@ -181,6 +204,14 @@ export const createAppCloser = (input: {
       const recordFailure = (error: unknown) => {
         failures.add(error);
       };
+      let harnessesStopped: Promise<void> | undefined;
+      let backendsStopped: Promise<void> | undefined;
+      const stopBackendWorkers = () =>
+        (backendsStopped ??= (async () => {
+          // Harness disposal can call back into a live extension backend.
+          await harnessesStopped?.catch(recordFailure);
+          await traceShutdownPhase("extension_backends", input.closeBackendWorkers);
+        })());
       try {
         input.startupAbort.abort();
         const preparationStopped = input.extensionRuntime.stopPreparation?.() ?? Promise.resolve();
@@ -188,7 +219,12 @@ export const createAppCloser = (input: {
         const queueStopped = traceShutdownPhase("session_queue", () => input.sessionQueueLifecycle.close());
         // A queued startup can need worker disposal to settle. Stop admission first,
         // then begin cleanup before waiting for those dispatches to finish.
-        const harnessesStopped = traceShutdownPhase("harnesses", () => input.harnessRegistry.dispose());
+        harnessesStopped = traceShutdownPhase("harnesses", () =>
+          drainHarnesses(
+            () => input.harnessRegistry.dispose(),
+            input.harnessShutdownGraceMs ?? HARNESS_SHUTDOWN_GRACE_MS,
+          ),
+        );
         harnessesStopped.catch(() => {});
         await traceShutdownPhase("queue_readiness", () => input.stopQueueReadiness());
         await queueStopped;
@@ -207,7 +243,6 @@ export const createAppCloser = (input: {
         await stopBackendWorkers();
         await traceShutdownPhase("automation", () => input.automationService.close());
         await traceShutdownPhase("terminals", () => input.terminalSupervisor.dispose());
-        await harnessesStopped;
         await preparationStopped;
       } catch (error) {
         recordFailure(error);
