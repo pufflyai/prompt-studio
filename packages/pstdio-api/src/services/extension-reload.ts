@@ -21,6 +21,7 @@ import type { createExtensionSourceMutations } from "./extension-source-mutation
 type JsonRecord = Record<string, unknown>;
 
 type ReloadDeps = {
+  authorizeChange?: (sourceId: string) => Promise<void>;
   installedExtensionSourcesService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
   emitInstalledSource: (source: unknown) => void;
   notifyInstalledSourcesChanged: (sourcePath?: string, validatedSource?: LoadedExtensionSnapshot) => Promise<void>;
@@ -160,7 +161,7 @@ const reloadInstalledSourceRow = async (deps: ReloadDeps, existing: InstalledSou
 export const reloadInstalledSourceBySourcePath = async (deps: ReloadDeps, sourcePath: string) => {
   const existing = await deps.installedExtensionSourcesService.getBySourcePath(sourcePath);
   if (!existing) throw new Error(`Installed extension not found at source path: ${sourcePath}`);
-
+  await deps.authorizeChange?.(existing.id);
   return reloadInstalledSourceRow(deps, existing);
 };
 

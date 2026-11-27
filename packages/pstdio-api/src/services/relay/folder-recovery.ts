@@ -5,7 +5,6 @@ import {
   createDocumentRelay,
   createDocumentRelayConnection,
   createDocumentSync,
-  fetchSyncSpaces,
   type LiveConnection,
 } from "pstdio-sync/relay";
 import { apiLogger } from "../../lib/logger";
@@ -17,6 +16,7 @@ import { createRecoveryOperations, folderRecoveryError, type RecoveryAttach } fr
 import { projectRecoveryRoot } from "../project-recovery/project-paths";
 import { createRecoveryStagingJournal } from "../project-recovery/restore-staging";
 import type { RelayDeps } from "./deps";
+import { fetchNativeSyncSpaces } from "./native-relay-access";
 import { createSyncQuarantine } from "./quarantine";
 import type { RelayWorkbench } from "./runtime";
 
@@ -122,7 +122,7 @@ export const startFolderRecovery = (input: {
         "Folder recovery sync will retry",
       ),
     synchronize: async (attempt, subscribe) => {
-      const { personal } = await fetchSyncSpaces({ ...config, credential: config.renewalGrant, signal: attempt });
+      const { personal } = await fetchNativeSyncSpaces({ ...config, credential: config.renewalGrant, signal: attempt });
       if (!chunks || space?.generation !== personal.generation) {
         space = personal;
         chunks = await createRecoveryChunkStore({

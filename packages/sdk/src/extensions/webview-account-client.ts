@@ -21,6 +21,10 @@ export const createWebviewAccountClient = (host: GuestHost) =>
   ({
     query: (source) => getWebviewServiceQueries(host, "account").query(source),
     status: () => host.call("account.read", { op: "status" }),
+    readTeamMembership: (request, expected) =>
+      host.call("account.read", { op: "readTeamMembership", request, expected }),
+    writeTeamMembership: (request, expected) =>
+      host.call("account.manage", { op: "writeTeamMembership", request, expected }),
     loginStatus: (id) => host.call("account.read", { op: "loginStatus", id }),
     devices: () => host.call("account.read", { op: "devices" }),
     projectSyncStatus: (projectId) =>

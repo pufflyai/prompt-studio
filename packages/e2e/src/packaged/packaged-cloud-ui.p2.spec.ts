@@ -61,7 +61,7 @@ test("Cloud settings respect early access and manage devices and project sync th
   context,
   page,
 }) => {
-  // Critical: a denied account must not gain Cloud controls; make-local must preserve both devices' copies.
+  // Critical: early access gates project sync; making local must preserve both devices' copies.
   const fixture = await createCloudAcceptanceFixture(resources.root, resources.children, { cloudUi: true });
   resources.fixture = fixture;
   await fixture.peer.setEarlyAccess(false);
@@ -222,8 +222,8 @@ test("Cloud settings respect early access and manage devices and project sync th
   await expect(settings.getByText("Cloud UI renamed device", { exact: true })).toBeVisible();
   expect((await first.client.account.devices()).some((device) => device.name === "Cloud UI renamed device")).toBe(true);
   await settings.getByRole("button", { name: "Make local", exact: true }).click();
-  const confirmation = settings.getByRole("dialog");
-  await expect(confirmation.getByText("Make this project local?", { exact: true })).toBeVisible();
+  const confirmation = settings.getByRole("dialog", { name: "Make this project local?", exact: true });
+  await expect(confirmation).toBeVisible();
   await confirmation.getByRole("button", { name: "Make local", exact: true }).click();
   await expect(status).toHaveText("Local");
   // Retire private project data while preserving the independently owned global settings destination.

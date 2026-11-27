@@ -19,6 +19,7 @@ import {
   signInPublicTextDevice,
 } from "./packaged-public-text-sync.fixture";
 import { signInBrowser, stopProcess } from "./packaged-serve-helpers";
+import { uniqueDocument } from "./packaged-sync-document-key.fixture";
 import { packagedProjectKey } from "./packaged-sync-project-key.fixture";
 
 interface Resources {
@@ -211,7 +212,7 @@ for (const presentation of ["native", "installed"] as const) {
       expect(Buffer.from(bytes).toString("latin1")).not.toContain("public-two-host-secret");
     const space = await createSyncSpace({ projectId: project.id, spaceOwner: null, keys: [packagedProjectKey] });
     const streamId = await space.documentId(JSON.stringify(["paper.public-text-source", "record-stream-v2"]));
-    const stream = documents.get(`~${streamId}`);
+    const stream = uniqueDocument(documents, streamId);
     expect(stream?.updates.length).toBeGreaterThan(0);
     for (const update of stream!.updates) {
       const envelope = { updateId: String(update.updateId), payload: String(update.payload) };

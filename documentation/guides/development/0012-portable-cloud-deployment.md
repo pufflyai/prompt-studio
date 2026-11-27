@@ -113,6 +113,24 @@ Test restoration into an isolated database and confirm every key generation befo
 depending on a backup. A stale backup can lose newer keys; it does not promise zero
 data loss. Clients with full local copies can upload lost relay data again.
 
+Team-managed extensions also need their immutable encrypted package objects under
+`managed-packages/`. Their descriptors, decryption material and current selection
+are in the manager database and authority snapshots; package bytes are in object
+storage. Preserve both at the same recovery point. A database-only restore cannot
+recover a missing package. Verify a selected package downloads and installs on a
+fresh authorized device before reopening traffic. Never substitute a different
+object for a descriptor: the native host verifies the package hashes.
+
+The manager removes unreferenced incomplete uploads after one hour and unreferenced
+ready packages after seven days, in bounded hourly batches. Current selections are
+retained. Keep independent encrypted backups of packages needed by an older recovery
+point; the live bucket's cleanup window is not backup retention. Before restoring
+authority data, stop the manager, restore its referenced objects and database, then
+reconcile grants before restarting. An image rollback must understand the managed
+policy schema and enforce required tools; an older host or manager is not a safe
+rollback after a team adopts managed extensions. Use a compatible forward fix or
+the tested recovery procedure instead.
+
 Distribute new manager public signing keys to every relay before issuing tokens with
 them. Retain old public keys until all their access tokens expire. Environment trust
 uses `RELAY_ACCESS_TRUST`.
@@ -130,7 +148,10 @@ Platform:
 - One PostgreSQL server with a database and login per service. Each service's migration
   revokes public access to its database and grants it to that service's login only, so
   the relay cannot reach the manager's keys.
-- A private Spaces bucket for relay data.
+- A private Spaces bucket for encrypted relay data and manager-owned managed packages.
+  The manager uses the same existing bucket and S3 credentials, with its objects
+  confined to `managed-packages/`. The module supplies `MANAGED_PACKAGE_S3_*`
+  configuration; it creates no additional bucket or deployment.
 
 Use it from your own Terraform configuration and pin it to a release, together with the
 image digests of the same release:

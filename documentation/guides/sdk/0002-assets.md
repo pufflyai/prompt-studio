@@ -18,11 +18,15 @@ const asset = await ctx.storage.assets.stage({
   source: file, // Blob or File
 });
 await ctx.storage.assets.verifyComplete([asset]);
+await ctx.storage.records.commit({
+  operationId: pendingWork.saveId,
+  edits: [{ recordId: pendingWork.recordId, replace: { name: "Report snapshot" }, asset }],
+});
 ```
 
-Keep the operation ID with pending work. Reuse it with the same source after interruption or restart. The host resumes from the bytes already stored. Changing the content or media type for that operation fails.
+Keep the staging operation ID with pending work. Reuse it with the same source after interruption or restart. The host resumes from the bytes already stored. Changing the content or media type for that operation fails.
 
-The result contains only `{ sha256, byteLength, mediaType }`. It contains no local path, URL, or credential. Its owner is the current workbench and installed extension. Storage scopes and collections share that asset owner; choose operation IDs that are unique across the extension's work in that workbench.
+The `stage` result contains only `{ sha256, byteLength, mediaType }`. It contains no local path, URL, or credential. Its owner is the current workbench and installed extension. Storage scopes and collections share that asset owner; choose operation IDs that are unique across the extension's work in that workbench.
 
 `getTransfer(operationId)` returns `staging`, `complete`, or `cancelled`, or `undefined` for an unknown operation. A staging result includes `uploadedByteLength`. Staged bytes cannot be read as a completed asset.
 
@@ -52,7 +56,7 @@ The owner is resolved from the installed extension in that project. Caller-suppl
 
 Call `ctx.storage.assets.cancel(operationId)` or `client.assets.cancel({ ...owner, operationId })` for explicit cancellation. This stops an active upload and removes its temporary bytes. Cancelling never removes a completed asset. A cancelled operation ID cannot be reused.
 
-Keep an asset readable by referencing it from a record. Do not rely on an asset that no record references staying available, and do not use assets as version history. Verifying assets does not commit a group of records or show that an entire workbench is ready offline.
+Keep an asset readable by attaching it through the record edit’s `asset` field. Relay transfers the file and makes it readable alongside the record. Use `record.asset` to open the stored attachment. Do not rely on an asset that no record references staying available, and do not use assets as version history. Verifying assets does not commit a group of records or show that an entire workbench is ready offline.
 
 ## Existing blobs
 

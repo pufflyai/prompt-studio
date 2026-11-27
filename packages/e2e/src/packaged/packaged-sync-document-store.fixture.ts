@@ -1,21 +1,36 @@
 import { expect } from "bun:test";
 import type { StateEnvelope, StateInfo, StoredUpdate } from "pstdio-sync-contracts";
 import type { createPeerLive } from "./packaged-live.fixture";
+import {
+  documentKey,
+  documentScope,
+  uniqueDocument,
+  uniqueDocumentKey,
+  wireDocumentId,
+} from "./packaged-sync-document-key.fixture";
+
+type StoredDocument = { state: StateInfo | null; payload?: string; blobIds?: string[]; updates: StoredUpdate[] };
+
+const retainedDocument = (documents: Map<string, StoredDocument>, id: string) => {
+  let value = documents.get(id);
+  if (!value) {
+    value = { state: null, updates: [] };
+    documents.set(id, value);
+  }
+  return value;
+};
 
 const retainedSnapshots = (payloads: Map<string, Map<string, string>>) =>
   [...payloads].flatMap(([documentId, states]) =>
-    [...states].map(([stateId, payload]) => ({ documentId, stateId, payload })),
+    [...states].map(([stateId, payload]) => ({ documentId: wireDocumentId(documentId), stateId, payload })),
   );
 
-/** Blind document storage and explicit fault controls for the packaged wire peer. */
+/** Blind document storage scoped by account, project, private space and wire ID. */
 export const createPackagedDocumentStore = (
   blobs: { complete: (id: string) => boolean },
   changed: ReturnType<typeof createPeerLive>["changed"],
 ) => {
-  const documents = new Map<
-    string,
-    { state: StateInfo | null; payload?: string; blobIds?: string[]; updates: StoredUpdate[] }
-  >();
+  const documents = new Map<string, StoredDocument>();
   const sequences = new Map<string, number>();
   const statePayloads = new Map<string, Map<string, string>>();
   const updateSequences = new Map<string, Map<string, number>>();
@@ -26,14 +41,7 @@ export const createPackagedDocumentStore = (
   let failReads: boolean | ((documentId: string) => boolean) = false;
   let failedReads = 0;
   let completedReads = 0;
-  const document = (id: string) => {
-    let value = documents.get(id);
-    if (!value) {
-      value = { state: null, updates: [] };
-      documents.set(id, value);
-    }
-    return value;
-  };
+  const document = (id: string) => retainedDocument(documents, id);
   const lastSequence = (id: string) => {
     const doc = document(id);
     const sequence = Math.max(
@@ -45,7 +53,7 @@ export const createPackagedDocumentStore = (
     return sequence;
   };
   const trim = (documentId: string) => {
-    const id = documentId.startsWith("~") ? documentId : `~${documentId}`;
+    const id = uniqueDocumentKey(documents.keys(), documentId);
     const doc = document(id);
     lastSequence(id);
     doc.updates = doc.updates.filter((update) => update.sequence > (doc.state?.through ?? 0));
@@ -71,17 +79,18 @@ export const createPackagedDocumentStore = (
   // Like the relay, tell connected devices that a document changed so they read it again.
   const publishChange = (documentId: string, spaceOwner: string | null, created = false) => {
     const doc = document(documentId);
+    const [accountId, projectId] = documentScope(documentId);
     const notice = {
       spaceOwner,
-      documentId: documentId.slice(1),
+      documentId: wireDocumentId(documentId).slice(1),
       lastSequence: lastSequence(documentId),
       stateId: doc.state?.stateId ?? null,
     };
-    changed(notice, created);
+    changed(notice, created, { accountId, projectId });
   };
   const readDocument = async (id: string, request: Request) => {
     const doc = document(id);
-    if (typeof failReads === "function" ? failReads(id.slice(1)) : failReads) {
+    if (typeof failReads === "function" ? failReads(wireDocumentId(id).slice(1)) : failReads) {
       failedReads++;
       // A simulated outage asks for an immediate retry, so clients exhaust their bounded backoff without waiting.
       return new Response(null, { status: 503, headers: { "retry-after": "0" } });
@@ -156,8 +165,9 @@ export const createPackagedDocumentStore = (
     parts: string[],
     spaceOwner: string | null,
     deviceId: string,
+    scope: { accountId: string; projectId: string },
   ) => {
-    const id = parts[5]!;
+    const id = documentKey({ ...scope, spaceOwner }, parts[5]!);
     if (spaceOwner) personalDocumentIds.add(id);
     if (path.endsWith("/read")) return readDocument(id, request);
     const doc = document(id);
@@ -175,11 +185,13 @@ export const createPackagedDocumentStore = (
   return {
     request: documentRequest,
     documents,
+    document: (id: string) => uniqueDocument(documents, id),
+    scopedDocument: (scope: Parameters<typeof documentKey>[0], id: string) => documents.get(documentKey(scope, id)),
     states: () => storedStates,
     retainedStates: () => retainedSnapshots(statePayloads),
     reads: () => completedReads,
     announceUnchanged() {
-      for (const id of documents.keys()) publishChange(id, personalDocumentIds.has(id) ? "owner" : null);
+      for (const id of documents.keys()) publishChange(id, documentScope(id)[2]);
     },
     failedReads: () => failedReads,
     personalDocuments: () => [...personalDocumentIds].map((id) => documents.get(id)!),
@@ -189,7 +201,7 @@ export const createPackagedDocumentStore = (
     /** Explicitly models expiry of covered updates; default fixtures retain their existing tail. */
     trim,
     captureSnapshot(documentId: string) {
-      const id = documentId.startsWith("~") ? documentId : `~${documentId}`;
+      const id = uniqueDocumentKey(documents.keys(), documentId);
       const doc = documents.get(id);
       if (!doc?.state || !doc.payload) throw new Error(`Document ${documentId} has no latest state`);
       return structuredClone({
@@ -204,7 +216,7 @@ export const createPackagedDocumentStore = (
      * earlier bytes with the new authenticated headers; relabelling ciphertext would test corruption.
      */
     installSnapshot(documentId: string, state: StateEnvelope) {
-      const id = documentId.startsWith("~") ? documentId : `~${documentId}`;
+      const id = uniqueDocumentKey(documents.keys(), documentId);
       const doc = document(id);
       if (state.baseStateId !== (doc.state?.stateId ?? null) || statePayloads.get(id)?.has(state.stateId))
         throw new Error("Fault snapshot must replace the current state with a new state ID");
@@ -212,8 +224,8 @@ export const createPackagedDocumentStore = (
         throw new Error("Fault snapshot must cover a valid update sequence");
       for (const blobId of state.blobIds) expect(blobs.complete(`~${blobId}`)).toBe(true);
       saveState(id, state, "fixture-incomplete-state");
-      trim(id);
-      publishChange(id, personalDocumentIds.has(id) ? "owner" : null);
+      trim(documentId);
+      publishChange(id, documentScope(id)[2]);
     },
     corrupt() {
       for (const [documentId, doc] of documents) {
@@ -224,7 +236,7 @@ export const createPackagedDocumentStore = (
           deviceId: "fixture-corrupt",
           createdAt: new Date().toISOString(),
         });
-        publishChange(documentId, null);
+        publishChange(documentId, documentScope(documentId)[2]);
       }
     },
   };

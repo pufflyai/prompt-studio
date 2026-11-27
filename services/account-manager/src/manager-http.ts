@@ -1,14 +1,19 @@
 import type { ReportFailure } from "pstdio-service-telemetry";
-import { identitySchema } from "pstdio-sync-contracts";
+import { identitySchema, managedExtensionHostHeader, managedExtensionHostVersion } from "pstdio-sync-contracts";
 import { z } from "zod";
 import { deviceHttp } from "./device-http";
 import type { createManagerAuthentication } from "./manager-authentication";
 import { nativeLogin } from "./native-login";
 import { projectDeletionServiceHttp } from "./project-deletion-http";
 import { EnvironmentAccessDenied, EnvironmentAccessFailure } from "./renewal-errors";
+import { teamInvitationWeb } from "./team-invitation-web";
 
 type Authentication = ReturnType<typeof createManagerAuthentication>;
-const renewal = z.strictObject({ workbenchId: identitySchema, accountId: identitySchema.optional() });
+const renewal = z.strictObject({
+  workbenchId: identitySchema,
+  accountId: identitySchema.optional(),
+  grantId: identitySchema.optional(),
+});
 const json = (body: unknown, status = 200, headers?: ConstructorParameters<typeof Headers>[0]) =>
   Response.json(body, {
     status,
@@ -29,7 +34,15 @@ const renewAccess = async (auth: Authentication, request: Request, log: RenewalL
     return unauthorized();
   }
   try {
-    return json(await auth.renew(token, input.workbenchId, input.accountId));
+    return json(
+      await auth.renew(
+        token,
+        input.workbenchId,
+        input.accountId,
+        input.grantId,
+        request.headers.get(managedExtensionHostHeader) === managedExtensionHostVersion,
+      ),
+    );
   } catch (error) {
     if (error instanceof EnvironmentAccessDenied) return unauthorized();
     const category = error instanceof EnvironmentAccessFailure ? error.category : "service";
@@ -60,26 +73,28 @@ export const createManagerHandler = (
   report: ReportFailure = () => {},
 ) => {
   const address = new URL(origin);
-  const canonicalOrigin = address.origin;
   const basePath = address.pathname.replace(/\/+$/, "");
-  return async (request: Request) => {
-    try {
-      const path = new URL(request.url).pathname;
-      if (path.startsWith("/api/auth/")) return await betterAuth(auth, basePath, request, report);
-      if (["/v1/native-login", "/v1/native-callback", "/v1/native-error"].includes(path))
-        return await nativeLogin(auth, `${canonicalOrigin}${basePath}`, request);
-      const projectDeletionResponse = await projectDeletionServiceHttp(auth, request, path);
-      if (projectDeletionResponse) return projectDeletionResponse;
-      const deviceResponse = await deviceHttp(auth, canonicalOrigin, request);
-      if (deviceResponse) return deviceResponse;
-      if (path === "/v1/sign-in-providers" && request.method === "GET")
-        return json({ microsoft: auth.supportsSignIn("microsoft") });
-      if (path === "/health") return json({ ok: true });
-      if (path === "/v1/environment-access") return await renewAccess(auth, request, log, report);
-      return json({ error: "Not found" }, 404);
-    } catch {
+  const managerAddress = `${address.origin}${basePath}`;
+  const handle = async (request: Request) => {
+    const path = new URL(request.url).pathname;
+    if (path.startsWith("/api/auth/")) return betterAuth(auth, basePath, request, report);
+    if (["/v1/native-login", "/v1/native-callback", "/v1/native-error"].includes(path))
+      return nativeLogin(auth, managerAddress, request);
+    if (path === "/v1/team-invitation" || path.startsWith("/v1/team-invitation/"))
+      return teamInvitationWeb(auth, managerAddress, request, path);
+    const projectDeletionResponse = await projectDeletionServiceHttp(auth, request, path);
+    if (projectDeletionResponse) return projectDeletionResponse;
+    const deviceResponse = await deviceHttp(auth, managerAddress, request);
+    if (deviceResponse) return deviceResponse;
+    if (path === "/v1/sign-in-providers" && request.method === "GET")
+      return json({ microsoft: auth.supportsSignIn("microsoft") });
+    if (path === "/health") return json({ ok: true });
+    if (path === "/v1/environment-access") return renewAccess(auth, request, log, report);
+    return json({ error: "Not found" }, 404);
+  };
+  return (request: Request) =>
+    handle(request).catch(() => {
       if (!request.signal.aborted) report("request_exception");
       return json({ error: "Account manager unavailable" }, 503);
-    }
-  };
+    });
 };

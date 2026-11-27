@@ -16,6 +16,10 @@ const runAccountOperation = (
       return account.status();
     case "loginStatus":
       return account.loginStatus(request.id);
+    case "readTeamMembership":
+      return account.readTeamMembership(request.request, request.expected);
+    case "writeTeamMembership":
+      return account.writeTeamMembership(request.request, request.expected);
     case "devices":
       return account.devices();
     case "projectSyncStatus":

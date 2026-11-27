@@ -7,6 +7,7 @@ import {
 } from "pstdio-sync-contracts";
 import type { RelayLimits } from "../limits";
 import type { DocumentChange } from "../storage/documents";
+import { relayDeviceKey } from "./authorization";
 import { createLiveAdmission } from "./live-admission";
 import { createLiveCalls, liveKey } from "./live-calls";
 import type { RateLimit } from "./rate-limit";
@@ -27,8 +28,11 @@ interface LiveConnection extends LiveIdentity {
   send(message: LiveServerMessage): void;
   close(code?: number): void;
 }
+const userOf = (connection: LiveIdentity) => connection.userId ?? connection.accountId;
+const sameDevice = (first: LiveIdentity, second: LiveIdentity) =>
+  first.deviceId === second.deviceId && userOf(first) === userOf(second);
 const canRead = (connection: LiveIdentity, spaceOwner: string | null) =>
-  spaceOwner === null || spaceOwner === (connection.userId ?? connection.accountId);
+  spaceOwner === null || spaceOwner === userOf(connection);
 
 const parse = (data: string | Buffer, limits: RelayLimits, identity: LiveIdentity) => {
   if (typeof data !== "string" || Buffer.byteLength(data) > limits.maxLiveMessageBytes * 2 + 4096) return 1009;
@@ -57,7 +61,7 @@ export const createLiveHub = (limits: RelayLimits, allow: RateLimit, access?: Li
     for (const follower of members(project)) {
       for (const [key, previous] of follower.followers) {
         const active = [...members(project)].some(
-          (reader) => reader.deviceId !== follower.deviceId && reader.subscriptions.has(key),
+          (reader) => !sameDevice(reader, follower) && reader.subscriptions.has(key),
         );
         if (active === previous) continue;
         follower.followers.set(key, active);
@@ -133,7 +137,8 @@ export const createLiveHub = (limits: RelayLimits, allow: RateLimit, access?: Li
           if (!stopped && socket && socket.send(JSON.stringify(message)) <= 0) close(1013);
         },
       };
-      const admit = createLiveAdmission({ limits, allow, deviceId: identity.deviceId, send: connection.send, close });
+      const deviceId = relayDeviceKey(identity.accountId, identity.userId, identity.deviceId);
+      const admit = createLiveAdmission({ limits, allow, deviceId, send: connection.send, close });
       const expiry = new Date(identity.expiresAt).getTime();
       const scheduleExpiry = () => {
         if (stopped) return;
@@ -163,7 +168,7 @@ export const createLiveHub = (limits: RelayLimits, allow: RateLimit, access?: Li
         if (message.type === "unfollow") connection.followers.delete(key);
         if (message.type === "follow") {
           const active = [...members(identity.projectKey)].some(
-            (reader) => reader.deviceId !== identity.deviceId && reader.subscriptions.has(key),
+            (reader) => !sameDevice(reader, identity) && reader.subscriptions.has(key),
           );
           connection.followers.set(key, active);
           connection.send({ type: "subscribers", spaceOwner: message.spaceOwner, topic: message.topic, active });
@@ -213,7 +218,7 @@ export const createLiveHub = (limits: RelayLimits, allow: RateLimit, access?: Li
           // Renewals replace the old device connection before accepting traffic.
           dispatchAdmitted(() => {
             for (const previous of members(identity.projectKey))
-              if (previous !== connection && previous.deviceId === identity.deviceId) previous.close();
+              if (previous !== connection && sameDevice(previous, identity)) previous.close();
             scheduleExpiry();
             connection.send({ type: "ready", protocolVersion: liveProtocolVersion });
           });

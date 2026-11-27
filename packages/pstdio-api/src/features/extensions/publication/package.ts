@@ -7,7 +7,10 @@ const packageSchema = z.strictObject({
   version: z.literal(1),
   files: z.array(z.strictObject({ path: z.string().min(1), bytes: z.string(), executable: z.boolean() })),
 });
-export const extensionPackageMediaType = "application/vnd.pstdio.extension+json";
+
+export { extensionPackageMediaType } from "./media-type";
+
+import { extensionPackageMediaType } from "./media-type";
 
 // Credentials, checkout metadata and machine-specific dependencies stay local.
 const privatePath = (path: string) =>
