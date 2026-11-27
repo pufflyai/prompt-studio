@@ -263,13 +263,16 @@ jobs:
           CHANNEL: ${{ steps.channel.outputs.channel }}
         run: |
           set -euo pipefail
+          if [[ -z "$BASELINE" ]]; then
+            BASELINE=$(gh release view --json tagName --jq .tagName)
+          fi
           required=true
           if [[ -n "$BASELINE" ]]; then
             previous=$(git rev-parse --verify "refs/tags/$BASELINE^{commit}")
             candidate="$CANDIDATE"
             if [[ "$CHANNEL" == nightly ]]; then
               # Compare source commits so nightly version bumps do not look like harness changes.
-              previous=$(git rev-parse --verify "$previous^")
+              if [[ "$BASELINE" == *-nightly.* ]]; then previous=$(git rev-parse --verify "$previous^"); fi
               candidate="$GITHUB_SHA"
             fi
             changed=$(git diff --name-only "$previous" "$candidate" -- \
