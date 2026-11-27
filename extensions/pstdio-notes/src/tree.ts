@@ -2,9 +2,14 @@ import { defineNavigationTree, defineView, l10n, viewDataEvents, workbenchModes 
 import { notesFileAccess } from "./file-access";
 import { listFolders } from "./folders";
 import { moveTreeNote } from "./note-movement";
-import { listNotes } from "./notes";
+import { listNotes, type NotesMount } from "./notes";
 import { noteResource, notesChanged, notesMount, noteTarget } from "./pages";
 import { folderActions, newFolderAction, newNoteAction } from "./tree-actions";
+
+const listNoteTree = async (mount: NotesMount) => {
+  const files = await mount.list();
+  return Promise.all([listNotes(mount, files), listFolders(mount, files)]);
+};
 
 export const notesTree = defineView({
   id: "note-list",
@@ -20,9 +25,7 @@ export const notesTree = defineView({
     },
     body: async (ctx) => {
       const { readable, writable } = await notesFileAccess(ctx);
-      const [notes, folders] = readable
-        ? await Promise.all([listNotes(notesMount(ctx)), listFolders(notesMount(ctx))])
-        : [[], []];
+      const [notes, folders] = readable ? await listNoteTree(notesMount(ctx)) : [[], []];
       const noteNode = (note: (typeof notes)[number]) => ({
         id: note.id,
         label: note.title,

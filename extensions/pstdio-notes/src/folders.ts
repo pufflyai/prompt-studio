@@ -1,4 +1,4 @@
-import { listNotes, type NotesMount, noteExists, noteFolderPath } from "./notes";
+import { listNotes, type NotesFileList, type NotesMount, noteExists, noteFolderPath } from "./notes";
 
 const folderPath = (id: string) => `.folders/${id}/title.txt`;
 const folderTitle = (name: string) => {
@@ -11,14 +11,17 @@ export const requireFolder = async (mount: NotesMount, id: string) => {
   if (!(await mount.exists(folderPath(id)))) throw new Error("Folder not found.");
 };
 
-export const listFolders = async (mount: NotesMount) => {
-  const files = await mount.list(".folders/*/title.txt");
-  const folders = await Promise.all(
-    files.map(async ({ path }) => ({
+export const listFolders = async (mount: NotesMount, listing?: NotesFileList) => {
+  const files = listing
+    ? listing.filter(({ path }) => /^\.folders\/[^/]+\/title\.txt$/.test(path))
+    : await mount.list(".folders/*/title.txt");
+  const folders = [];
+  for (const { path } of files) {
+    folders.push({
       id: path.slice(".folders/".length, -"/title.txt".length),
       title: await mount.readText(path),
-    })),
-  );
+    });
+  }
   return folders.sort((a, b) => a.title.localeCompare(b.title));
 };
 

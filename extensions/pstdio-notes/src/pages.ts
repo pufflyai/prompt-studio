@@ -17,7 +17,7 @@ import { noteText } from "./text-source";
 export { notesChanged } from "./events";
 export { note } from "./resource-kinds";
 
-import { noteExists, readNoteSource, readNoteTitle } from "./notes";
+import { noteExists, readExistingNoteTitle, readNoteSource } from "./notes";
 
 /** Notes belong to the default project workspace through the host artifact mount. */
 export const notesMount = (ctx: ExtensionContextBase) => ctx.artifacts.mount(documents.id);
@@ -38,17 +38,16 @@ export const editor = defineView({
         return {
           emptyState: { title: "Notes unavailable", description: "Open a ready local project folder to read notes." },
         };
-      const mount = notesMount(ctx);
-      // Reloads still handle missed removal events, including offline clients.
-      if (!id || !(await noteExists(mount, id))) {
+      if (!id) {
         return {
           emptyState: {
-            title: id ? "Note not found" : "No note open",
-            description: id ? "This note was deleted." : "Pick a note in the sidebar or create a new one.",
+            title: "No note open",
+            description: "Pick a note in the sidebar or create a new one.",
           },
         };
       }
 
+      const mount = notesMount(ctx);
       let content: string;
       try {
         content = await readNoteSource(mount, id);
@@ -74,14 +73,8 @@ const noteTab = {
     const id = renderer.resource?.id;
     const { readable } = await notesFileAccess(ctx);
     if (!readable || !id) return {};
-    const mount = notesMount(ctx);
-    if (!(await noteExists(mount, id))) return {};
-    try {
-      return { label: await readNoteTitle(mount, id) };
-    } catch (error) {
-      if (await noteExists(mount, id)) throw error;
-      return {};
-    }
+    const label = await readExistingNoteTitle(notesMount(ctx), id);
+    return label === undefined ? {} : { label };
   },
 };
 export const notesPage = definePage({

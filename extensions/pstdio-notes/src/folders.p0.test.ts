@@ -32,6 +32,20 @@ test("renames folders and preserves their notes when a folder is removed", async
   expect((await listNotes(mount))[0].folderId).toBeUndefined();
 });
 
+test("folder deletion sees a note assigned after listing its files", async () => {
+  const mount = createNotesMount();
+  const folder = await createFolder(mount, "ideas", "Ideas");
+  const note = await createNote(mount, "note", "Draft");
+  const readText = mount.readText;
+  mount.readText = async (path) => {
+    if (path === `${note.id}/content.md`) await moveNote(mount, note.id, folder.id);
+    return readText(path);
+  };
+  await deleteFolder(mount, folder.id);
+  expect(await mount.exists(`${note.id}/folder.txt`)).toBe(false);
+  expect(await mount.exists(`${note.id}/content.md`)).toBe(true);
+});
+
 test("rejects missing folders and blank folder names without moving a note", async () => {
   const mount = createNotesMount();
   const note = await createNote(mount, coreIds.create());
