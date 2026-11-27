@@ -44,6 +44,14 @@ export const checkCloudProjectUpgrade = async (
     await stopProcess(device.host.child);
     running.delete(device.host);
   };
+  const stopAll = async () => {
+    try {
+      const stopped = await Promise.allSettled([...running].map((host) => stopProcess(host.child)));
+      return stopped.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
+    } finally {
+      peer.stop();
+    }
+  };
   try {
     let a = await start("a", baseline, "baseline");
     let b = await start("b", baseline, "baseline");
@@ -127,11 +135,11 @@ export const checkCloudProjectUpgrade = async (
     b = await timedEdit("b", "online", onlineEdit);
     await seen(a, onlineEdit, seed.secondTicket);
     console.log("[Cloud upgrade] Both upgraded devices read the same saved ticket");
-  } finally {
-    try {
-      await Promise.all([...running].map((host) => stopProcess(host.child)));
-    } finally {
-      peer.stop();
-    }
+  } catch (error) {
+    // A device stopped by the limit's abort can refuse the shutdown request. Report the check's own failure.
+    await stopAll();
+    throw error;
   }
+  const cleanup = await stopAll();
+  if (cleanup.length) throw new AggregateError(cleanup, "Cloud upgrade cleanup failed");
 };
