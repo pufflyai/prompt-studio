@@ -258,7 +258,7 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
       if (!unresolved && !closed) setError(caught instanceof Error ? caught.message : config.labels.submitError);
     } finally {
       dismissPending.current = undefined;
-      if (!closed) setSubmitting(false);
+      setSubmitting(false);
     }
   };
 
