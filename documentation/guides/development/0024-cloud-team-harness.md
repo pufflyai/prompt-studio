@@ -26,7 +26,7 @@ receives database/object-store credentials and storage access. Cleanup removes t
   needs permission to create/delete its own Job, Services, Secret and NetworkPolicies, and exec into the two workspace
   pods. It does not change controller deployments or use the shared browser preview bridge.
 - Network access from both workspace pods to the namespace's disposable services and the package
-  registry. The runner copies a checksummed Git archive through the configured Kubernetes transport, then bootstraps a detached app process in a separate source directory with a finite workspace Job deadline. The source build installs the frozen monorepo dependencies and builds the dashboard.
+  registry. The runner copies a checksummed Git archive through the configured Kubernetes transport, then bootstraps a detached app process in a separate source directory with a finite workspace Job deadline. The source build installs the frozen monorepo dependencies and builds the dashboard. Its build home, temporary files and package cache use the owned disk-backed workspace rather than the image's small memory-backed `/tmp`.
 
 ## Run the complete scenario
 
@@ -51,7 +51,7 @@ The scenario checks:
 8. Owner removes member; after the 30-second access-token lifetime, future edits do not reach the
    removed member. Old downloaded data remains; the owner can still read/write.
 
-A failed assertion exits nonzero. Results and original failures are retained as `results.jsonl`. A unique holder marker is saved before each launch. Provisioning uses the normal public native command endpoint with a finite20-minute request allowance, allowing a cold queue to exceed Bun's default client idle timeout. If the response is lost, `down` must recover the exact holder from recent runs; otherwise it reports uncertain cleanup and retains the backend. It never retries provisioning blindly or stops a workspace inferred from creation time.
+A failed assertion exits nonzero. Results and original failures are retained as `results.jsonl`. Before removing a failed startup pod, the runner attempts to save a bounded, redacted `<role>-bootstrap.json` log with disk-space evidence. Failure to collect diagnostics is recorded without hiding the original error. A unique holder marker is saved before each launch. Provisioning uses the normal public native command endpoint with a finite20-minute request allowance, allowing a cold queue to exceed Bun's default client idle timeout. If the response is lost, `down` must recover the exact holder from recent runs; otherwise it reports uncertain cleanup and retains the backend. It never retries provisioning blindly or stops a workspace inferred from creation time.
 The runner stops its own Cloud Workspaces and deletes its labelled disposable backend. `--keep`
 retains the setup on success or failure for diagnosis. Jobs and workspace runs have finite lifetimes;
 use `down` to remove Services/Secrets too. Nothing touches another run's workspace or project.

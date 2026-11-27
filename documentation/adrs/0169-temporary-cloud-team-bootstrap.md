@@ -29,6 +29,8 @@ evidence. No result is inferred from Kubernetes provisioning alone.
 
 The next attempt encountered a full compute pool and lost its long CLI HTTP response before a holder ID returned. The local harness therefore uses the same public host command endpoint with Bun's idle timeout disabled and its own finite 20-minute request allowance. It journals a unique holder marker before submission; an interrupted response must be recovered from that exact marker or cleanup remains explicitly uncertain and retains storage. No production server timeout or companion installation is changed. The installed companion does not expose its initial run to machine automation, so this does not add automation permissions or issue a new token.
 
+The first bootstrap attempt then failed during package extraction with ENOSPC. The approved image has a read-only root and a small memory-backed /tmp; operator exec does not inherit the normal test runner's workspace-local HOME, TMPDIR and Bun cache. A scoped cloud diagnostic confirmed the normal runner uses /workspace for those paths and the disk has free capacity. Bootstrap must explicitly place its build home, temporary files and package cache under the owned disk-backed /workspace/cloud-team directory. Preserve bounded, redacted startup logs and disk evidence before cleanup removes a failed pod.
+
 ## Limitations
 
 The companion has no nonblocking exact-run inspection command; its recent-run list is

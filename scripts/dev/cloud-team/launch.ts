@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { collectBootstrapFailure } from "./diagnostics";
 import { configureActorNetwork, exec, exposeServices, findActor, kube } from "./infra";
 import { reserve } from "./operator";
 import { until } from "./process";
@@ -77,28 +78,34 @@ export const createActorLauncher =
       "-p",
       JSON.stringify({ spec: { activeDeadlineSeconds: minutes * 60 } }),
     ]);
-    await exec(pair, actor, ["bun", "/workspace/cloud-team/repo/scripts/dev/cloud-team/bootstrap.ts"]);
-    await until(
-      `${role} runtime ready`,
-      async () => {
-        const progress = JSON.parse(
-          await exec(pair, actor, [
-            "bun",
-            "-e",
-            `
+    try {
+      await exec(pair, actor, ["bun", "/workspace/cloud-team/repo/scripts/dev/cloud-team/bootstrap.ts"]);
+      await until(
+        `${role} runtime ready`,
+        async () => {
+          const progress = JSON.parse(
+            await exec(pair, actor, [
+              "bun",
+              "-e",
+              `
         const exit=Bun.file("/workspace/cloud-team/exited");
         console.log(JSON.stringify({ready:await Bun.file("/workspace/cloud-team/ready").exists(),
           exit:await exit.exists()?Number(await exit.text()):null}));
       `,
-          ]),
-        );
-        if (progress.exit !== null)
-          throw new Error(
-            `${role} bootstrap exited (${progress.exit}); inspect ${actor.pod}:/workspace/cloud-team/bootstrap.log`,
+            ]),
           );
-        return progress.ready;
-      },
-      900,
-    );
+          if (progress.exit !== null) throw new Error(`${role} bootstrap exited (${progress.exit})`);
+          return progress.ready;
+        },
+        900,
+      );
+    } catch (error) {
+      await collectBootstrapFailure(pair, actor, role)
+        .then((path) => evidence(pair, "startup diagnostics saved", { role, path }))
+        .catch((diagnosticError) =>
+          evidence(pair, "startup diagnostics unavailable", { role, error: String(diagnosticError) }),
+        );
+      throw error;
+    }
     await evidence(pair, `${role} Cloud workspace ready`, { workspaceId: created.id });
   };
