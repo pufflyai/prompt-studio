@@ -92,8 +92,15 @@ test("Cloud settings respect early access and manage devices and project sync th
   await context.setOffline(false);
   await expect(status).toHaveText("Sign in");
   await openSettings();
-  const microsoftSignIn = settings.getByRole("button", { name: "Sign in with Microsoft", exact: true });
-  await expect(microsoftSignIn).toBeVisible();
+  const signIn = settings.getByRole("button", { name: "Sign in", exact: true });
+  const providers = settings.getByRole("dialog", { name: "Sign in", exact: true });
+  const chooseProvider = async (provider: "Google" | "Microsoft") => {
+    await signIn.click();
+    await expect(providers).toBeVisible();
+    await providers.getByRole("button", { name: `Sign in with ${provider}`, exact: true }).click();
+    await expect(providers).toBeHidden();
+  };
+  await expect(signIn).toBeVisible();
   const startSignIn = async (provider: "Google" | "Microsoft" = "Google") => {
     const viewport = page.viewportSize()!;
     const opened = context.waitForEvent("page");
@@ -101,7 +108,7 @@ test("Cloud settings respect early access and manage devices and project sync th
       "request",
       (request) => new URL(request.url()).pathname === "/v1/native-login",
     );
-    await settings.getByRole("button", { name: `Sign in with ${provider}`, exact: true }).click();
+    await chooseProvider(provider);
     const popup = await opened;
     const login = new URL((await destination).url());
     expect(login.origin).toBe(fixture.peer.origin);
@@ -118,13 +125,13 @@ test("Cloud settings respect early access and manage devices and project sync th
   const cancelled = await startSignIn("Microsoft");
   await expect(settings.getByRole("button", { name: "Cancel sign-in" })).toBeVisible();
   await settings.getByRole("button", { name: "Cancel sign-in" }).click();
-  await expect(settings.getByRole("button", { name: "Sign in with Google", exact: true })).toBeVisible();
+  await expect(signIn).toBeVisible();
   await expect(fetch(cancelled)).rejects.toThrow();
   const cancelledNotice = settings.getByRole("alert").filter({ hasText: "Sign-in did not complete." });
   await expect(cancelledNotice).toBeVisible();
   const cancelledAttempt = (await first.client.account.status()).loginAttempt;
   await fixture.peer.setMicrosoftSignIn(false);
-  await microsoftSignIn.click();
+  await chooseProvider("Microsoft");
   const unavailableNotice = settings.getByRole("alert").filter({ hasText: "has not enabled Microsoft sign-in" });
   await expect(unavailableNotice).toBeVisible();
   await expect(cancelledNotice).toBeHidden();
@@ -159,7 +166,7 @@ test("Cloud settings respect early access and manage devices and project sync th
   await expect(status).toHaveText("Sign in");
   // Critical: retiring the account popover must keep the independently owned settings surface open.
   await expect(settingsFrame).toBeVisible();
-  await expect(settings.getByRole("button", { name: "Sign in with Google", exact: true })).toBeVisible();
+  await expect(signIn).toBeVisible();
   await fixture.peer.setEarlyAccess(true);
   expect((await fetch(await startSignIn())).status).toBe(200);
   await expect(status).toHaveText("Local");
