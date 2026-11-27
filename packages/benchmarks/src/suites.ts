@@ -22,50 +22,46 @@ export const suites: BenchmarkSuite[] = scenarios.map((scenario) => ({
   label: scenario.label,
   files: [scenario.file],
   platforms: [...scenario.platforms],
-  prepare: (context) =>
-    scenario.id === "B7"
-      ? []
-      : [
-          { command: ["bun", "run", "build", "--", "--scope", "@pstdio/desktop", "--include-dependencies"] },
-          ...(scenario.id === "B6"
-            ? [{ command: ["bunx", "playwright", "install", "chromium"], cwd: "packages/e2e" }]
-            : [
-                {
-                  command: ["bun", "run", "package", "--", `--arch=${context.platform.split("-")[1]}`],
-                  cwd: "clients/desktop",
-                },
-                ...(context.platform.startsWith("linux-")
-                  ? [
-                      {
-                        command: [
-                          "sudo",
-                          "chown",
-                          "root:root",
-                          join(
-                            context.root,
-                            "clients/desktop/out",
-                            `prompt-studio-${context.platform}`,
-                            "chrome-sandbox",
-                          ),
-                        ],
-                      },
-                      {
-                        command: [
-                          "sudo",
-                          "chmod",
-                          "4755",
-                          join(
-                            context.root,
-                            "clients/desktop/out",
-                            `prompt-studio-${context.platform}`,
-                            "chrome-sandbox",
-                          ),
-                        ],
-                      },
-                    ]
-                  : []),
-              ]),
-        ],
+  prepare: (context) => {
+    if (scenario.id === "B7") return [];
+    if (scenario.id === "B9")
+      return [
+        { command: ["bun", "run", "build", "--", "--scope", "pstdio-dashboard", "--include-dependencies"] },
+        { command: ["bun", "run", "--cwd", "scripts", "build:host"] },
+        { command: ["bunx", "playwright", "install", "chromium", "--no-shell"], cwd: "packages/e2e" },
+      ];
+    return [
+      { command: ["bun", "run", "build", "--", "--scope", "@pstdio/desktop", "--include-dependencies"] },
+      ...(scenario.id === "B6"
+        ? [{ command: ["bunx", "playwright", "install", "chromium"], cwd: "packages/e2e" }]
+        : [
+            {
+              command: ["bun", "run", "package", "--", `--arch=${context.platform.split("-")[1]}`],
+              cwd: "clients/desktop",
+            },
+            ...(context.platform.startsWith("linux-")
+              ? [
+                  {
+                    command: [
+                      "sudo",
+                      "chown",
+                      "root:root",
+                      join(context.root, "clients/desktop/out", `prompt-studio-${context.platform}`, "chrome-sandbox"),
+                    ],
+                  },
+                  {
+                    command: [
+                      "sudo",
+                      "chmod",
+                      "4755",
+                      join(context.root, "clients/desktop/out", `prompt-studio-${context.platform}`, "chrome-sandbox"),
+                    ],
+                  },
+                ]
+              : []),
+          ]),
+    ];
+  },
   sample: (context) => [
     {
       command: [
@@ -85,6 +81,7 @@ export const suites: BenchmarkSuite[] = scenarios.map((scenario) => ({
                 join(context.root, "dist", context.platform.startsWith("win32-") ? "pstdio.exe" : "pstdio"),
             }
           : {}),
+        ...(scenario.id === "B9" && { E2E_PACKAGED_BINARY_PATH: join(context.root, "dist", "pstdio") }),
         BENCHMARK_SOURCE_SHA: context.sha,
         BENCHMARK_EVIDENCE_DIR:
           process.env.BENCHMARK_EVIDENCE_DIR ?? join(context.root, "test-results/production-performance"),

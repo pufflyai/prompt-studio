@@ -92,7 +92,7 @@ Prefer configured cloud test workspaces and cloud app previews when they support
 
 ## 10. Frozen performance catalog
 
-1. PS-233 authorizes exactly B1–B8 in the versioned benchmark manifest. Do not add benchmarks automatically for features.
+1. PS-233 authorizes the B1–B8 critical workloads in the versioned benchmark manifest. PS-309 authorizes the on-demand Apple Silicon B9 Notes workload. Do not add benchmarks automatically for features.
 2. Adding, deleting, replacing, resizing, reordering, relaxing or extending a scenario, metric, fixture, variant or platform requires an explicit human instruction. Label every benchmark PR `benchmark` and leave it for human review and merge under [004.1.11](0004-ci.md#1-finishing-a-pull-request). Agents must not treat a self-edited lock as authorization.
 3. Harness-only repairs may retain workload version and history when semantics are unchanged. Temporary profiling stays outside discovery, gates and the permanent catalog.
 4. PR and queue run the fast catalog check only. Measurements remain in dedicated nightly/release validation; no median-only acceptance, unchanged retries or workload reduction obtains a pass.

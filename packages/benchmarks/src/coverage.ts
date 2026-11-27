@@ -78,8 +78,8 @@ export const verifyBenchmarkCoverage = async (root: string, suites: BenchmarkSui
       suites,
     ),
   ];
-  if (scenarios.length !== 8 || scenarios.some((scenario, index) => scenario.id !== `B${index + 1}`))
-    errors.push("The frozen catalog is exactly B1–B8 in order");
+  if (scenarios.length !== 9 || scenarios.some((scenario, index) => scenario.id !== `B${index + 1}`))
+    errors.push("The authorized catalog is exactly B1–B9 in order");
   for (const scenario of scenarios) {
     const source = ts.createSourceFile(
       scenario.file,
@@ -109,6 +109,6 @@ export const verifyBenchmarkCoverage = async (root: string, suites: BenchmarkSui
       errors.push(`${scenario.file}: expected exactly one ${scenario.id} case`);
   }
   if (errors.length) throw new Error(`Benchmark coverage failed:\n${errors.join("\n")}`);
-  const { digest } = readContract(root);
-  console.log(`Frozen catalog revision 1: ${digest}`);
+  const { digest, revision } = readContract(root);
+  console.log(`Frozen catalog revision ${revision}: ${digest}`);
 };

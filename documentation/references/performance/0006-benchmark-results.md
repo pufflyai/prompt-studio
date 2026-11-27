@@ -1,6 +1,6 @@
 # Benchmark results
 
-The permanent catalog is [B1–B8](../../../packages/benchmarks/src/catalog/scenarios.ts), revision 1. See [workload guidance](../../guides/development/0016-writing-benchmarks.md) and the [migration ledger](0009-frozen-workload-ledger.md). The previous nine families and their historical results are retired history; they are not comparable with this series.
+The [benchmark catalog](../../../packages/benchmarks/src/catalog/scenarios.ts) is at revision 2. It contains critical release scenarios B1–B8 and the on-demand Notes benchmark B9. See [workload guidance](../../guides/development/0016-writing-benchmarks.md) and the [migration ledger](0009-frozen-workload-ledger.md). Results from the retired benchmark families use different workloads.
 
 ## Execution and ownership
 
