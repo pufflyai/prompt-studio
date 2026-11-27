@@ -27,7 +27,7 @@ import {
   projectionStringTag,
   projectionSubstringBytes,
 } from "./record-projection-codec";
-import { cachedQueryFieldSql } from "./record-query-field-cache";
+import { cachedQueryFieldSql, cachedQueryPredicateSql } from "./record-query-field-cache";
 import { recordHierarchySql } from "./record-query-hierarchy";
 import { recordLookupSql } from "./record-query-lookup";
 import { relatedRecordPredicateSql } from "./record-related-query";
@@ -207,6 +207,19 @@ type RelatedSql = (
   alias?: string,
   negated?: boolean,
 ) => SQL;
+const cachedPredicateSql = (
+  index: StorageRecordIndex,
+  predicate: StoragePredicate,
+  alias: string | undefined,
+  resolve: ((name: string) => StorageRecordIndex) | undefined,
+  owner: QuerySqlOwner | undefined,
+) => {
+  if (!resolve || !owner) return;
+  return cachedQueryPredicateSql(index, predicate, alias, (original) =>
+    relatedRecordPredicateSql(owner, original, predicate, resolve, alias ?? "records"),
+  );
+};
+
 export const predicateSql = (
   index: StorageRecordIndex,
   predicate?: StoragePredicate,
@@ -218,6 +231,8 @@ export const predicateSql = (
   negated = false,
 ) => {
   if (!predicate) return sql`true`;
+  const cached = cachedPredicateSql(index, predicate, alias, resolve, owner);
+  if (cached) return cached;
   if ("test" in predicate) {
     if (!expression) throw new Error("Expression query needs field scopes");
     return sql`${expression(predicate.test)} = 'true'::jsonb`;

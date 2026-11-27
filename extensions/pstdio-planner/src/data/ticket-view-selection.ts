@@ -46,12 +46,14 @@ export const prepareTicketViewQuery = async (
 ) => {
   await ensureTicketStorage(ctx);
   const { visible, ...viewSelection } = selection;
-  await ensureDefaultTags(ctx.storage);
-  const statuses = await seedDefaultStatuses(ctx.storage);
-  const [workflow] = await Promise.all([readWorkflowStatuses(ctx, statuses), readPlanMetadata(ctx.storage)]);
+  const [statuses] = await Promise.all([
+    seedDefaultStatuses(ctx.storage),
+    ensureDefaultTags(ctx.storage),
+    readPlanMetadata(ctx.storage),
+  ]);
+  const workflow = await readWorkflowStatuses(ctx, statuses);
   const before = await ctx.storage.records.query({ index: "ticket-view", fields: [], limit: 0, orderBy: [] });
   // Seed writes finish above; a fresh read cannot reuse a pre-snapshot seeder result.
-  const tags = sortedBySortOrder(await readTagDefinitions(ctx.storage));
   const point = selection.pointTicketId
     ? await ctx.storage.records.query({
         index: "ticket-view",
@@ -64,7 +66,11 @@ export const prepareTicketViewQuery = async (
     : undefined;
   const deadlineId = point?.records[0]?.fields.deadlineId;
   const pointDeadline = typeof deadlineId === "string" ? deadlineId : null;
-  const state = await ticketViewState(ctx.storage, usableWorkflowStatuses(workflow), point ? pointDeadline : undefined);
+  const [definitions, state] = await Promise.all([
+    readTagDefinitions(ctx.storage),
+    ticketViewState(ctx.storage, usableWorkflowStatuses(workflow), point ? pointDeadline : undefined),
+  ]);
+  const tags = sortedBySortOrder(definitions);
   const { computed, metadata } = state;
   const attributes = [...buildTicketAttributes(statuses, tags), ...timelineTicketAttributes(metadata.deadlines)];
   const groups = [input.settings?.columnGrouping ?? "status", input.settings?.rowGrouping ?? "none"];

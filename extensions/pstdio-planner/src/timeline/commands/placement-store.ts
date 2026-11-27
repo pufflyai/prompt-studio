@@ -16,35 +16,52 @@ const metadataKey = "timeline.deadlines";
 export const planPlacements = (storage: ExtensionStorageApi) =>
   storage.collection<PlanPlacement>("timeline.placements");
 
+// Retain only migration completion for this storage API's lifetime; metadata is always read afresh.
+const metadataMigrations = new WeakMap<ExtensionStorageApi, Promise<void>>();
+const migratePlanMetadata = (storage: ExtensionStorageApi) => {
+  const existing = metadataMigrations.get(storage);
+  if (existing) return existing;
+  const ready = storage
+    .scope({ type: "migration", id: "timeline.placements" })
+    .migrate(1, async (_previous, migration) => {
+      const legacy = await storage.get<StoredPlan>("timeline.plan");
+      const known = new Set(legacy?.deadlines.map(({ id }) => id) ?? []);
+      const seen = new Set<string>();
+      const entries = legacy?.order ?? [];
+      const placements = planPlacements(storage);
+      for (let offset = 0; offset < entries.length; offset += 100) {
+        const batch = entries.slice(offset, offset + 100).flatMap((entry, index) => {
+          if (seen.has(entry.ticketId)) return [];
+          seen.add(entry.ticketId);
+          return [
+            {
+              ...entry,
+              deadlineId: entry.deadlineId && known.has(entry.deadlineId) ? entry.deadlineId : null,
+              position: migration.position(offset + index, entry.ticketId),
+            },
+          ];
+        });
+        for (let start = 0; start < batch.length; start += 8)
+          await Promise.all(
+            batch.slice(start, start + 8).map((entry) => placements.createIfAbsent(entry.ticketId, entry)),
+          );
+      }
+      await storage.set<PlanMetadata>(metadataKey, { deadlines: legacy?.deadlines ?? [] });
+      if (legacy) await storage.delete("timeline.plan");
+    })
+    .then(() => {})
+    .catch((error: unknown) => {
+      metadataMigrations.delete(storage);
+      throw error;
+    });
+  metadataMigrations.set(storage, ready);
+  return ready;
+};
+
 /** The old array is migration input only. Publish the new catalog after every bounded write succeeds. */
 export const readPlanMetadata = async (storage: ExtensionStorageApi) => {
   await preparePlannerIndexes(storage);
-  await storage.scope({ type: "migration", id: "timeline.placements" }).migrate(1, async (_previous, migration) => {
-    const legacy = await storage.get<StoredPlan>("timeline.plan");
-    const known = new Set(legacy?.deadlines.map(({ id }) => id) ?? []);
-    const seen = new Set<string>();
-    const entries = legacy?.order ?? [];
-    const placements = planPlacements(storage);
-    for (let offset = 0; offset < entries.length; offset += 100) {
-      const batch = entries.slice(offset, offset + 100).flatMap((entry, index) => {
-        if (seen.has(entry.ticketId)) return [];
-        seen.add(entry.ticketId);
-        return [
-          {
-            ...entry,
-            deadlineId: entry.deadlineId && known.has(entry.deadlineId) ? entry.deadlineId : null,
-            position: migration.position(offset + index, entry.ticketId),
-          },
-        ];
-      });
-      for (let start = 0; start < batch.length; start += 8)
-        await Promise.all(
-          batch.slice(start, start + 8).map((entry) => placements.createIfAbsent(entry.ticketId, entry)),
-        );
-    }
-    await storage.set<PlanMetadata>(metadataKey, { deadlines: legacy?.deadlines ?? [] });
-    if (legacy) await storage.delete("timeline.plan");
-  });
+  await migratePlanMetadata(storage);
   return (await storage.get<PlanMetadata>(metadataKey)) ?? { deadlines: [] };
 };
 

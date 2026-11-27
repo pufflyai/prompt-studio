@@ -33,7 +33,7 @@ export const recordRelatedOrderCandidatesSql = (
   const source = queryFieldCacheSourceSql(cache, where, (name) =>
     recordFieldSql(index, name, undefined, resolve, owner),
   );
-  return sql`(SELECT record_id AS selected_record_id FROM ${source}
+  return sql`(SELECT record_id AS selected_record_id, row_number() OVER (ORDER BY ${order}) AS selected_order FROM ${source}
     ORDER BY ${order} LIMIT ${limit + offset}) AS candidates INNER JOIN records
     ON records.record_id = candidates.selected_record_id
     AND records.owner_id = ${queryOwnerKey(owner)}`;

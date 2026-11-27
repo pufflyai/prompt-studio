@@ -21,6 +21,13 @@ import { ticketQuerySummary } from "./ticket-query-summary";
 import { plannerOwnerFor, readTicketParentLookup } from "./ticket-resource-hierarchy";
 import { prepareTicketViewQuery, type TicketQueryContext, type TicketViewSelection } from "./ticket-view-selection";
 
+const reviewRequestState = (archived: boolean, counts?: { pending: number; answered: number }) => {
+  if (archived) return "";
+  if (counts?.pending) return "requested";
+  if (counts?.answered) return "answered";
+  return "";
+};
+
 export const readTicketViewPage = async (
   ctx: TicketQueryContext,
   input: Partial<KanbanRendererQueryParams>,
@@ -32,6 +39,10 @@ export const readTicketViewPage = async (
   const requested = (fields: string[]) => !displayFields || fields.some((field) => displayFields.includes(field));
   const showLinkedResources = requested([TICKET_LINKED_RESOURCES_ATTRIBUTE, TICKET_LINKED_RESOURCE_ITEMS_ATTRIBUTE]);
   if (showLinkedResources && scope.fields) scope.fields = [...scope.fields, ...reviewLinkProjectionFields];
+  const showReviews = requested(["reviewRequests", REVIEW_REQUEST_ITEMS_ATTRIBUTE]);
+  // The same bounded review counts supply the card badges and the selected attribute.
+  const reuseReviewCounts = showReviews && scope.fields?.includes("reviewRequests");
+  if (reuseReviewCounts) scope.fields = scope.fields?.filter((field) => field !== "reviewRequests");
   const selected = await readCollectionPage(ctx.storage, scope);
   const tickets = selected.records.flatMap(({ fields }) => {
     const ticket = ticketQuerySummary(fields);
@@ -46,12 +57,14 @@ export const readTicketViewPage = async (
         )
       : undefined,
     readTicketParentLookup(ctx, new Map(tickets.map((ticket) => [ticket.id, ticket]))),
-    readReviewCounts(
-      ctx.storage,
-      requested(["reviewRequests", REVIEW_REQUEST_ITEMS_ATTRIBUTE]) ? tickets.map(({ id }) => id) : [],
-    ),
+    readReviewCounts(ctx.storage, showReviews ? tickets.map(({ id }) => id) : []),
   ]);
   const projections = new Map(selected.records.map(({ fields }) => [String(fields.id), fields]));
+  if (reuseReviewCounts) {
+    for (const ticket of tickets) {
+      projections.get(ticket.id)!.reviewRequests = reviewRequestState(ticket.archived, reviews.get(ticket.id));
+    }
+  }
   if (links) {
     for (const { id } of tickets)
       links.set(

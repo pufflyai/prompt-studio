@@ -34,8 +34,8 @@ export const readPlanCommand = defineCommand({
   },
   async run(ctx, input) {
     await ensureTicketStorage(ctx);
-    const workflow = usableWorkflowStatuses(await readWorkflowStatuses(ctx));
-    await ensureDefaultTags(ctx.storage);
+    const [statuses] = await Promise.all([readWorkflowStatuses(ctx), ensureDefaultTags(ctx.storage)]);
+    const workflow = usableWorkflowStatuses(statuses);
     const display = input.display;
     const hidden = Boolean(
       display?.collapsedMilestones?.length ||
@@ -145,11 +145,11 @@ export const readPlanCommand = defineCommand({
     });
     if (view.tickets.some(({ id }) => typeof view.projections.get(id)?.planPosition !== "string"))
       throw new Error("Timeline execution order is stale; restart the query with a numeric offset");
-    const page = await planPageRows(ctx, view, executionOffset);
-    // Selection outside the visible window needs only its row and section.
-    const summary = input.ticketId
-      ? undefined
-      : await planQuerySummary(ctx.storage, view, executionOffset !== undefined);
+    const [page, summary] = await Promise.all([
+      planPageRows(ctx, view, executionOffset),
+      // Selection outside the visible window needs only its row and section.
+      input.ticketId ? undefined : planQuerySummary(ctx.storage, view, executionOffset !== undefined),
+    ]);
     const deadlines = [...view.metadata.deadlines, null].filter(
       (deadline) => !input.ticketId || page.rows.some((row) => row.deadlineId === (deadline?.id ?? null)),
     );

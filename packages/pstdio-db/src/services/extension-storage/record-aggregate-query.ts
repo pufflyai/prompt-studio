@@ -27,7 +27,7 @@ export const aggregateRecordQuery = async (
   const cardinality = counted ? sql`coalesce(sum(n), 0)` : sql`count(*)`;
   const source = () => {
     if (counted) return counted;
-    if (!cache?.fields.size) return sql`records WHERE ${where}`;
+    if (!cache || (!cache.fields.size && !cache.predicates.size)) return sql`records WHERE ${where}`;
     return queryFieldCacheSourceSql(cache, where, (name) => recordFieldSql(original, name, undefined, resolve, owner));
   };
   const metrics = options.metrics.length

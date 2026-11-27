@@ -38,8 +38,11 @@ export const parseWorkflowStatuses = (value: unknown) => {
 type WorkflowContext = Pick<ExtensionContextBase, "settings" | "storage">;
 
 export const readWorkflowStatuses = async (ctx: WorkflowContext, definitions?: StoredStatus[]) => {
-  const selections = parseWorkflowStatuses((await ctx.settings.all())["workflow.statuses"]);
-  const statuses = definitions ?? (await readTicketStatuses(ctx.storage)).statuses;
+  const [settings, statuses] = await Promise.all([
+    ctx.settings.all(),
+    definitions ?? readTicketStatuses(ctx.storage).then((result) => result.statuses),
+  ]);
+  const selections = parseWorkflowStatuses(settings["workflow.statuses"]);
   const known = new Set(statuses.map(({ id }) => id));
   const ids = [...selections.completedStatusIds, ...selections.blockedStatusIds, ...selections.activeStatusIds];
   return { selections, statuses, missingStatusIds: ids.filter((id) => !known.has(id)) };
