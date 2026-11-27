@@ -1,12 +1,11 @@
-import { Box, Stack, Text } from "@chakra-ui/react";
+import { Text } from "@chakra-ui/react";
 import { psTheme } from "@pstdio/ui";
 import { barY, defineChart, dot } from "@tanstack/charts";
-import { Chart } from "@tanstack/charts/react";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
 import { tooltip } from "@tanstack/charts/tooltip";
 import type { Aggregation } from "../webview/period";
 import { periodChartMargin, periodTitle, timelineScale } from "../webview/period-chart";
-import { useHealthChartAppearance } from "./health-chart-style";
+import { HealthChartFrame, HealthPlot, useHealthChartAppearance } from "./health-chart-style";
 import { publicationRows, releaseMarks } from "./health-chart-timeline";
 import type { HealthBucket } from "./health-timeline";
 import type { BugOriginCoverage } from "./types";
@@ -71,14 +70,14 @@ export const BugOriginsPlot = (props: Props) => {
   });
 
   return (
-    <Stack gap="2xs">
-      <Box color="fg.muted" textStyle="label/XS">
-        {points.length ? (
-          <Chart definition={definition} height={220} ariaLabel={`Estimated bugs per feature by ${aggregation}, UTC`} />
-        ) : (
-          <Text>No reviewed feature merges in this range.</Text>
-        )}
-      </Box>
+    <HealthChartFrame>
+      {points.length ? (
+        <HealthPlot definition={definition} ariaLabel={`Estimated bugs per feature by ${aggregation}, UTC`} />
+      ) : (
+        <Text textStyle="label/XS" color="fg.muted">
+          No reviewed feature merges in this range.
+        </Text>
+      )}
       <Text textStyle="label/XS" color="fg.muted">
         {coverage.linkedToFeatures.toLocaleString()} of {coverage.mergedReviewed.toLocaleString()} reviewed merged bug
         PRs linked to earlier features · {coverage.linkedToOther.toLocaleString()} linked to other PRs
@@ -86,6 +85,6 @@ export const BugOriginsPlot = (props: Props) => {
         · {coverage.unlinked.toLocaleString()} unlinked · Reviewed through{" "}
         {dateFormat.format(new Date(coverage.reviewedThrough))}
       </Text>
-    </Stack>
+    </HealthChartFrame>
   );
 };

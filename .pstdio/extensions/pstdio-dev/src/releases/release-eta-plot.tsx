@@ -1,12 +1,11 @@
-import { Box, Stack, Text } from "@chakra-ui/react";
+import { Text } from "@chakra-ui/react";
 import { EmptyState, psTheme } from "@pstdio/ui";
 import { defineChart, dot, lineY } from "@tanstack/charts";
-import { Chart } from "@tanstack/charts/react";
 import { scaleBand } from "@tanstack/charts/scales/band";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
 import { tooltip } from "@tanstack/charts/tooltip";
 import { periodChartMargin } from "../webview/period-chart";
-import { useHealthChartAppearance } from "./health-chart-style";
+import { HealthChartFrame, HealthPlot, useHealthChartAppearance } from "./health-chart-style";
 import {
   AGENTIC_HOURS_PER_FAILURE,
   type EtaGrouping,
@@ -93,19 +92,16 @@ export const ReleaseEtaPlot = ({ runs, grouping, onChoose }: ReleaseEtaPlotProps
   });
 
   return (
-    <Stack gap="2xs">
+    <HealthChartFrame>
       <Text textStyle="label/M/medium">{formatHours(latest.hours)}</Text>
-      <Box color="fg.muted" textStyle="label/XS">
-        <Chart
-          definition={definition}
-          height={220}
-          ariaLabel={`ETA to release by ${grouping}, UTC`}
-          onFocusChange={(focused) => {
-            const row = rows.find((entry) => entry.key === String(focused?.xValue));
-            if (row) onChoose(row.point.latest.run.id);
-          }}
-        />
-      </Box>
-    </Stack>
+      <HealthPlot
+        definition={definition}
+        ariaLabel={`ETA to release by ${grouping}, UTC`}
+        onFocusChange={(focused) => {
+          const row = rows.find((entry) => entry.key === String(focused?.xValue));
+          if (row) onChoose(row.point.latest.run.id);
+        }}
+      />
+    </HealthChartFrame>
   );
 };

@@ -1,13 +1,12 @@
-import { Box, Stack } from "@chakra-ui/react";
+import { Stack } from "@chakra-ui/react";
 import { AlertMessage, EmptyState, psTheme } from "@pstdio/ui";
 import { barY, defineChart, dot, lineY, stack } from "@tanstack/charts";
-import { Chart } from "@tanstack/charts/react";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
 import { tooltip } from "@tanstack/charts/tooltip";
 import { useState } from "react";
 import type { Aggregation } from "../webview/period";
 import { periodChartMargin, periodTitle, timelineScale } from "../webview/period-chart";
-import { seriesColorSettings, useHealthChartAppearance } from "./health-chart-style";
+import { HealthChartFrame, HealthPlot, seriesColorSettings, useHealthChartAppearance } from "./health-chart-style";
 import { publicationRows, releaseMarks } from "./health-chart-timeline";
 import type { HealthBucket } from "./health-timeline";
 import { SeriesLegend } from "./series-legend";
@@ -108,11 +107,9 @@ export const VelocityPlot = ({ buckets, aggregation }: TimelinePlotProps) => {
   });
 
   return (
-    <Stack gap="2xs">
-      <Box color="fg.muted" textStyle="label/XS">
-        <Chart definition={definition} height={220} ariaLabel={`Feature velocity by ${aggregation}, UTC`} />
-      </Box>
-    </Stack>
+    <HealthChartFrame>
+      <HealthPlot definition={definition} ariaLabel={`Feature velocity by ${aggregation}, UTC`} />
+    </HealthChartFrame>
   );
 };
 
@@ -187,9 +184,9 @@ export const PullRequestMergesPlot = ({ buckets, aggregation, error }: TimelineP
   });
 
   return (
-    <Stack gap="lg">
+    <HealthChartFrame gap="lg">
       {warning}
-      <Stack gap="2xs">
+      <Stack flex="1" gap="2xs">
         {categorized ? (
           <SeriesLegend
             label="PR category legend"
@@ -198,18 +195,15 @@ export const PullRequestMergesPlot = ({ buckets, aggregation, error }: TimelineP
             onSelect={setSelection}
           />
         ) : null}
-        <Box color="fg.muted" textStyle="label/XS">
-          <Chart
-            definition={definition}
-            height={220}
-            ariaLabel={
-              selected
-                ? `${categories[selected].label} PR merges by ${aggregation}, UTC`
-                : `PR merges by ${aggregation}, UTC`
-            }
-          />
-        </Box>
+        <HealthPlot
+          definition={definition}
+          ariaLabel={
+            selected
+              ? `${categories[selected].label} PR merges by ${aggregation}, UTC`
+              : `PR merges by ${aggregation}, UTC`
+          }
+        />
       </Stack>
-    </Stack>
+    </HealthChartFrame>
   );
 };

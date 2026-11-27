@@ -1,7 +1,6 @@
-import { Box, HStack, Stack, Text } from "@chakra-ui/react";
+import { HStack, Text } from "@chakra-ui/react";
 import { AlertMessage, EmptyState, psTheme } from "@pstdio/ui";
 import { barY, defineChart, stack } from "@tanstack/charts";
-import { Chart } from "@tanstack/charts/react";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
 import { tooltip } from "@tanstack/charts/tooltip";
 import { ChartColumn, Layers } from "lucide-react";
@@ -9,7 +8,7 @@ import { useState } from "react";
 import type { Aggregation } from "../webview/period";
 import { periodChartMargin, periodTitle, timelineScale } from "../webview/period-chart";
 import { SelectMenu } from "../webview/select-menu";
-import { seriesColorSettings, useHealthChartAppearance } from "./health-chart-style";
+import { HealthChartFrame, HealthPlot, seriesColorSettings, useHealthChartAppearance } from "./health-chart-style";
 import { publicationRows, releaseMarks } from "./health-chart-timeline";
 import type { HealthBucket } from "./health-timeline";
 import { SeriesLegend } from "./series-legend";
@@ -208,7 +207,7 @@ export function MergeThemesPlot({ buckets, aggregation, coverage, error, kind = 
   });
 
   return (
-    <Stack gap="2xs">
+    <HealthChartFrame>
       <HStack gap="2xs" flexWrap="wrap">
         <SelectMenu
           label={copy.selector}
@@ -232,13 +231,10 @@ export function MergeThemesPlot({ buckets, aggregation, coverage, error, kind = 
         Analysis through {date.format(new Date(coverage.analyzedAt))} UTC
       </Text>
       <SeriesLegend label={`${copy.title} legend`} items={groups} selected={selected?.id} onSelect={setSelection} />
-      <Box color="fg.muted" textStyle="label/XS">
-        <Chart
-          definition={definition}
-          height={220}
-          ariaLabel={`${selected?.label ?? copy.title} by ${aggregation}, ${share ? copy.share : copy.count}, UTC`}
-        />
-      </Box>
-    </Stack>
+      <HealthPlot
+        definition={definition}
+        ariaLabel={`${selected?.label ?? copy.title} by ${aggregation}, ${share ? copy.share : copy.count}, UTC`}
+      />
+    </HealthChartFrame>
   );
 }
