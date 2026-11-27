@@ -256,6 +256,20 @@
       "icon": "Gauge"
     },
     {
+      "installName": "agent-quotas",
+      "extensionId": "pstdio.agent-quotas",
+      "displayName": "Agent Quotas",
+      "description": "Remaining 5-hour and weekly agent allowance in the status bar, with a forecast at the current pace.",
+      "origin": {
+        "kind": "git",
+        "url": "https://github.com/pufflyai/prompt-studio",
+        "path": "extensions/pstdio-agent-quotas",
+        "ref": "{hostRelease}"
+      },
+      "default": false,
+      "icon": "Hourglass"
+    },
+    {
       "installName": "extension-lab",
       "extensionId": "pstdio.extension-lab",
       "displayName": "Extension Lab",
