@@ -1,6 +1,7 @@
-import { diffChars } from "diff";
+import { diffArrays, diffChars } from "diff";
 import type { Table, TableCell } from "mdast";
 import { parseMarkdownSource } from "./markdown-ast";
+import { inlineMathRanges } from "./markdown-legacy-math";
 import { collectMarkdownLinkChanges } from "./markdown-source-links";
 import { buildSourceMap, mappedEnd, mappedInsertion, mappedStart, type SourceMap } from "./markdown-source-map";
 
@@ -15,7 +16,7 @@ interface TableChanges {
   normalizedCurrent: string;
 }
 
-const collectEdits = (baseline: string, current: string) => {
+const editsFromChanges = (changes: ReturnType<typeof diffChars>) => {
   const edits: TextEdit[] = [];
   let baselineOffset = 0;
   let pending: TextEdit | null = null;
@@ -26,7 +27,7 @@ const collectEdits = (baseline: string, current: string) => {
     pending = null;
   };
 
-  for (const change of diffChars(baseline, current)) {
+  for (const change of changes) {
     if (!change.added && !change.removed) {
       finishPending();
       baselineOffset += change.value.length;
@@ -45,6 +46,60 @@ const collectEdits = (baseline: string, current: string) => {
 
   finishPending();
   return edits;
+};
+
+type MathDiffToken = string | { value: string; source: string };
+
+const mathDiffTokens = (markdown: string, ranges: ReturnType<typeof inlineMathRanges>) => {
+  const tokens: MathDiffToken[] = [];
+  let offset = 0;
+  for (const { start, end, value } of ranges) {
+    for (const character of markdown.slice(offset, start)) tokens.push(character);
+    tokens.push({ value, source: markdown.slice(start, end) });
+    offset = end;
+  }
+  for (const character of markdown.slice(offset)) tokens.push(character);
+  return tokens;
+};
+
+const tokenSource = (token: MathDiffToken) => (typeof token === "string" ? token : token.source);
+
+const collectEdits = (baseline: string, current: string, parse: typeof parseMarkdownSource) => {
+  const markers = /\$|\\[([]/;
+  if (!markers.test(baseline) && !markers.test(current)) return editsFromChanges(diffChars(baseline, current));
+
+  const before = inlineMathRanges(parse(baseline));
+  const after = inlineMathRanges(parse(current));
+  if (!before.length && !after.length) return editsFromChanges(diffChars(baseline, current));
+
+  // Keep unchanged equations whole even when adjacent equations require a different delimiter spelling.
+  const original = mathDiffTokens(baseline, before);
+  const changes = diffArrays(original, mathDiffTokens(current, after), {
+    comparator: (left, right) =>
+      typeof left === "string" || typeof right === "string" ? left === right : left.value === right.value,
+  });
+  let offset = 0;
+  const edits = editsFromChanges(
+    changes.map((change) => {
+      if (change.added) return { ...change, value: change.value.map(tokenSource).join("") };
+      const value = original
+        .slice(offset, offset + change.count)
+        .map(tokenSource)
+        .join("");
+      offset += change.count;
+      return { ...change, value };
+    }),
+  );
+
+  return edits.flatMap((edit) => {
+    if (edit.start === edit.end || !edit.replacement) return [edit];
+    const inner = editsFromChanges(diffChars(baseline.slice(edit.start, edit.end), edit.replacement));
+    return inner.map(({ start, end, replacement }) => ({
+      start: edit.start + start,
+      end: edit.start + end,
+      replacement,
+    }));
+  });
 };
 
 const sourceLineEnding = (source: string) => (source.includes("\r\n") ? "\r\n" : "\n");
@@ -214,7 +269,7 @@ export const applyMarkdownSourceChanges = (
 
   // Lexical reports semantic Markdown but normalizes its spelling. Map those
   // semantic edits back onto the loaded source so unrelated syntax never moves.
-  const edits = collectEdits(baseline, tableChanges.normalizedCurrent)
+  const edits = collectEdits(baseline, tableChanges.normalizedCurrent, parse)
     .map((edit) => {
       const start =
         edit.start === edit.end ? mappedInsertion(sourceMapping, edit.start) : mappedStart(sourceMapping, edit.start);

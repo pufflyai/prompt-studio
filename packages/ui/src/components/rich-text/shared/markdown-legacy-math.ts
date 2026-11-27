@@ -226,19 +226,68 @@ type ParseMath = (markdown: string, matches?: ReadonlyMap<number, number>) => Ro
 const matchInline = (markdown: string, { inlineBlocks, literals, autolinks }: ReturnType<typeof readSyntax>) =>
   inlineBlocks.flatMap((block) => inlinePairs(markdown, block, literals, autolinks));
 
+const planDisplay = (markdown: string, syntax: ReturnType<typeof readSyntax>, inline: InlinePair[]) => {
+  const source = markdown.split("\n");
+  const matchedInline = new Set(inline.filter((pair) => !pair.wrapped).flatMap(({ open, close }) => [open, close]));
+  const pairs = findDisplayPairs(source, syntax.paragraphs, syntax.literals, matchedInline);
+  const lines = displayLines(source, syntax.literals);
+  return { source, pairs, lines };
+};
+
+const displaySourceRanges = (plan: ReturnType<typeof planDisplay>, parse: ParseMath) => {
+  const { source, pairs, lines } = plan;
+  const ends = new Map<number, number>();
+  if (pairs.length) {
+    const rendered = renderLegacyMath(source, lines, pairs);
+    for (const { open, close } of acceptedDisplayPairs(parse(rendered.markdown), rendered, pairs)) {
+      ends.set(open.index, close.index);
+    }
+  }
+  const offsets = [0];
+  for (const line of source) offsets.push(offsets.at(-1)! + line.length + 1);
+
+  const ranges: SourceRange[] = [];
+  for (let index = 0; index < source.length; index++) {
+    const end = ends.get(index) ?? index;
+    if (end > index || lines[index]!.length > 1) {
+      ranges.push({ start: offsets[index]!, end: offsets[end + 1]! - 1 });
+      index = end;
+    }
+  }
+  return ranges;
+};
+
+export const parseLegacyInlineSource = (markdown: string, parse: ParseMath) => {
+  const original = parse(markdown);
+  if (!/\\[([]/.test(markdown)) return original;
+  const syntax = readSyntax(markdown, original);
+  const inline = matchInline(markdown, syntax);
+  if (!inline.length) return original;
+  // Keep original offsets while preventing display blocks from shifting the inline source ranges.
+  const displays = markdown.includes("\\[") ? displaySourceRanges(planDisplay(markdown, syntax, inline), parse) : [];
+  const matches = inline.filter(({ open, close }) => !literalAt(displays, open, close + 2));
+  return matches.length ? parse(markdown, new Map(matches.map(({ open, close }) => [open, close]))) : original;
+};
+
+export const inlineMathRanges = (tree: Root) => {
+  const ranges: (SourceRange & { value: string })[] = [];
+  forEachChild(tree, (node) => {
+    if (node.type !== "inlineMath") return;
+    const start = node.position?.start.offset;
+    const end = node.position?.end.offset;
+    if (start !== undefined && end !== undefined) ranges.push({ start, end, value: node.value });
+  });
+  return ranges;
+};
+
 export const parseLegacyMath = (markdown: string, parse: ParseMath) => {
   // Markdown itself determines code spans and block boundaries before legacy delimiters are considered.
   const original = parse(markdown);
   if (!/\\[([]/.test(markdown)) return original;
 
-  const source = markdown.split("\n");
   const syntax = readSyntax(markdown, original);
   const originalInline = matchInline(markdown, syntax);
-  const matchedInline = new Set(
-    originalInline.filter((pair) => !pair.wrapped).flatMap(({ open, close }) => [open, close]),
-  );
-  const pairs = findDisplayPairs(source, syntax.paragraphs, syntax.literals, matchedInline);
-  const lines = displayLines(source, syntax.literals);
+  const { source, pairs, lines } = planDisplay(markdown, syntax, originalInline);
   const rendered = renderLegacyMath(source, lines, pairs);
   const normalized = rendered.markdown === markdown ? original : parse(rendered.markdown);
   const accepted = pairs.length ? acceptedDisplayPairs(normalized, rendered, pairs) : pairs;

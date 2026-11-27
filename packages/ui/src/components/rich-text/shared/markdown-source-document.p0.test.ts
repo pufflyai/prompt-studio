@@ -4,7 +4,7 @@ import * as markdownAst from "./markdown-ast";
 import { createMarkdownSourceDocument } from "./markdown-source-document";
 import { updateMarkdownTableCell } from "./markdown-table";
 import { $isDataTableNode } from "./nodes/DataTableNode";
-import { $isEquationNode } from "./plugins/EquationPlugin/EquationNode";
+import { $createEquationNode, $isEquationNode } from "./plugins/EquationPlugin/EquationNode";
 import { createHeadlessEditor } from "./transformers/markdown-transformers-test-utils";
 
 const sourceRoundTrip = (markdown: string, edit?: (editor: ReturnType<typeof createHeadlessEditor>) => void) => {
@@ -365,6 +365,53 @@ test("edits the second of two adjacent formulas without rewriting its delimiters
   });
 
   expect(result).toBe(String.raw`Adjacent: \(x\)\[z\].`);
+});
+
+test.each([
+  { markdown: String.raw`\(\$5\)`, before: false, expected: String.raw`\(\$5\)\(\$6\)` },
+  { markdown: String.raw`\(\$5\)`, before: true, expected: String.raw`\(\$6\)\(\$5\)` },
+  { markdown: "$x$", before: false, expected: String.raw`$x$\(\$6\)` },
+  { markdown: "$x$", before: true, expected: String.raw`\(\$6\)$x$` },
+  { markdown: "Before $x$ after.", before: true, expected: String.raw`Before \(\$6\)$x$ after.` },
+  { markdown: "Before $x$ after.", before: false, expected: String.raw`Before $x$\(\$6\) after.` },
+  {
+    markdown: "\\[x\\]\n\nBefore $x$ after.",
+    before: true,
+    expected: "\\[x\\]\n\nBefore \\(\\$6\\)$x$ after.",
+  },
+])("inserts an adjacent formula and preserves the loaded equation source (%o)", ({ markdown, before, expected }) => {
+  const result = sourceRoundTrip(markdown, (editor) => {
+    editor.update(
+      () => {
+        const paragraph = $getRoot().getChildren().find($isElementNode);
+        expect($isElementNode(paragraph)).toBe(true);
+        if (!$isElementNode(paragraph)) return;
+        const existing = paragraph.getChildren().find($isEquationNode);
+        expect(existing).toBeDefined();
+        const formula = $createEquationNode(String.raw`\$6`, true);
+        if (before) existing?.insertBefore(formula);
+        else existing?.insertAfter(formula);
+      },
+      { discrete: true },
+    );
+  });
+
+  expect(result).toBe(expected);
+});
+
+test("removes an adjacent formula without rewriting the surviving formula", () => {
+  const result = sourceRoundTrip(String.raw`Before $x$\[y\] after.`, (editor) => {
+    editor.update(
+      () => {
+        const paragraph = $getRoot().getFirstChild();
+        expect($isElementNode(paragraph)).toBe(true);
+        if ($isElementNode(paragraph)) paragraph.getChildren().find($isEquationNode)?.remove();
+      },
+      { discrete: true },
+    );
+  });
+
+  expect(result).toBe(String.raw`Before \[y\] after.`);
 });
 
 test("edits price prose without rewriting its dollar signs", () => {

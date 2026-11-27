@@ -4,7 +4,7 @@ import { gfmFromMarkdown, gfmToMarkdown } from "mdast-util-gfm";
 import { type InlineMath, mathFromMarkdown, mathToMarkdown } from "mdast-util-math";
 import { type Handle, toMarkdown } from "mdast-util-to-markdown";
 import { gfm } from "micromark-extension-gfm";
-import { parseLegacyMath } from "./markdown-legacy-math";
+import { parseLegacyInlineSource, parseLegacyMath } from "./markdown-legacy-math";
 import { dollarMath, legacyInlineMath } from "./markdown-math-syntax";
 
 const parserOptions = {
@@ -51,8 +51,6 @@ const serializerOptions = {
   strong: "*" as const,
 };
 
-export const parseMarkdownSource = (markdown: string) => fromMarkdown(markdown, parserOptions);
-
 const parseMatchedMath = (markdown: string, matches?: ReadonlyMap<number, number>) =>
   fromMarkdown(
     markdown,
@@ -60,6 +58,8 @@ const parseMatchedMath = (markdown: string, matches?: ReadonlyMap<number, number
       ? { ...parserOptions, extensions: [...parserOptions.extensions, legacyInlineMath(matches)] }
       : parserOptions,
   );
+
+export const parseMarkdownSource = (markdown: string) => parseLegacyInlineSource(markdown, parseMatchedMath);
 
 export const parseMarkdown = (markdown: string) => parseLegacyMath(markdown, parseMatchedMath);
 
