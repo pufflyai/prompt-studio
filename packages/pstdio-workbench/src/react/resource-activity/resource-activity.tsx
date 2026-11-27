@@ -5,7 +5,7 @@ import { X } from "lucide-react";
 import { useState } from "react";
 import type { WorkbenchCore } from "../../core";
 import type { ResourceActivityBinding } from "../../core/registries/resources/resource-activity";
-import { activityActorName, activityChangeSummary, activityTime } from "./activity-presentation";
+import { activityActor, activityChangeSummary, activityTime } from "./activity-presentation";
 import { revealActivityPassage } from "./markdown-activity";
 import { ResourceActivityComposer, ResourceActivityReplyComposer } from "./resource-activity-composer";
 import { useActivityHistory } from "./use-activity-history";
@@ -165,7 +165,7 @@ const ActivityEntries = (props: {
         .map((entry) =>
           entry.kind === "change" ? (
             <Activity.Timeline key={entry.id} data-activity-entry={entry.id}>
-              <Activity.Event actor={{ name: activityActorName(entry) }} timestamp={activityTime(entry.createdAt)}>
+              <Activity.Event actor={activityActor(entry)} timestamp={activityTime(entry.createdAt)}>
                 {activityChangeSummary(entry)}
               </Activity.Event>
             </Activity.Timeline>
@@ -173,14 +173,14 @@ const ActivityEntries = (props: {
             <Activity.Comment
               key={entry.id}
               data-activity-entry={entry.id}
-              actor={{ name: activityActorName(entry) }}
+              actor={activityActor(entry)}
               timestamp={activityTime(entry.createdAt)}
               tone={entry.author.type === "user" ? "sent" : "default"}
               replies={replies.get(entry.id)?.map((reply) => (
                 <Activity.Reply
                   key={reply.id}
                   data-activity-entry={reply.id}
-                  actor={{ name: activityActorName(reply) }}
+                  actor={activityActor(reply)}
                   timestamp={activityTime(reply.createdAt)}
                 >
                   <EntryBody entry={reply} controller={controller} workbench={workbench} />

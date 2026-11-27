@@ -37,7 +37,7 @@ const browserAt = (url: string): WorkbenchPageLocationBrowser => {
 };
 
 describe("createBootstrapModule", () => {
-  test("opens floating Side on the first launch after project tools are ready", async () => {
+  test("opens attached Side on the first launch after project tools are ready", async () => {
     const workbench = createWorkbench({ defaultPage: dashboardHomePage, initialSidePanelMode: "closed" });
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
@@ -50,7 +50,7 @@ describe("createBootstrapModule", () => {
       expect(workbench.sidePanel.getMode()).toBe("closed");
       setDashboardExtensionsReadyProject(workbench, "project-1");
       await flushMicrotasks();
-      expect(workbench.sidePanel.getMode()).toBe("floating");
+      expect(workbench.sidePanel.getMode()).toBe("attached");
       workbench.sidePanel.setMode("closed");
       clearDashboardExtensionsReadyProject(workbench);
       setDashboardExtensionsReadyProject(workbench, "project-1");

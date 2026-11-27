@@ -44,7 +44,17 @@ export const createPageLocationPublisher = <Value>(
       if (history !== "none") input.browser[history](hooks.entry(projectId, location, nextIndex));
       hooks.commitIndex(nextIndex, history === "push");
       beforePublish?.();
-      internals.publish(state, action, operation);
+      const previous = input.registry.store.getState();
+      const passive =
+        action === "updatePageParams" ||
+        (action === "replayWorkbenchPageHistory" &&
+          previous.projectId === projectId &&
+          workbenchPageLocationsEqual(previous.location, location, internals.resources, input.registry.listPages()));
+      internals.publish(
+        { ...state, navigationLocation: passive ? previous.navigationLocation : undefined },
+        action,
+        operation,
+      );
       const rootLevel = hooks.rememberRootLevel(location);
       const remembered = hooks.rememberLocation(location);
       runWorkbenchEffect(`page location cache for ${projectId}`, () =>

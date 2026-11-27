@@ -25,10 +25,11 @@ export const registerModeNavigationShortcuts = (core: WorkbenchCore) => {
         Boolean(core.modes.getActiveModeId()) &&
         resolveNavigationLevels({
           location: core.pages.store.getState().location,
+          navigationLocation: core.pages.store.getState().navigationLocation,
           pages: core.pages.listPages(),
           navigationTrees: core.navigationTrees,
         }).length > 0,
-      execute: () => core.pageLocations.navigateToRootLevel(),
+      execute: () => core.pages.setNavigationLocation(null),
     },
   );
   const action = { kind: "command" as const, commandId: MODE_RETURN_COMMAND_ID };

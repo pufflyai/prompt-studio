@@ -45,7 +45,7 @@ export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
         if (!openInitialSideChat || !projectId || getDashboardExtensionsReadyProjectId(ctx) !== projectId) return;
         openInitialSideChat = false;
         if (!ctx.shell.getPanelPolicy("side").canOpen || ctx.sidePanel.getMode() !== "closed") return;
-        void openDashboardSidePanel(ctx).catch((error) => reportWorkbenchError(error, projectId));
+        void openDashboardSidePanel(ctx, "attached").catch((error) => reportWorkbenchError(error, projectId));
       };
 
       const disposePending = () => {

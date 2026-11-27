@@ -8,7 +8,7 @@ import {
 } from "../../../core";
 import { resourceNavigationStateScope } from "../../../core/controllers/page-location/navigation-tree-state-scope";
 import { treeStateKey } from "../../../core/registries/renderers/tree-state-scope";
-import { useWorkbenchStore } from "../../shared/use-workbench-store";
+import { useOptionalWorkbenchStore, useWorkbenchStore } from "../../shared/use-workbench-store";
 import { useTreeNavigationState } from "./use-tree-navigation-state";
 
 export const resourceTreeStateScope = (workbench: WorkbenchCore, location: PageLocation | undefined) =>
@@ -85,11 +85,16 @@ export const useTreeViewState = (
 ) => {
   "use no memo";
   const navigation = useTreeNavigationState(workbench, placement);
+  const navigationLocation = useOptionalWorkbenchStore(isSidenav ? workbench.pages.store : undefined, (state) =>
+    state.navigationLocation === undefined ? state.location : (state.navigationLocation ?? undefined),
+  );
   const resourceMenu = workbench.viewMenus
     .listViewMenus()
     .some((menu) => menu.viewId === treeViewId && menu.purpose === "resources");
   const stateScope =
-    (isSidenav || resourceMenu ? resourceTreeStateScope(workbench, navigation.activeLocation) : undefined) ??
+    (isSidenav || resourceMenu
+      ? resourceTreeStateScope(workbench, isSidenav ? navigationLocation : navigation.activeLocation)
+      : undefined) ??
     (resource ? JSON.stringify(["resource-tree", navigation.projectId, treeViewId, resourceKey(resource)]) : undefined);
   const presentationKey = stateScope ?? JSON.stringify([navigation.projectId, treeViewId]);
   const presentation = useTreePresentationState(workbench, presentationKey);

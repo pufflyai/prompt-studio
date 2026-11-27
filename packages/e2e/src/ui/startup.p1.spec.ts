@@ -93,7 +93,8 @@ test("creating the first folder project opens Home", async ({ page, request }) =
   await page.getByRole("dialog", { name: "Open project folder", exact: true }).waitFor({ state: "hidden" });
   await expect(page.getByRole("option", { name: "Home", exact: true })).toBeVisible();
   await expect(homePage(page)).toBeVisible();
-  await expect(page.getByTestId("workbench-side-panel-floating")).toBeVisible();
+  await expect(page.getByTestId("workbench-side-panel-attached")).toBeVisible();
+  await expect(page.getByTestId("workbench-side-panel-floating")).not.toBeVisible();
 });
 
 test("dashboard selects the only project on first load", async ({ page, request }) => {

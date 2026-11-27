@@ -199,14 +199,20 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
 
   const toggleSection = createToggleTreeSection(workbench, treeViewId, treeState.expandedSectionIds, stateScope);
 
-  const navigate = createTreeNavigator({ workbench, treeViewId, stateScope, hostRegion, owner, onOpenResourceError });
-  const pinnedTreeProps = {
+  const navigate = createTreeNavigator({
+    workbench,
+    treeViewId,
+    stateScope,
+    isSidenav,
+    hostRegion,
+    owner,
+    onOpenResourceError,
+  });
+  const treeControls = {
     draggable: isSidenav,
     expandedNodeIds: actionInput.expandedNodeIds,
     expandedSectionIds: treeState.expandedSectionIds,
     activeNodeId: activeNodeSelection,
-    rowVariant: "compact" as const,
-    nodeGap: "1px",
     onToggleSection: toggleSection,
     onToggleNode: toggleNode,
     onReorderNodes,
@@ -235,7 +241,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
       >
         <PinnedTree
           slot="header"
-          tree={{ ...pinnedTreeProps, sections: visibleHeaderSections }}
+          tree={{ ...treeControls, sections: visibleHeaderSections }}
           onReorderSections={onReorderSections}
         />
         {isSidenav ? <TreeModeReturn workbench={workbench} /> : null}
@@ -253,6 +259,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
           }}
         >
           <TreeViewBody
+            {...treeControls}
             loadingContent={props.loadingContent}
             error={error}
             loading={loading}
@@ -261,24 +268,15 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
             backgroundContextActions={
               isSidenav ? undefined : createTreeBackgroundActions(visibleSections, backgroundContextActions)
             }
-            draggable={isSidenav}
             customizationAvailable={isSidenav}
-            activeNodeId={activeNodeSelection}
-            expandedNodeIds={actionInput.expandedNodeIds}
-            expandedSectionIds={treeState.expandedSectionIds}
             scrollRef={scrollRef}
-            onToggleSection={toggleSection}
-            onToggleNode={toggleNode}
             onReorderSections={(nextSectionIds) => onReorderSections("content", nextSectionIds)}
-            onReorderNodes={onReorderNodes}
-            canMove={treeRenderer.canMove}
             onMoveNode={moveNode}
-            onNavigate={navigate}
           />
         </TreeViewport>
         <PinnedTree
           slot="footer"
-          tree={{ ...pinnedTreeProps, sections: visibleFooterSections }}
+          tree={{ ...treeControls, sections: visibleFooterSections }}
           onReorderSections={onReorderSections}
         />
         {visibilityOpen ? (
@@ -313,6 +311,8 @@ const PinnedTree = (props: {
     <Flex bg={workbenchBackgrounds.sidenav} flexShrink={0}>
       <TreeList
         {...tree}
+        rowVariant="compact"
+        nodeGap="1px"
         sectionGap={slot === "header" ? "1px" : "md"}
         onReorderSections={(ids) => onReorderSections(slot, ids)}
       />

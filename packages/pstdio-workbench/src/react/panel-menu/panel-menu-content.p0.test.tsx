@@ -1,7 +1,36 @@
 import { afterEach, expect, spyOn, test } from "bun:test";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { createWorkbench, getWorkbenchRenderers, type WorkbenchWidgetPlacement } from "../../core";
-import { usePanelMenuContent } from "./use-panel-menu-content";
+import { treeMenuHasContent, usePanelMenuContent } from "./use-panel-menu-content";
+
+test("a resource menu omits its sole self row but retains other resources and pagination", () => {
+  const resource = { type: "ticket", id: "one" };
+  const self = { id: "body", label: "Ticket", resource };
+  const data = { header: [], body: [{ id: "files", nodes: [self] }], footer: [] };
+  expect(treeMenuHasContent(data, resource)).toBe(false);
+  expect(
+    treeMenuHasContent(
+      { ...data, body: [{ ...data.body[0], actions: [{ id: "new-file", label: "New file" }] }] },
+      resource,
+    ),
+  ).toBe(false);
+  expect(treeMenuHasContent(data)).toBe(true);
+  const document = { ...resource, metadata: { documentId: "second" } };
+  const linkedDocument = { ...self, id: "second", resource: document };
+  const pagedSelf = { ...self, nextPage: async () => ({ nodes: [] }) };
+  expect(
+    treeMenuHasContent({ ...data, body: [{ id: "files", nodes: [self, linkedDocument] }] }, resource, "documentId"),
+  ).toBe(true);
+  expect(treeMenuHasContent({ ...data, body: [{ id: "files", nodes: [pagedSelf] }] }, resource)).toBe(true);
+  data.body[0].nodes.push({ ...self, id: "other", resource: { ...resource, id: "two" } });
+  expect(treeMenuHasContent(data, resource)).toBe(true);
+  expect(
+    treeMenuHasContent(
+      { ...data, body: [{ ...data.body[0], nodes: [self], nextPage: async () => ({ nodes: [] }) }] },
+      resource,
+    ),
+  ).toBe(true);
+});
 
 const environment = globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean };
 const previousEnvironment = environment.IS_REACT_ACT_ENVIRONMENT;

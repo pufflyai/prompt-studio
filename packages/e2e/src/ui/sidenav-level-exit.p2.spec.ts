@@ -3,7 +3,7 @@ import { createPlannerTicket } from "../helpers/planner-api";
 import { expect, test } from "../scripts/session-test";
 import { uiOrigin } from "../ui-server";
 
-test("Back to project leaves a Sidenav level for the last root-level page", async ({ page, request }) => {
+test("Sidenav level entry and exit retain Main and its history", async ({ page, request }) => {
   const response = await request.post(`${uiOrigin}/v1/projects`, {
     data: folderProjectInput({ name: "Level exit" }),
   });
@@ -34,20 +34,24 @@ test("Back to project leaves a Sidenav level for the last root-level page", asyn
   await expect(page).toHaveURL(/\/tickets$/);
 
   await row("Sessions").click();
+  await expect(page).toHaveURL(/\/tickets$/);
   await expect(row("Tickets")).toHaveCount(0);
   await row("Exit session").click();
   await expect(page).toHaveURL(/\/extensions\/pstdio\.session-browser\/conversation\?resource=/);
+  const conversationUrl = page.url();
 
   await backToProject.click();
-  await expect(page).toHaveURL(/\/tickets$/);
+  await expect(page).toHaveURL(conversationUrl);
   await expect(row("Sessions")).toBeVisible();
 
-  // The saved board survives a reload that opens a level page straight from the URL.
+  // Reload follows Main; leaving that restored level still preserves the conversation.
   await row("Sessions").click();
-  await expect(page).toHaveURL(/\/extensions\/pstdio\.session-browser\/conversations\/compose$/);
+  await expect(page).toHaveURL(conversationUrl);
   await page.reload();
   await expect(row("Exit session")).toBeVisible();
   await backToProject.click();
-  await expect(page).toHaveURL(/\/tickets$/);
+  await expect(page).toHaveURL(conversationUrl);
   await expect(row("Sessions")).toBeVisible();
+  await page.goBack();
+  await expect(page).toHaveURL(/\/tickets$/);
 });

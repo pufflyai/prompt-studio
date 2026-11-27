@@ -57,7 +57,7 @@ export const ProjectCrumb = (props: ProjectCrumbProps) => {
         minW="0"
         justifyContent="flex-start"
         onClick={() => {
-          workbench.pageLocations.navigateToRootLevel();
+          workbench.pages.setNavigationLocation(null);
         }}
         {...projectButtonInteraction}
       >
