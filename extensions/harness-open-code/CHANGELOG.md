@@ -1,5 +1,14 @@
 # harness-open-code
 
+## 0.48.1
+
+_2026-11-27_
+
+### Patch Changes
+
+- 958363f: Keep extensions available on the next host API while retaining compatibility with previously supported hosts.
+- d8c68af: Show OpenCode models, sign-in status, and native commands after the provider has loaded.
+
 ## 0.48.0
 
 _2026-11-21_

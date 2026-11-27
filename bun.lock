@@ -123,7 +123,7 @@
     },
     "clients/desktop": {
       "name": "@pstdio/desktop",
-      "version": "0.48.0",
+      "version": "0.49.0",
       "dependencies": {
         "@chakra-ui/react": "3.32.0",
         "@emotion/react": "11.14.0",
@@ -210,7 +210,7 @@
     },
     "extensions/canvas": {
       "name": "canvas",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "dependencies": {
         "@chakra-ui/react": "3.32.0",
         "@emotion/react": "^11.0.0",
@@ -251,7 +251,7 @@
     },
     "extensions/extension-lab": {
       "name": "extension-lab",
-      "version": "0.47.0",
+      "version": "0.48.0",
       "dependencies": {
         "@chakra-ui/react": "^3.0.0",
         "@emotion/react": "^11.0.0",
@@ -285,7 +285,7 @@
     },
     "extensions/harness-claude-code": {
       "name": "harness-claude-code",
-      "version": "0.48.0",
+      "version": "0.48.1",
       "dependencies": {
         "@anthropic-ai/claude-agent-sdk": "0.3.316",
         "@anthropic-ai/claude-code": "2.1.251",
@@ -298,7 +298,7 @@
     },
     "extensions/harness-codex": {
       "name": "harness-codex",
-      "version": "0.48.0",
+      "version": "0.48.1",
       "dependencies": {
         "@openai/codex": "0.169.0",
         "@pstdio/sdk": "0.47.0-nightly.20261112030231",
@@ -310,7 +310,7 @@
     },
     "extensions/harness-copilot": {
       "name": "harness-copilot",
-      "version": "0.48.0",
+      "version": "0.48.1",
       "dependencies": {
         "@github/copilot-sdk": "1.0.34",
         "@pstdio/sdk": "0.47.0-preview.sha-39796d3892fb176a0254332998ce50fb36ad155f",
@@ -322,7 +322,7 @@
     },
     "extensions/harness-open-code": {
       "name": "harness-open-code",
-      "version": "0.48.0",
+      "version": "0.48.1",
       "dependencies": {
         "@opencode/cli": "2.2.5",
         "@pstdio/sdk": "0.47.0-preview.sha-39796d3892fb176a0254332998ce50fb36ad155f",
@@ -335,7 +335,7 @@
     },
     "extensions/harness-pi": {
       "name": "harness-pi",
-      "version": "0.46.1",
+      "version": "0.46.2",
       "dependencies": {
         "@earendil-works/pi-coding-agent": "0.79.0",
         "@pstdio/sdk": "0.47.0-preview.sha-39796d3892fb176a0254332998ce50fb36ad155f",
@@ -349,7 +349,7 @@
     },
     "extensions/pstdio-artifacts": {
       "name": "artifacts",
-      "version": "0.47.0",
+      "version": "0.47.1",
       "dependencies": {
         "@chakra-ui/react": "^3.0.0",
         "@emotion/react": "^11.0.0",
@@ -369,7 +369,7 @@
     },
     "extensions/pstdio-base-themes": {
       "name": "base-themes",
-      "version": "0.46.0",
+      "version": "0.46.1",
       "dependencies": {
         "@pstdio/sdk": "0.48.0-preview.sha-3b41d415bd0c5c2d607249ba8bdd47a499d62a77",
       },
@@ -387,7 +387,7 @@
     },
     "extensions/pstdio-cloud": {
       "name": "cloud",
-      "version": "0.3.0",
+      "version": "0.4.0",
       "dependencies": {
         "@chakra-ui/react": "^3.0.0",
         "@emotion/react": "^11.0.0",
@@ -406,7 +406,7 @@
     },
     "extensions/pstdio-home": {
       "name": "home",
-      "version": "0.3.0",
+      "version": "0.3.1",
       "dependencies": {
         "@chakra-ui/react": "^3.0.0",
         "@emotion/react": "^11.0.0",
@@ -426,7 +426,7 @@
     },
     "extensions/pstdio-notes": {
       "name": "notes",
-      "version": "0.47.0",
+      "version": "0.47.1",
       "dependencies": {
         "@pstdio/sdk": "0.48.0-preview.sha-3b41d415bd0c5c2d607249ba8bdd47a499d62a77",
       },
@@ -437,7 +437,7 @@
     },
     "extensions/pstdio-onboarding": {
       "name": "onboarding",
-      "version": "0.3.0",
+      "version": "0.3.1",
       "dependencies": {
         "@chakra-ui/react": "3.32.0",
         "@emotion/react": "^11.0.0",
@@ -460,7 +460,7 @@
     },
     "extensions/pstdio-performance": {
       "name": "performance",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "dependencies": {
         "@chakra-ui/react": "^3.0.0",
         "@emotion/react": "^11.0.0",
@@ -480,7 +480,7 @@
     },
     "extensions/pstdio-planner": {
       "name": "planner",
-      "version": "0.48.0",
+      "version": "0.49.0",
       "dependencies": {
         "@chakra-ui/react": "^3.0.0",
         "@emotion/react": "^11.0.0",
@@ -501,7 +501,7 @@
     },
     "extensions/pstdio-reports": {
       "name": "reports",
-      "version": "0.47.0",
+      "version": "0.47.1",
       "dependencies": {
         "@pstdio/sdk": "0.48.0-preview.sha-3b41d415bd0c5c2d607249ba8bdd47a499d62a77",
       },
@@ -512,7 +512,7 @@
     },
     "extensions/pstdio-session-browser": {
       "name": "session-browser",
-      "version": "0.3.0",
+      "version": "0.4.0",
       "dependencies": {
         "@pstdio/sdk": "0.49.0-preview.sha-be738486a4384d80b2fc0cc54deefe335e610331",
       },
@@ -523,7 +523,7 @@
     },
     "extensions/pstdio-skill-browser": {
       "name": "pstdio-skill-browser",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "dependencies": {
         "@chakra-ui/react": "3.32.0",
         "@emotion/react": "^11.0.0",
@@ -543,7 +543,7 @@
     },
     "extensions/pstdio-skills": {
       "name": "skills",
-      "version": "0.46.0",
+      "version": "0.46.1",
       "dependencies": {
         "@pstdio/sdk": "0.48.0-preview.sha-3b41d415bd0c5c2d607249ba8bdd47a499d62a77",
       },
@@ -561,7 +561,7 @@
     },
     "extensions/pstdio-terminal": {
       "name": "pstdio-terminal",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "dependencies": {
         "@pstdio/sdk": "0.47.0-nightly.20261111030243",
       },
@@ -572,7 +572,7 @@
     },
     "extensions/pstdio-workspaces": {
       "name": "workspaces",
-      "version": "0.3.0",
+      "version": "0.3.1",
       "dependencies": {
         "@chakra-ui/react": "^3.0.0",
         "@emotion/react": "^11.0.0",
@@ -602,7 +602,7 @@
     },
     "extensions/remote-workspaces": {
       "name": "remote-workspaces",
-      "version": "0.46.2",
+      "version": "0.46.3",
       "dependencies": {
         "@pstdio/sdk": "0.46.0-preview.sha-2c2b2e4c6b144c418cc048219c56553afe938bf4",
       },
@@ -667,7 +667,7 @@
     },
     "packages/canvas": {
       "name": "@pstdio/canvas",
-      "version": "0.48.0",
+      "version": "0.49.0",
       "bin": {
         "pstdio-canvas": "./bin/pstdio-canvas.ts",
       },
@@ -760,7 +760,7 @@
     },
     "packages/pstdio": {
       "name": "pstdio",
-      "version": "0.48.0",
+      "version": "0.49.0",
       "bin": {
         "pstdio": "./bin/pstdio.cjs",
         "pst": "./bin/pstdio.cjs",
@@ -787,12 +787,12 @@
         "typescript": "6.0.2",
       },
       "optionalDependencies": {
-        "@pstdio/cli-darwin-arm64": "0.48.0",
-        "@pstdio/cli-darwin-x64": "0.48.0",
-        "@pstdio/cli-linux-arm64": "0.48.0",
-        "@pstdio/cli-linux-x64": "0.48.0",
-        "@pstdio/cli-win-arm64": "0.48.0",
-        "@pstdio/cli-win-x64": "0.48.0",
+        "@pstdio/cli-darwin-arm64": "0.49.0",
+        "@pstdio/cli-darwin-x64": "0.49.0",
+        "@pstdio/cli-linux-arm64": "0.49.0",
+        "@pstdio/cli-linux-x64": "0.49.0",
+        "@pstdio/cli-win-arm64": "0.49.0",
+        "@pstdio/cli-win-x64": "0.49.0",
       },
     },
     "packages/pstdio-api": {
@@ -1062,7 +1062,7 @@
     },
     "packages/pstdio-workbench": {
       "name": "@pstdio/workbench",
-      "version": "0.48.0",
+      "version": "0.49.0",
       "dependencies": {
         "@dnd-kit/core": "^6.3.1",
         "@pstdio/sdk": "workspace:^",
@@ -1119,7 +1119,7 @@
     },
     "packages/sdk": {
       "name": "@pstdio/sdk",
-      "version": "0.48.0",
+      "version": "0.49.0",
       "dependencies": {
         "@noble/hashes": "^2.4.0",
         "@tanstack/query-core": "5.90.20",
@@ -1160,7 +1160,7 @@
     },
     "packages/ui": {
       "name": "@pstdio/ui",
-      "version": "0.48.0",
+      "version": "0.49.0",
       "dependencies": {
         "@dnd-kit/core": "^6.3.1",
         "@dnd-kit/sortable": "^10.0.0",

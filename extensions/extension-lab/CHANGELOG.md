@@ -1,5 +1,18 @@
 # extension-lab
 
+## 0.48.0
+
+_2026-11-27_
+
+### Minor Changes
+
+- 7d6313d: Preview numeric property gestures across views, commit once with cancellation and recovery, and retain independently resized Marmalade inspector groups.
+- 0df40cf: Export Marmalade documents as self-contained SVG files through native device actions.
+
+### Patch Changes
+
+- 958363f: Keep extensions available on the next host API while retaining compatibility with previously supported hosts.
+
 ## 0.47.0
 
 _2026-11-12_

@@ -1,5 +1,14 @@
 # pstdio-notes
 
+## 0.47.1
+
+_2026-11-27_
+
+### Patch Changes
+
+- 958363f: Keep extensions available on the next host API while retaining compatibility with previously supported hosts.
+- 68646d4: Keep Notes rename and Planner launch recovery attached to their original resource and preserve confirmed results after a missed response.
+
 ## 0.47.0
 
 _2026-11-21_

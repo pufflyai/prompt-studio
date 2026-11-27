@@ -1,5 +1,163 @@
 # pstdio
 
+## 0.49.0
+
+_2026-11-27_
+
+### Minor Changes
+
+- 4ce70b9: Sign in to Prompt Studio Cloud with a personal Microsoft account or a work or school account using the SDK or CLI.
+- 43f79ed: Create a team and sync its first project across your computers.
+- 1fd4c3c: Add scatterplots, ring charts, custom dashboard content, and page-owned dashboard toolbars.
+- 0af6825: Edit dashboard widget descriptions and chart colors. Prefill custom widget headings and keep Cancel and Apply on the right.
+- bb732e9: Add outcome-aware device saves and live resource actions in native document menus.
+- d7407f0: Move the extension API to 0.6: issue automation tokens with independent retry histories and allow explicit device or project credential scope. Revoke a saved global or shared sign-in by origin through the SDK.
+- bce3bc0: Move the Side Panel with consistent drop feedback or free positioning, resize from the available top corners for its alignment, and choose the bubble visibility and default panel in Appearance settings. Move the complete Bottom panel into a closed Side Panel while preserving both trays and their drafts.
+- aa1d78b: Add desktop team invitation codes, full project-member capabilities and owner-managed extension policies to the public account APIs.
+- aa1d78b: Invite people to Cloud teams, inspect incoming links, and manage team membership.
+- d7bb3ed: Show the animated Prompt Studio logo while pages, panels and dialogs load, with new `LoadingState` and `LogoLoader` components; the action bar, navigation and status bar show skeletons instead.
+- 26262f1: Preview, complete and cancel numeric property gestures with mixed values, units and retained authored drafts.
+- 47960a3: Keep view controls and resource menus with their live page or tab, support movable menu headers and bottom menu presets, and align web app headers with desktop. Add the public header-view contract and TextPen icon for extension consumers.
+- 6d70a09: Navigate conversation turns and identify attributed messages by sender.
+- aa1d78b: Grant and revoke a member’s Cloud team project access. Rotate shared keys when access ends.
+- 026e2e3: Show settings, notification changes, resource changes, and collection edits immediately across views. Keep failed and uncertain drafts available through System activity.
+- dab0dc1: Add global host-managed extension connections shared across local projects and support localized static parameter choices.
+- aa1d78b: Offer and accept ownership of a Cloud team without changing project grants.
+
+### Patch Changes
+
+- 5f14c0b: Keep extension upgrade controls clickable beside search in the Extensions header.
+- 34eaf29: Start an agent session with optional instructions when an extension upgrade needs help reconciling local changes.
+- f7e08bd: Load a fresh canvas preview when returning after leaving during loading.
+- a6c7d4a: Avoid duplicate artifact refreshes when directory timestamps stay unchanged across writes.
+- c272a00: Stop a process-mode extension worker that hangs for 60 seconds or uses more than 2 GiB of memory, and pause restarts of a worker that keeps failing.
+- 64c1869: Speed up legacy storage upgrades and require an upgraded project to open and save an edit within 20 seconds before release.
+
+  Fresh installations use one generated 0.49 database migration. Installations on 0.46, 0.47 and 0.48 can upgrade directly. The upgrade automatically updates incompatible, unmodified first-party tools from their recorded official sources.
+
+  The 0.48 → 0.49 upgrade treats every project as local. It keeps current records, local edits, documents, attachments, saved recovery points, and unfinished uploads with bytes on disk. It discards deleted record rows, prior save IDs, sync markers, and completed transfer entries. A retry using a 0.48 save ID is a new request. The batch importer leaves a recovery copy of the previous database beside the active database with the suffix `.before-0.49`.
+
+- 12035b1: Keep command palette resource searches active while views refresh.
+- 25be844: Preserve explicit process environment grants for workspace providers and agent harnesses.
+- d51d8c5: Let native chat providers opt into browser-local drafts through additive extension API 0.5.1 while preserving existing provider-managed persistence. Acknowledge recovered input only after every body is saved in durable browser storage.
+- c272a00: Bundle extension backends in a separate process with the extension's allowlisted environment, so bundler macros no longer run inside Prompt Studio with its secrets.
+- d7407f0: Preserve device identity and scoped settings during storage consolidation, and keep host credentials private while supporting device and project sign-ins. Preserve saved and built-in board defaults during table consolidation. Retain automation token identity and run history when consolidating ownership. Give each automation token its own retry history and remove grouped-token issuance.
+- aaf35b1: Keep a conversation stopped when a previously queued scroll event arrives after following is disabled.
+- 902f5eb: Dismiss any item in System activity and use the Recover changes command to find dismissed recovery details.
+- e514d24: Continue recovering and activating other projects if one project's workspaces cannot be inspected or reconciled during startup.
+- 9303acc: Show occurrence counts for repeated polling prompts and errors in session chat.
+- 6efc0a7: Remove the extra launch screen and use existing desktop recovery for dashboard render failures.
+- 008afcf: Prompt Studio always runs its database in a separate thread, so long queries and bursts of writes leave requests, health checks, and cancellation responsive. This replaces the `PSTDIO_DATABASE_WORKER` setting.
+- 30c1e14: Open the desktop workbench after long database upgrades without asking the user to retry.
+- a43ebcf: Offer downloaded desktop updates through a movable status-bar widget and confirm before installing and reopening Prompt Studio.
+- 02b5121: Processes that a process-mode extension starts itself now stop with its worker, also when the worker crashes or is stopped for hanging. Each worker's exit code and peak memory are recorded in the runtime diagnostics.
+- 33919ed: Add a private worker process that can run extension backend code outside the API process. Extensions do not use it yet.
+- 67b1781: Every extension backend now runs in its own worker process. Prompt Studio no longer imports extension code into its API process, and `pstdio.backendRuntime` is no longer needed: packages that still set it load unchanged. `pst extensions check` no longer warns about the in-process runtime.
+
+  Workers start only when a handler first runs. Prompt Studio reads each extension version's contributions once and keeps them, so a restart with unchanged extensions starts no worker until one is used.
+
+  What changes for extension authors:
+
+  - Backend `process.env` is the environment that started Prompt Studio without its credentials: `PSTDIO_` names containing `TOKEN`, `SECRET`, `KEY`, `PASSWORD` or `CREDENTIAL`, anything starting with `NPM_CONFIG_`, `NPM_TOKEN`, `NPM_AUTH_TOKEN`, `NODE_AUTH_TOKEN` and `BUN_AUTH_TOKEN`. Code that read `PSTDIO_API_TOKEN` from `process.env` no longer finds it; `PSTDIO_HOME` and other settings stay. Provider keys, proxy and certificate settings are still there.
+  - Module state is no longer shared with Prompt Studio or between workers. Values on `globalThis` stay in the worker, and a worker that stops after 10 idle minutes, crashes or reloads starts with fresh module state.
+  - Contributions are read once per extension version, and a worker that reports a different definition than that first read is refused until the extension is loaded again. Compute values that depend on the time, the environment or other changing state in handlers instead.
+  - Handler arguments and results cross a process boundary. Functions, promises, streams and handles keep working; class instances arrive as plain objects.
+  - Cancelling a call settles it at once, without waiting for cleanup the handler still does in the worker after its signal aborts.
+
+- 34eaf29: Show extension upgrade conflicts in an error popover with Resolve and offer local, published, or agent-assisted resolution.
+  Only offer Upgrade all when multiple updates can run, excluding paused and active upgrades.
+- e00cf5a: Keep Prompt Studio responsive while an extension writes in bulk. Core database work now goes ahead of queued extension work, extensions take turns, and long bursts pause regularly so health checks, cancellation and other requests are answered. An extension already running 256 commands gets an `extension_overloaded` rejection for new ones before they start.
+- be73848: Extensions can list host environment variable names in `pstdio.processEnvironment` and pass a granted value to one child with `envFromHost` on `ctx.process.run`, `runOrThrow` and `spawnDetached`. You allow names per project and extension source in the extension's details or with `pst extensions permissions`; changed source needs a new grant, and revoking stops the children that received the value. The host no longer reads `PSTDIO_EXTENSION_PROCESS_ENV`.
+- 088e5eb: Extensions running with `pstdio.backendRuntime: "process"` can pass callbacks to host APIs and use returned handles and streams, including `storage.migrate`, `storage.observe`, `storage.log`, session streams and connection streams.
+- b901e66: Extensions running with `pstdio.backendRuntime: "process"` can use `storage.positions`, `storage.assets`, `urlFor` and `records.id` inside `storage.scope(...)`. A process-mode extension's worker stops after 10 minutes without calls.
+- c272a00: Harnesses can run with `pstdio.backendRuntime: "process"`. Session handles, promises and handler results now cross the boundary and stay valid while the host holds them.
+- c272a00: Workspace types, text sources and resource hierarchy providers can run with `pstdio.backendRuntime: "process"`, including `ctx.localDirectory()` for workspace providers.
+- c272a00: Process-mode harnesses keep their event stream and approvals after `start()` returns. A call cancelled before it reaches the worker no longer runs. A busy host no longer stops healthy extension workers. Extension bundling stops after 2 minutes instead of waiting forever on a stuck macro, and output printed by macros no longer breaks it.
+
+  Cancelled process-mode calls settle promptly and release their handles after cleanup. Harness operations keep synchronous event access, and closing a process output reader releases pending reads.
+
+- e1639f1: Extensions running with `pstdio.backendRuntime: "process"` can use resources, files, workspaces, sessions, activity, notifications, automation, process runs and the other data-only `ctx` services.
+- c272a00: Extensions running with `pstdio.backendRuntime: "process"` can open terminal sessions with `ctx.terminal.openSession`. A host call that is still running when its handler returns now delivers its result instead of failing.
+- e1639f1: Extensions can set `"pstdio": { "backendRuntime": "process" }` to run their commands, middleware and hooks in their own worker process, so a slow or CPU-heavy extension no longer freezes Prompt Studio. Harnesses and workspace types are not available in this mode yet.
+- 323ad8f: Extensions can start a host-owned child with `ctx.process.spawn` and talk to it while it runs: write its stdin, stream its stdout and stderr, and kill it. The child belongs to the call or to the enabled extension, runs on the selected workspace, and goes through a remote workspace provider's new `spawn` method when the workspace is remote. Harnesses can read files on a session's workspace with `ctx.targetFiles.readText`. Both work in the process runtime.
+- 34eaf29: Show extension upgrade review controls immediately and report confirmed registry install failures with their cause.
+- 008afcf: A process-mode extension gets `extension_overloaded` past 4,096 regular host calls in flight. A bounded reserve lets cleanup calls release work at the limit.
+- 378dee6: Avoid repeated relationship scans when opening a large Timeline for the first time.
+- c3c398c: Keep extension removal independent of unrelated tool loading, stop inspecting removed source folders, and serialize confirmed desktop shutdown.
+- 9469636: Keep a chat's reading position when its panel is hidden while the conversation is still scrolling.
+- dadd665: Add `ctx.diagnostics.capture`, which lets first-party extensions profile the Prompt Studio API process and trace its runtime operations from their backend workers.
+- 07aa4c0: Recover project folders on Intel Macs using the correct native directory entries.
+- 79b5149: Keep panel resizing under the finger that started the drag when another finger touches the screen.
+- 40c79f8: Show a board as soon as its first page loads, instead of waiting for a second read when the page describes new fields.
+- 2ed45d3: Preserve local extension edits when a managed upgrade encounters a changed source or an active local copy.
+- c519937: Keep tools installed from a prebuilt release loading after Prompt Studio updates, instead of failing to rebuild them without their dependencies.
+- a663f9f: Refresh installed source extensions when scoped dependency packages are added or removed on macOS.
+- 2c01704: Open shortcut-created tickets after the current page refreshes, keep the exact title draft after a rejected rename, and show native command refusals beside the retained input.
+- 8297693: Run the newly accepted extension after an upgrade even when an older source inspection is still in flight.
+- 8707810: Open a linked resource in only one panel by comparing its declared owner and project before its tool has confirmed the link. Preserve saved tabs and keep resources from different owners, projects, and documents distinct.
+
+  Keep the live viewer and its follower panels mounted when the owner refreshes a pasted link's title and metadata.
+
+  Preserve each codec-defined revision and retained follower when reopening links or restoring a project.
+
+- 0eed063: Show the Microsoft account email or sign-in address in Cloud settings and account details without requiring another sign-in.
+- 4b77de9: Make native resource actions available again after they finish.
+- 7afa556: Make session cleanup reads reliable, expose conversation exports and Planner template provenance and reset, and document failure-preserving CLI pipelines.
+- 4444cbf: Keep case-insensitive related-record lookups indexed while preserving unique matches and query execution guards.
+- 4c4b384: Open newly saved tickets directly from the creation form while the board refreshes and attachments finish uploading.
+- 3c9f594: Read device seed identities once for a batch of personal-history record edits.
+- 220d89a: Show webview edits within seconds while a background webview check is running, instead of restarting extension preparation for every step of the edit.
+- e461132: Keep queued follow-up messages available when stopping an active run, without restarting the stopped session.
+- 889efc0: Keep keyboard focus on a Workbench panel header when a restored terminal finishes loading.
+- 4596264: Removing a project while extensions sync cleans up its leftover attachments, preserves existing user installations, and lets startup continue for the remaining projects.
+- 8e8d485: Publish newly written sync index pages with their validated edges in one step.
+- 16b4a08: Keep board columns and status choices intact when views share or restore query results.
+- 841304e: List extension storage files without failing when another caller deletes some of them during the listing.
+- c237d96: Open existing projects faster by starting the database worker earlier, loading bundled locale data as one resource, and collecting unreachable files during idle time.
+- f913272: Stop tool-definition processes when extension preparation is canceled, preempted, or shut down.
+- 174eb91: Expose pending relay routing so session catch-up validation waits for initial subscriptions.
+- 9447f92: Keep workspaces usable when an enabled local extension skill asset temporarily disappears.
+- c272a00: Fix extension reads that could stop responding under heavy load, by yielding between read bursts with a timer instead of `setImmediate`.
+- 307030e: Keep watching extension source files after a forced reinstall.
+- 188f2b3: Preserve saved projects when upgrading a database that already has record count indexes.
+- 95acad1: Keep catalog-installed project tools upgradable after folder discovery and prepare core extension runtimes for faster direct upgrades on Apple Silicon and Linux.
+- ecda0ad: Refresh source extensions when macOS misses an installed dependency change.
+- 5e1dc4a: Refresh an extension upgrade comparison after local files change and keep saved choices available for review.
+- d51d8c5: Remove the misleading notice from native chat draft recovery.
+- ea3ceba: Show the first tree results when the search query changes.
+- 2635943: Speed up upgrades from 0.48 by restoring device history with its final local state in one pass.
+- f516cb1: Restore older saved panel layouts when opening a project or the Extensions page after an upgrade.
+- 308e6c0: Restore the saved page once tools that load after the project opens, such as upgraded tools, register.
+- ce8dca2: Keep modal drafts open when Escape closes a just-opened popover.
+- e6ff27b: Keep verified webviews available after an extension upgrade and rebuild them when local source or dependencies change.
+- e7ac288: Open the workbench before cleaning up legacy dependency markers and unused document files. Keep document room indexes small by indexing only linked rooms.
+
+  Register extension queries as metadata and retire their old per-project database indexes during maintenance.
+
+- c31bd6e: Keep Cloud project recovery from restarting a copy the device is already downloading or has downloaded.
+- 962fa6d: Update i18next and Claude Code to patched releases and require Claude Code 2.1.251 or newer.
+- ea1c5f3: Make extension upgrades faster by serving verified release webviews directly from the prepared cache.
+- b697943: Show compact sender avatars alongside message actions. Click a session avatar to open its conversation. Outline marks animate on hover and focus.
+- 80fce4d: Reopen closed sessions at the latest reply and run queued follow-ups in the order shown after reordering.
+- 89529ff: Deliver replies queued after a running session has become idle.
+- f7e08bd: Switch between canvases faster by sharing preview assets and project fonts, and keep the two most recent designs live.
+- d05e67a: Show the full label in a tooltip when hovering over a clipped workbench breadcrumb.
+- 16b4a08: Use registered resource icons consistently and allow tool updates when stored record identities are long.
+- 563f097: Keep the desktop responsive when opening Sessions or reconnecting a project with archived conversations.
+- e3cdb48: Restore saved activity logs in batches and prepare bundled tools during database migration. Allow two extension preparation workers on three-core hosts with at least 6 GB of memory. Keep the first ticket read available while checking webviews and reduce repeated database reads when a Cloud project first reconnects.
+- 02b5121: A dashboard or client that falls behind on the sync stream now gets a fresh snapshot instead of making the host queue every update in memory.
+- 8ca73d3: Build independent receipt index pages concurrently so Cloud checkpoint saves keep up as retained history grows.
+- aa1d78b: Allow project members to publish ordinary shared extensions while reserving required extension policies for the team owner.
+
+  Show native project and shared-source restrictions in extension controls, preserve them during saves, and keep team-managed packages out of bulk upgrades.
+
+- 2ae8f11: Shared text editors reconnect after a dropped connection even when the server has not yet noticed that the old connection closed.
+- 00c4ba5: Open logs and other non-prose files in the code editor instead of the document editor.
+- 9dd9fff: Dismiss popovers and tooltips when navigating away from retained views. Preserve unfinished popup fields when a retained workbench is suspended.
+- 1cec63b: Upgrade unchanged catalog extensions rediscovered in their original installation folders. Show conflict resolution when a comparison confirms local edits and offer a version choice when the original files cannot be verified.
+- 76c96f8: Keep Canvas previews current when macOS omits an artifact notification after a rebuild, and keep document sync running if a mount watch cannot start.
+- d92b0e0: Pass Windows profile directories to extension processes and let users grant additional host environment variables to individual extensions.
+
 ## 0.48.0
 
 _2026-11-21_

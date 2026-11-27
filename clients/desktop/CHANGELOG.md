@@ -1,5 +1,19 @@
 # @pstdio/desktop
 
+## 0.49.0
+
+_2026-11-27_
+
+### Patch Changes
+
+- ded6b7a: Keep Retry available in desktop recovery when the dashboard fails while opening to confirm Quit.
+- bee3469: Fix a macOS desktop crash when the system rejects an optional network socket setting.
+- 8da4ce0: Open the desktop workbench when the splash screen is visible even on systems where Chromium omits paint timing.
+  Release canceled startup attempts while their document is loading so another runtime can open.
+  Keep native recovery controls available when the desktop bridge fails to initialize.
+- 07aa4c0: Recover project folders on Intel Macs using the correct native directory entries.
+- d7bb3ed: Show the animated Prompt Studio logo while pages, panels and dialogs load, with new `LoadingState` and `LogoLoader` components; the action bar, navigation and status bar show skeletons instead.
+
 ## 0.48.0
 
 _2026-11-21_

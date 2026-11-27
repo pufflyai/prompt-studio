@@ -1,5 +1,33 @@
 # @pstdio/ui
 
+## 0.49.0
+
+_2026-11-27_
+
+### Minor Changes
+
+- 1fd4c3c: Add scatterplots, ring charts, custom dashboard content, and page-owned dashboard toolbars.
+- 0af6825: Edit dashboard widget descriptions and chart colors. Prefill custom widget headings and keep Cancel and Apply on the right.
+- bce3bc0: Move the Side Panel with consistent drop feedback or free positioning, resize from the available top corners for its alignment, and choose the bubble visibility and default panel in Appearance settings. Move the complete Bottom panel into a closed Side Panel while preserving both trays and their drafts.
+- d7bb3ed: Show the animated Prompt Studio logo while pages, panels and dialogs load, with new `LoadingState` and `LogoLoader` components; the action bar, navigation and status bar show skeletons instead.
+- 26262f1: Preview, complete and cancel numeric property gestures with mixed values, units and retained authored drafts.
+- 6d70a09: Navigate conversation turns and identify attributed messages by sender.
+- 026e2e3: Show settings, notification changes, resource changes, and collection edits immediately across views. Keep failed and uncertain drafts available through System activity.
+
+### Patch Changes
+
+- aaf35b1: Keep a conversation stopped when a previously queued scroll event arrives after following is disabled.
+- 9303acc: Show occurrence counts for repeated polling prompts and errors in session chat.
+- 9469636: Keep a chat's reading position when its panel is hidden while the conversation is still scrolling.
+- 79b5149: Keep panel resizing under the finger that started the drag when another finger touches the screen.
+- 4c4b384: Open newly saved tickets directly from the creation form while the board refreshes and attachments finish uploading.
+- 889efc0: Keep keyboard focus on a Workbench panel header when a restored terminal finishes loading.
+- 47960a3: Keep view controls and resource menus with their live page or tab, support movable menu headers and bottom menu presets, and align web app headers with desktop. Add the public header-view contract and TextPen icon for extension consumers.
+- ce8dca2: Keep modal drafts open when Escape closes a just-opened popover.
+- b697943: Show compact sender avatars alongside message actions. Click a session avatar to open its conversation. Outline marks animate on hover and focus.
+- 80fce4d: Reopen closed sessions at the latest reply and run queued follow-ups in the order shown after reordering.
+- 9dd9fff: Dismiss popovers and tooltips when navigating away from retained views. Preserve unfinished popup fields when a retained workbench is suspended.
+
 ## 0.48.0
 
 _2026-11-21_

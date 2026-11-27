@@ -1,5 +1,14 @@
 # pstdio-performance
 
+## 0.2.1
+
+_2026-11-27_
+
+### Patch Changes
+
+- 958363f: Keep extensions available on the next host API while retaining compatibility with previously supported hosts.
+- 27e5ee4: Show pending status when copying performance data or pausing and resuming an extension. Reflect the selected React render highlight setting immediately.
+
 ## 0.2.0
 
 _2026-11-21_

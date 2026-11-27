@@ -1,5 +1,15 @@
 # canvas
 
+## 0.1.2
+
+_2026-11-27_
+
+### Patch Changes
+
+- 958363f: Keep extensions available on the next host API while retaining compatibility with previously supported hosts.
+- 2c01704: Allow another parameter save when the selected Canvas version has been repaired after a validation error.
+- f7e08bd: Switch between canvases faster by sharing preview assets and project fonts, and keep the two most recent designs live.
+
 ## 0.1.1
 
 _2026-11-21_

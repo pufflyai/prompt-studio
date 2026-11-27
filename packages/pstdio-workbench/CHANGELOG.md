@@ -1,5 +1,48 @@
 # @pstdio/workbench
 
+## 0.49.0
+
+_2026-11-27_
+
+### Minor Changes
+
+- 4ce70b9: Sign in to Prompt Studio Cloud with a personal Microsoft account or a work or school account using the SDK or CLI.
+- 43f79ed: Create a team and sync its first project across your computers.
+- bb732e9: Add outcome-aware device saves and live resource actions in native document menus.
+- bce3bc0: Move the Side Panel with consistent drop feedback or free positioning, resize from the available top corners for its alignment, and choose the bubble visibility and default panel in Appearance settings. Move the complete Bottom panel into a closed Side Panel while preserving both trays and their drafts.
+- 47960a3: Keep view controls and resource menus with their live page or tab, support movable menu headers and bottom menu presets, and align web app headers with desktop. Add the public header-view contract and TextPen icon for extension consumers.
+- 6d70a09: Navigate conversation turns and identify attributed messages by sender.
+- 026e2e3: Show settings, notification changes, resource changes, and collection edits immediately across views. Keep failed and uncertain drafts available through System activity.
+
+### Patch Changes
+
+- f7e08bd: Load a fresh canvas preview when returning after leaving during loading.
+- 12035b1: Keep command palette resource searches active while views refresh.
+- d51d8c5: Let native chat providers opt into browser-local drafts through additive extension API 0.5.1 while preserving existing provider-managed persistence. Acknowledge recovered input only after every body is saved in durable browser storage.
+- 902f5eb: Dismiss any item in System activity and use the Recover changes command to find dismissed recovery details.
+- a43ebcf: Offer downloaded desktop updates through a movable status-bar widget and confirm before installing and reopening Prompt Studio.
+- 34eaf29: Show extension upgrade conflicts in an error popover with Resolve and offer local, published, or agent-assisted resolution.
+  Only offer Upgrade all when multiple updates can run, excluding paused and active upgrades.
+- 2c01704: Open shortcut-created tickets after the current page refreshes, keep the exact title draft after a rejected rename, and show native command refusals beside the retained input.
+- 8707810: Open a linked resource in only one panel by comparing its declared owner and project before its tool has confirmed the link. Preserve saved tabs and keep resources from different owners, projects, and documents distinct.
+
+  Keep the live viewer and its follower panels mounted when the owner refreshes a pasted link's title and metadata.
+
+  Preserve each codec-defined revision and retained follower when reopening links or restoring a project.
+
+- d7bb3ed: Show the animated Prompt Studio logo while pages, panels and dialogs load, with new `LoadingState` and `LogoLoader` components; the action bar, navigation and status bar show skeletons instead.
+- 4b77de9: Make native resource actions available again after they finish.
+- 4c4b384: Open newly saved tickets directly from the creation form while the board refreshes and attachments finish uploading.
+- 16b4a08: Keep board columns and status choices intact when views share or restore query results.
+- d51d8c5: Remove the misleading notice from native chat draft recovery.
+- ea3ceba: Show the first tree results when the search query changes.
+- f516cb1: Restore older saved panel layouts when opening a project or the Extensions page after an upgrade.
+- b697943: Show compact sender avatars alongside message actions. Click a session avatar to open its conversation. Outline marks animate on hover and focus.
+- 80fce4d: Reopen closed sessions at the latest reply and run queued follow-ups in the order shown after reordering.
+- d05e67a: Show the full label in a tooltip when hovering over a clipped workbench breadcrumb.
+- 563f097: Keep the desktop responsive when opening Sessions or reconnecting a project with archived conversations.
+- 9dd9fff: Dismiss popovers and tooltips when navigating away from retained views. Preserve unfinished popup fields when a retained workbench is suspended.
+
 ## 0.48.0
 
 _2026-11-21_

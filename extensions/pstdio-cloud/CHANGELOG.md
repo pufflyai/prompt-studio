@@ -1,5 +1,18 @@
 # pstdio-cloud
 
+## 0.4.0
+
+_2026-11-27_
+
+### Minor Changes
+
+- 47c96c6: Choose Microsoft or Google from the Prompt Studio Cloud Account card.
+
+### Patch Changes
+
+- 958363f: Keep extensions available on the next host API while retaining compatibility with previously supported hosts.
+- 0eed063: Keep signed-in device management available before Cloud early access is enabled.
+
 ## 0.3.0
 
 _2026-11-21_
