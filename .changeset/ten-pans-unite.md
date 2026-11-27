@@ -13,3 +13,5 @@ Use Bun’s resolved browser inputs to reduce first-time preparation for source-
 Reduce repeated relationship checks and metadata reads when a bundled Planner panel opens.
 
 Reconcile a panel’s first invalidated data read promptly while keeping repeated background reads bounded.
+
+Load Planner request and Auto Build dialogs on interaction, and avoid rereading saved-view schemas for ticket windows.

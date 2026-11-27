@@ -11,12 +11,14 @@ import { AutoBuildHelp } from "./auto-build-help";
 import { AutoBuildIndicator, resolveAutoBuildIndicatorStatus } from "./auto-build-indicator";
 import type { AutoBuildSession } from "./auto-build-session-row";
 import { RequestWindowControls } from "./request-window";
-import { RequestsDialog } from "./ticket-requests-dialog";
 
 const AutoBuildForm = lazy(async () => {
   await installPrismGlobal();
   return import("./auto-build-form").then((module) => ({ default: module.AutoBuildForm }));
 });
+const RequestsDialog = lazy(() =>
+  import("./ticket-requests-dialog").then((module) => ({ default: module.RequestsDialog })),
+);
 
 export interface AutoBuildButtonProps {
   enabled: boolean;
@@ -72,6 +74,7 @@ export function AutoBuildButton(props: AutoBuildButtonProps) {
     t,
   } = props;
   const [content, setContent] = useState<"configuration" | "sessions" | "requests" | null>(null);
+  const [requestsOpened, setRequestsOpened] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
   const headerButton = useRecipe({ recipe: psTheme.getRecipe("button") })({ size: "xs", variant: "outline" });
   const failed = (!completed && supervisor?.status === "failed") || Boolean(error);
@@ -131,36 +134,43 @@ export function AutoBuildButton(props: AutoBuildButtonProps) {
         }}
         onStop={() => void stop()}
         onConfigure={() => setContent("configuration")}
-        onOpenRequests={() => setContent("requests")}
-      />
-      <RequestsDialog
-        title={t("timeline.autoBuild.requests", "Needs attention")}
-        row={{ requests: reviewRequests, requestErrors }}
-        total={props.requestPage?.total}
-        loading={props.requestLoading}
-        footer={
-          props.requestPage && props.onRequestPage ? (
-            <RequestWindowControls
-              result={props.requestPage}
-              offset={props.requestPage.offset}
-              move={props.onRequestPage}
-              loading={props.requestLoading}
-            />
-          ) : undefined
-        }
-        open={content === "requests"}
-        pendingOnly
-        trigger={trigger.current}
-        onClose={() => setContent(null)}
-        onAnswer={async (id, response) => {
-          if (!onAnswerRequest) throw new Error("Answering requests is unavailable.");
-          return onAnswerRequest(id, response);
-        }}
-        onOpenChat={async (id) => {
-          if (!onOpenRequestChat) throw new Error("Opening a session is unavailable.");
-          return onOpenRequestChat(id);
+        onOpenRequests={() => {
+          setRequestsOpened(true);
+          setContent("requests");
         }}
       />
+      {requestsOpened ? (
+        <Suspense fallback={null}>
+          <RequestsDialog
+            title={t("timeline.autoBuild.requests", "Needs attention")}
+            row={{ requests: reviewRequests, requestErrors }}
+            total={props.requestPage?.total}
+            loading={props.requestLoading}
+            footer={
+              props.requestPage && props.onRequestPage ? (
+                <RequestWindowControls
+                  result={props.requestPage}
+                  offset={props.requestPage.offset}
+                  move={props.onRequestPage}
+                  loading={props.requestLoading}
+                />
+              ) : undefined
+            }
+            open={content === "requests"}
+            pendingOnly
+            trigger={trigger.current}
+            onClose={() => setContent(null)}
+            onAnswer={async (id, response) => {
+              if (!onAnswerRequest) throw new Error("Answering requests is unavailable.");
+              return onAnswerRequest(id, response);
+            }}
+            onOpenChat={async (id) => {
+              if (!onOpenRequestChat) throw new Error("Opening a session is unavailable.");
+              return onOpenRequestChat(id);
+            }}
+          />
+        </Suspense>
+      ) : null}
       <Dialog.Root
         lazyMount
         unmountOnExit

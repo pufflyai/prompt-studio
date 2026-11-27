@@ -32,6 +32,7 @@ export const readPlanCommand = defineCommand({
     page: params.json<KanbanRendererQueryParams["page"]>(),
     display: params.json<PlanDisplay>(),
     ticketId: params.text(),
+    includeSavedViews: params.boolean(),
   },
   async run(ctx, input) {
     await ensureTicketStorage(ctx);
@@ -177,7 +178,10 @@ export const readPlanCommand = defineCommand({
           : { ...summarizeSection(section, view.tags, null), globalCounts: undefined };
       }),
       projectId: ctx.projectId,
-      savedViews: input.ticketId ? { views: [], defaultViewId: null } : await ctx.views.list(timelineBoard),
+      savedViews:
+        input.ticketId || input.includeSavedViews === false
+          ? { views: [], defaultViewId: null }
+          : await ctx.views.list(timelineBoard),
       ticketRows: planTicketRows(view, page.rows),
       ticketAttributes: view.result.attributes,
       page: view.result.page,

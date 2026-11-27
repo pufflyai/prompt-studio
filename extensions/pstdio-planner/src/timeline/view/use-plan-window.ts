@@ -25,6 +25,8 @@ export function usePlanWindow(client: PlanClient, filter: ViewFilterGroup, searc
     {
       filter,
       display,
+      // The schema query owns saved views; a page needs only its ticket window.
+      includeSavedViews: false,
       page: {
         limit: PLAN_WINDOW_SIZE,
         offset: current.offset,

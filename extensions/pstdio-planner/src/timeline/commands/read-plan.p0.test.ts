@@ -65,6 +65,25 @@ test("the timeline snapshot includes its saved views and their default", async (
   expect((await readPlanCommand.run(ctx, {})).savedViews).toEqual(savedViews);
 });
 
+test("timeline windows can retain schema views without reading them again", async () => {
+  const [ctx] = makeCommandArgs({ storage: createMemoryStorage(), params: {} });
+  const ticket = await createTicketCommand.run(ctx, { title: "Visible work", statusId: "ready" });
+  let viewReads = 0;
+  ctx.views.list = async () => {
+    viewReads++;
+    return { views: [], defaultViewId: "saved" };
+  };
+  const original = await readPlanCommand.run(ctx, {});
+  const input = { includeSavedViews: false, page: { limit: 100, offset: 0, fields: [], search: "" } };
+  const window = await readPlanCommand.run(ctx, input);
+  expect(viewReads).toBe(1);
+  expect(original.savedViews.defaultViewId).toBe("saved");
+  expect(window.savedViews).toEqual({ views: [], defaultViewId: null });
+  expect(window.sections).toEqual(original.sections);
+  expect(window.ticketRows).toEqual(original.ticketRows);
+  expect(window.sections.flatMap(({ rows }) => rows).some(({ id }) => id === ticket.id)).toBe(true);
+});
+
 test("the timeline carries gate instructions without copying ordinary ticket documents", async () => {
   const storage = createMemoryStorage();
   const [ctx] = makeCommandArgs({ storage, params: {} });
