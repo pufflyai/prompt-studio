@@ -91,9 +91,10 @@ jobs:
               baselines=$(jq -c --arg tag "$previous" '. + [{from: $tag}]' <<< "$baselines")
             fi
           fi
-          # Direct upgrades cross the 0.49 storage boundary from both earlier stable layouts.
-          if [[ -n "$BUILD_ID" && "$from" == pstdio@0.48.* ]]; then
-            baselines=$(jq -c '. + [{from:"pstdio@0.46.0", profile:"direct"}, {from:"pstdio@0.47.0", profile:"direct"}]' <<< "$baselines")
+          # Nightlies check the complete save / quit / reopen path from each current channel.
+          # Stable certification and manual rehearsals run the full project fixtures.
+          if [[ -n "$BUILD_ID" ]]; then
+            baselines=$(jq -c 'map(. + {profile:"direct"})' <<< "$baselines")
           fi
           platforms=$(jq -c --argjson pairs "$baselines" '[.[] as $p | $pairs[] | $p + .]' <<< "$platforms")
           {
@@ -143,7 +144,7 @@ jobs:
       (needs.version_manual.result == 'success' || (inputs.ref != '' && needs.version_manual.result == 'skipped'))
     name: Project upgrade (${{ matrix.from }} → ${{ matrix.target }})
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: ${{ inputs.build_artifact_id != '' && 12 || 30 }}
     strategy:
       fail-fast: false
       matrix:
@@ -243,6 +244,7 @@ jobs:
           tar -xzf release-build.tar.gz "$binary"
           echo "CANDIDATE_BINARY=$PWD/$binary" >> "$GITHUB_ENV"
       - name: Install Chromium for the upgraded workbench
+        if: matrix.profile != 'direct'
         working-directory: packages/e2e
         run: bun x --no-install playwright install chromium --with-deps --no-shell
       - name: Upgrade populated projects from the published host

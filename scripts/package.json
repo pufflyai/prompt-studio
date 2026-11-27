@@ -45,6 +45,7 @@
     "pstdio-benchmarks": "workspace:*"
   },
   "exports": {
+    "./owned-process-tree": "./ci/owned-process-tree.ts",
     "./testing": "./ci/testing.ts"
   }
 }

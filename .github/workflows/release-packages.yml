@@ -384,9 +384,9 @@ jobs:
       candidate-ref: ${{ needs.plan.outputs.commit }}
 
   # A daily nightly and every stable candidate get the same deep diagnostics.
-  # Publication below waits for this job only for stable releases.
+  # Start advisory nightly diagnostics after the publisher settles so release checks get runners first.
   production:
-    needs: [plan, release_build, containers, desktop]
+    needs: [plan, release_build, containers, desktop, publish_nightly]
     if: ${{ !cancelled() && needs.plan.outputs.release == 'true' }}
     permissions:
       contents: read
@@ -526,6 +526,16 @@ jobs:
           channel: ${{ needs.plan.outputs.channel }}
           previous-tag: ${{ needs.plan.outputs.previous_tag }}
           patch: ${{ inputs.channel == 'patch' }}
+
+      - name: Report dispatch-to-publication time
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          started=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" --jq .created_at)
+          published=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq .published_at)
+          seconds=$(( $(date -d "$published" +%s) - $(date -d "$started" +%s) ))
+          echo "Nightly published in ${seconds}s (target <1800s)." >> "$GITHUB_STEP_SUMMARY"
+          if (( seconds >= 1800 )); then echo "::warning::Nightly exceeded its 30-minute delivery target (${seconds}s)"; fi
 
   # Performance measurements start independently when a candidate exists or after publication.
   # A dispatch failure remains advisory and cannot fail an otherwise delivered release.
