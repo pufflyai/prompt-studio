@@ -263,6 +263,7 @@ test("keeps install retries and toggle progress attached to their controls acros
     extensionId: catalog.extensionId,
     displayName: catalog.displayName,
     canUpgrade: false,
+    hasPublishedAlternative: false,
     updateAvailable: true,
     version: "1.0.0",
   };
