@@ -12,6 +12,7 @@ import {
   preparedCacheRoot,
   preparedRevisionState,
   revisionDigest,
+  runsOnThisHost,
 } from "./prepared-revision";
 import { copyRevisionCompilerInputs } from "./revision-compiler-inputs";
 import {
@@ -129,7 +130,7 @@ export const acceptRevision = (
   expectedId?: string | null,
   expectedState?: string | null,
 ) => {
-  if (revision.host !== preparationHostIdentity() || !existsSync(revision.entryPath))
+  if (!runsOnThisHost(revision) || !existsSync(revision.entryPath))
     throw new Error("Prepared extension revision is unavailable or incompatible.");
   const path = acceptedRevisionPath(sourcePath);
   mkdirSync(dirname(path), { recursive: true });
@@ -145,7 +146,7 @@ export const acceptRevision = (
       (revision.contentKey && current?.contentKey === revision.contentKey ? current.verifiedInstall : undefined);
     // Reads treat an earlier host/format as absent. Its replacement uses that same guard;
     // a compatible revision accepted in the meantime still participates in the CAS below.
-    if (current?.host !== preparationHostIdentity()) current = null;
+    if (!runsOnThisHost(current)) current = null;
     if (
       expectedState !== undefined &&
       preparedRevisionState(current) !== expectedState &&
