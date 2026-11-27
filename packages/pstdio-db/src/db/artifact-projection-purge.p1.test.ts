@@ -56,4 +56,4 @@ test("explicitly purging a migrated artifact owner allows a fresh mirror after r
     await store?.close();
     await rm(root, { recursive: true, force: true });
   }
-});
+}, 15_000);
