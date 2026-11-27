@@ -30,7 +30,7 @@ export const verifyTreeGroups = async (page: Page, tree: Locator, source: Locato
     await page.mouse.move(from.x + 40, before.y + before.height / 2);
     expect((await group.boundingBox())!.y).toBe(before.y);
     await expect(tree.locator("[data-tree-list-drop-group]")).toHaveCount(1, { timeout: 1_000 });
-  }).toPass();
+  }).toPass({ timeout: 15_000 });
   await expect(tree.locator("[data-tree-list-drop-group]")).toHaveCount(1);
   await page.mouse.up();
   // A drop schedules the tree update. Wait for this row to belong to the group
