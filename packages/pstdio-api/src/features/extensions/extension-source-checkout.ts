@@ -108,6 +108,12 @@ export const prepareGitExtensionSource = async (
   return { path: join(checkoutPath, origin.path), ref: namedSourceRef(commit, origin), gitRef: releaseRef };
 };
 
+const toPreparedBundledSource = (
+  { commit, ...source }: NonNullable<Awaited<ReturnType<typeof prepareBundledExtensionSource>>>,
+  origin: GitExtensionOrigin,
+  gitRef: string,
+): PreparedNamedInstallSource => ({ ...source, ref: namedSourceRef(commit, origin), gitRef });
+
 export const prepareReleaseExtensionSource = async (
   origin: GitExtensionOrigin,
   tempDir: string,
@@ -115,14 +121,7 @@ export const prepareReleaseExtensionSource = async (
   signal?: AbortSignal,
 ) => {
   const bundled = await prepareBundledExtensionSource(origin, tempDir, ref, { signal });
-  if (bundled)
-    return {
-      path: bundled.path,
-      ref: namedSourceRef(bundled.commit, origin),
-      gitRef: ref,
-      runtimeBundle: bundled.runtimeBundle,
-      preparedRelease: bundled.preparedRelease,
-    };
+  if (bundled) return toPreparedBundledSource(bundled, origin, ref);
   return prepareGitExtensionSource(origin, tempDir, ref, signal);
 };
 
@@ -213,12 +212,7 @@ export const createSharedNamedSourceCheckout = async (
         const bundled = options.ref
           ? null
           : await prepareBundledExtensionSource(entry.origin, checkoutPath, group.ref, options);
-        if (bundled)
-          preparedByName.set(entry.installName, {
-            path: bundled.path,
-            ref: namedSourceRef(bundled.commit, entry.origin),
-            gitRef: group.ref,
-          });
+        if (bundled) preparedByName.set(entry.installName, toPreparedBundledSource(bundled, entry.origin, group.ref));
         else remaining.push(entry);
       }
       if (remaining.length === 0) continue;

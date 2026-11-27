@@ -3,6 +3,12 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import {
+  type BundledExtensionSources,
+  packExtensionReleaseBundle,
+  packExtensionSource,
+} from "pstdio-extensions/distribution";
 import { createSharedNamedSourceCheckout, prepareGitExtensionSource } from "./extension-source-checkout";
 
 const git = (cwd: string, ...args: string[]) => {
@@ -69,6 +75,69 @@ describe("prepareGitExtensionSource", () => {
 });
 
 describe("createSharedNamedSourceCheckout", () => {
+  test("carries a prebuilt runtime through the default extensions' shared checkout", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-bundled-checkout-"));
+    const name = "harness-codex";
+    try {
+      writeFileSync(
+        join(root, "package.json"),
+        JSON.stringify({
+          publisher: "pstdio",
+          name,
+          version: "1.0.0",
+          main: "extension.ts",
+          engines: { pstdio: `^${EXTENSION_API_VERSION}` },
+        }),
+      );
+      writeFileSync(join(root, "extension.ts"), "export default {};");
+      const source = await packExtensionSource(root);
+      const bundle = await packExtensionReleaseBundle(
+        {
+          extensionId: source.manifest.id,
+          version: source.manifest.version,
+          sourceSha256: source.sha256,
+          webviews: [],
+        },
+        { "runtime.mjs": new TextEncoder().encode("export default {};") },
+      );
+      const manifest: BundledExtensionSources = {
+        ref: "test-release",
+        commit: "a".repeat(40),
+        sources: [
+          {
+            installName: name,
+            url: "https://github.com/pufflyai/prompt-studio",
+            path: `extensions/${name}`,
+            id: source.manifest.id,
+            version: source.manifest.version,
+            sha256: source.sha256,
+            bundles: [bundle.descriptor],
+          },
+        ],
+      };
+      const fixture = {
+        hostReleaseRef: manifest.ref,
+        runCommand: () => {
+          throw new Error("An embedded release does not need Git.");
+        },
+        files: [
+          new File([JSON.stringify(manifest)], "extension-sources/manifest.json"),
+          new File([source.bytes], `extension-sources/${name}.tgz`),
+          new File([bundle.bytes], `extension-sources/runtime/${bundle.descriptor.sha256}.tgz`),
+        ],
+      };
+      const checkout = await createSharedNamedSourceCheckout([name], fixture);
+      try {
+        const prepared = await checkout.prepareNamedSource(name, root);
+        expect(prepared).toMatchObject({ runtimeBundle: { descriptor: bundle.descriptor } });
+      } finally {
+        checkout.cleanup();
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   test("passes cancellation to every Git operation", async () => {
     const controller = new AbortController();
     const calls: Array<{ signal?: AbortSignal }> = [];
