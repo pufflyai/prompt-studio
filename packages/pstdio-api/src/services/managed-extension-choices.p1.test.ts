@@ -61,6 +61,9 @@ test("team policy protects a required tool from disable, removal and provider re
   });
   required = true;
 
+  await expect(service.removeProjectExtensionInstance(installed.instance.id)).rejects.toBeInstanceOf(
+    AlwaysEnabledExtensionError,
+  );
   await expect(service.setProjectExtensionEnabled(installed.instance.id, false)).rejects.toBeInstanceOf(
     AlwaysEnabledExtensionError,
   );
@@ -105,4 +108,6 @@ test("team policy protects a required tool from disable, removal and provider re
   await service.assertInstalledSourceChoice(installed.installedSource.id);
   expect((await service.setProjectExtensionEnabled(installed.instance.id, false))?.enabled).toBe(false);
   expect(await sources.get(installed.installedSource.id)).not.toBeNull();
+  await service.removeProjectExtensionInstance(installed.instance.id);
+  expect(await instances.get(installed.instance.id)).toBeNull();
 });

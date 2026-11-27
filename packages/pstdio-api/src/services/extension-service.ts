@@ -214,6 +214,11 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
   };
 
   const removeProjectExtensionInstance = async (instanceId: string) => {
+    const instance = await deps.extensionInstancesService.get(instanceId);
+    if (instance?.scope_type === "project") {
+      const source = await deps.installedExtensionSourcesService.get(instance.installed_extension_id);
+      if (source) await assertProjectChoice(instance.scope_id, source.extension_id);
+    }
     const removed = await deps.extensionInstancesService.remove(instanceId);
     if (removed) deps.eventBus?.emit("extension_instances", "delete", removed);
     return removed;

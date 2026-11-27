@@ -93,8 +93,9 @@ const findFreshSource = async (fresh: FreshWorkspaceSource[], path: string) => {
 export const adoptWorkspacesTool = (deps: ExtensionsRouteDeps, projectId: string, fresh: FreshWorkspaceSource[] = []) =>
   withProjectExtensionChoices(deps.extensionService, projectId, () => adopt(deps, projectId, fresh));
 
-const canRetireSharedProvider = (deps: ExtensionsRouteDeps, projectId: string, published: boolean) =>
-  published ? deps.accountService.canPublishProjectExtensions(projectId) : Promise.resolve(true);
+const canRetireSharedProvider = async (deps: ExtensionsRouteDeps, projectId: string, published: boolean) =>
+  !(await deps.accountService.isExtensionManaged(projectId, "pstdio.git-workspaces")) &&
+  (!published || (await deps.accountService.canPublishProjectExtensions(projectId)));
 
 const adopt = async (deps: ExtensionsRouteDeps, projectId: string, fresh: FreshWorkspaceSource[]) => {
   const records = await deps.extensionService.listProjectExtensionInstances(projectId);
