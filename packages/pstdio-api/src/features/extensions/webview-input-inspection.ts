@@ -11,9 +11,10 @@ export const inspectWebviewDependencyInputs = async (
   packagePath: string,
   entryPaths: string[],
   signal?: AbortSignal,
+  batch = false,
 ) => {
   signal?.throwIfAborted();
-  if (isMainThread) return hashWebviewDependencyInputsAsync(packagePath, entryPaths);
+  if (isMainThread) return hashWebviewDependencyInputsAsync(packagePath, entryPaths, batch);
   return withExtensionWebviewBuildSlot(async () => {
     signal?.throwIfAborted();
     const env = { ...process.env };
@@ -23,7 +24,7 @@ export const inspectWebviewDependencyInputs = async (
       isPackagedRuntime()
         ? ["extension-input-inspector"]
         : [fileURLToPath(new URL("./webview-input-inspector.entry.ts", import.meta.url))],
-      { cwd: packagePath, env, signal, stdin: JSON.stringify({ packagePath, entryPaths }) },
+      { cwd: packagePath, env, signal, stdin: JSON.stringify({ packagePath, entryPaths, batch }) },
     );
     signal?.throwIfAborted();
     if (result.exitCode !== 0) throw new Error(result.stderr.trim() || "Extension frontend input inspection failed.");
