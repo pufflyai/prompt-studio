@@ -2,15 +2,12 @@ import { access, copyFile, mkdtemp, rm, symlink } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { PreparedExtensionRevision } from "pstdio-extensions";
 import { apiLogger } from "../../lib/logger";
+import { parseExtensionSourceRef } from "../../services/extension-source-ref";
+import { readBundledExtensionRuntimeCli } from "./bundled-extension-source";
 import { installedDependencyHash } from "./hash-extension-dependency-inputs";
 import { installDependencies, shouldInstallDependencies } from "./install-extension-dependencies";
 import { copyUsableNodeModules } from "./install-extension-source-node-modules";
 
-const nativeCommands = new Map([
-  ["pstdio.harness-codex", "codex"],
-  ["pstdio.harness-claude-code", "claude"],
-  ["pstdio.harness-open-code", "opencode"],
-]);
 const metadataHandlers = new Set(["capabilities", "dispose", "recoverMessages"]);
 const pending = new Map<string, Promise<void>>();
 
@@ -41,7 +38,10 @@ const stageDependencies = async (source: string, packagePath: string, target: st
     const dependencies = join(stage, "node_modules");
     if (!(await exists(dependencies))) {
       await copyFile(join(packagePath, "package.json"), join(stage, "package.json"));
-      await copyFile(join(packagePath, "bun.lock"), join(stage, "bun.lock"));
+      for (const lock of ["bun.lock", "bun.lockb"]) {
+        const sourceLock = join(packagePath, lock);
+        if (await exists(sourceLock)) await copyFile(sourceLock, join(stage, lock));
+      }
       await installDependencies(stage, { production: true });
     }
 
@@ -78,16 +78,27 @@ const provisionDependencies = (source: string, revision: PreparedExtensionRevisi
 };
 
 export const preparePrebuiltHarnessRuntime = (source: string, revision: PreparedExtensionRevision) => {
-  if (!revision.prebuiltRelease) return;
-  const command = nativeCommands.get(revision.manifest.id);
-  if (!command) return;
+  const command = revision.manifest.pstdio?.runtimeCli;
+  const previous = revision.verifiedInstall;
+  const origin = command || previous?.sourcePath !== source ? null : parseExtensionSourceRef(previous.ref);
+  if (!revision.prebuiltRelease || (!command && !origin)) return;
+  let bundledCli: Promise<string | undefined> | undefined;
   let hasDependencies = false;
-  return (path: readonly string[]) => {
-    // Definition loading, workspace provisioning, and startup session metadata never install a CLI.
-    const usesCli = path[0] === "commands" || (path[0] === "harnesses" && !metadataHandlers.has(path.at(-1) ?? ""));
-    if (!usesCli || hasDependencies || Bun.which(command, { PATH: process.env.PATH })) return;
+  const prepare = (cli: string | undefined) => {
+    if (!cli || Bun.which(cli, { PATH: process.env.PATH })) return;
     return provisionDependencies(source, revision).then(() => {
       hasDependencies = true;
     });
+  };
+  return (path: readonly string[]) => {
+    // Definition loading, workspace provisioning, and startup session metadata never install a CLI.
+    const usesCli = path[0] === "commands" || (path[0] === "harnesses" && !metadataHandlers.has(path.at(-1) ?? ""));
+    if (!usesCli || hasDependencies) return;
+    if (command) return prepare(command);
+    // Existing accepted revisions can predate the manifest field. Their recorded catalog
+    // origin lets the updated host supply the same declaration from its bundled package.
+    if (!origin) return;
+    bundledCli ??= readBundledExtensionRuntimeCli(revision.manifest.id, origin);
+    return bundledCli.then(prepare);
   };
 };

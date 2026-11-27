@@ -75,6 +75,7 @@ export {
   getExtensionApiVersionError,
   type HostCommandExecuteInput,
   type InvocationScope,
+  isRuntimeCliName,
   keybindingDedupeEntries,
   type LoadExtensionRuntimeInput,
   type LoadExtensionSourcesOptions,
