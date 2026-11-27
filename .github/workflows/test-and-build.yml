@@ -12,6 +12,10 @@ on:
       - test/ci-reliability/**
   workflow_dispatch:
     inputs:
+      review:
+        type: boolean
+        default: false
+        description: Run the complete isolated test:review gate on an Ubuntu Docker host
       profile:
         type: choice
         options:
@@ -29,12 +33,16 @@ on:
       test_file:
         type: string
         default: ""
-        description: Optional single test file; runs its owning runner instead of a full profile
+        description: Optional test file or JSON array of files; runs their owning runners instead of a full profile
       test_os:
         type: choice
-        options: [ubuntu-latest, windows-latest, macos-15, macos-15-intel]
+        options: [ubuntu-24.04, ubuntu-latest, windows-latest, macos-15, macos-15-intel]
         default: windows-latest
         description: Host for a single-file owning-runner diagnostic
+      prebuilt_desktop:
+        type: boolean
+        default: false
+        description: Build a desktop package first, then exercise cached-package setup in the selected desktop tests
       release_channel:
         type: choice
         options: [stable, nightly]
@@ -83,14 +91,56 @@ concurrency:
 env:
   NX_DAEMON: "false"
 jobs:
+  isolated_review:
+    if: github.event_name == 'workflow_dispatch' && inputs.review
+    # Playwright 1.60 supports 24.04; ubuntu-latest has moved to 26.04.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.source_sha || github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26.7.0"
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: ./.github/actions/setup-ci-cache
+      - name: Prepare Docker and browser prerequisites
+        run: |
+          docker info
+          docker compose version
+          bunx playwright@1.60.0 install --with-deps chromium firefox
+          sudo apt-get install -y openbox x11-utils
+      - name: Run every check selected by the isolated review gate
+        env:
+          TMPDIR: ${{ runner.temp }}
+        run: xvfb-run -a bun run test:review --base origin/main
+      - name: Preserve review reports, logs and traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: isolated-review-${{ github.run_attempt }}
+          path: |
+            test-results/local-review
+            ${{ runner.temp }}/pstdio-local-review-*/checks.json
+            ${{ runner.temp }}/pstdio-local-review-*/logs
+            ${{ runner.temp }}/pstdio-local-review-*/compose-projects.jsonl
+            ${{ runner.temp }}/pstdio-local-review-*/source/test-results
+            ${{ runner.temp }}/pstdio-local-review-*/source/packages/e2e/test-results
+            ${{ runner.temp }}/pstdio-local-review-*/source/clients/desktop/test-results
+          if-no-files-found: error
   native_file:
-    if: inputs.test_file != ''
+    if: inputs.test_file != '' && !inputs.review
     runs-on: ${{ inputs.test_os || 'windows-latest' }}
     timeout-minutes: 20
     env:
       CI_PROFILE: production
       GH_TOKEN: ${{ github.token }}
       DIAGNOSTIC_FILE: ${{ inputs.test_file }}
+      DIAGNOSTIC_PREBUILT_DESKTOP: ${{ inputs.prebuilt_desktop }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -106,19 +156,36 @@ jobs:
         with:
           install-strategy: native
           windows-dev-drive: "true"
-      # Use the owning plan for prerequisites as well as execution. Packaged CLI
-      # files can exercise Chromium UI, even though Bun owns their test process.
+      # Derive browser/display prerequisites and cached-package eligibility from the owning plan.
       - name: Prepare the selected native file plan
         id: native_plan
-        run: >-
-          bun -e 'const child = Bun.spawnSync(["bun", "scripts/test.ts", "--file", process.env.DIAGNOSTIC_FILE, "--list", "--out", "test-results/ci/native-file-plan.json"], { stdio: ["inherit", "inherit", "inherit"] }); if (child.exitCode) process.exit(child.exitCode); const plan = await Bun.file("test-results/ci/native-file-plan.json").json(); await Bun.write(process.env.GITHUB_OUTPUT, "chromium=" + plan.runs.some((run) => run.runner === "packaged-cli") + String.fromCharCode(10));'
-      - name: Install native Chromium for packaged CLI UI
+        run: |
+          bun -e '
+            const input = process.env.DIAGNOSTIC_FILE;
+            const files = input.trimStart().startsWith("[") ? JSON.parse(input) : [input];
+            if (!Array.isArray(files) || !files.length || files.some((file) => typeof file !== "string"))
+              throw new Error("Choose a test file or a JSON array of test files.");
+            const child = Bun.spawnSync(["bun", "scripts/test.ts", ...files.flatMap((file) => ["--file", file]), "--list", "--out", "test-results/ci/native-file-plan.json"], { stdio: ["inherit", "inherit", "inherit"] });
+            if (child.exitCode) process.exit(child.exitCode);
+            const plan = await Bun.file("test-results/ci/native-file-plan.json").json();
+            const desktop = plan.runs.some((run) => run.runner === "desktop");
+            if (process.env.DIAGNOSTIC_PREBUILT_DESKTOP === "true" && !plan.runs.every((run) => run.runner === "desktop"))
+              throw new Error("Cached desktop diagnostics require desktop test files.");
+            const chromium = plan.runs.some((run) => run.runner === "packaged-cli" || (run.runner === "desktop" && process.platform === "linux"));
+            await Bun.write(process.env.GITHUB_OUTPUT, `chromium=${chromium}\ndesktop=${desktop}\n`);
+          '
+      - name: Install Chromium prerequisites for the selected tests
         if: steps.native_plan.outputs.chromium == 'true'
-        run: bunx playwright@1.60.0 install chromium
-      # Direct argv preserves the native shell's signal behavior and keeps the input out of shell syntax.
+        run: bunx playwright@1.60.0 install --with-deps chromium
+      - name: Build the cached desktop diagnostic package
+        if: inputs.prebuilt_desktop
+        run: bun run --cwd clients/desktop package
+      # Direct argv preserves the native shell and keeps file inputs out of shell syntax.
       - name: Run the selected native file with its owning runner
+        env:
+          PLAN_DISPLAY: ${{ runner.os == 'Linux' && steps.native_plan.outputs.desktop == 'true' && 'true' || 'false' }}
         run: >-
-          bun -e 'const child = Bun.spawnSync(["bun", "scripts/test.ts", "--plan", "test-results/ci/native-file-plan.json"], { stdio: ["inherit", "inherit", "inherit"] }); process.exit(child.exitCode);'
+          bun -e 'const args = ["bun", "scripts/test.ts", "--plan", "test-results/ci/native-file-plan.json"]; if (process.env.DIAGNOSTIC_PREBUILT_DESKTOP === "true") args.push("--prebuilt"); const child = Bun.spawnSync(args, { stdio: ["inherit", "inherit", "inherit"] }); process.exit(child.exitCode);'
       - name: Preserve native file execution
         if: always()
         uses: actions/upload-artifact@v4
@@ -130,7 +197,7 @@ jobs:
             clients/desktop/test-results
           if-no-files-found: error
   scope:
-    if: inputs.test_file == ''
+    if: inputs.test_file == '' && !inputs.review
     permissions:
       contents: read
       pull-requests: read
@@ -662,7 +729,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        group: [process-security, filesystem-storage-1, filesystem-storage-2]
+        group: [process-security, filesystem-storage-1, filesystem-storage-2, filesystem-storage-3]
     env:
       CI_PROFILE: production
       CI_PRIORITY: P2
@@ -1417,7 +1484,7 @@ jobs:
           path: test-results/coverage/*.json
           if-no-files-found: error
   ci_passed:
-    if: ${{ !cancelled() && inputs.test_file == '' }}
+    if: ${{ !cancelled() && inputs.test_file == '' && !inputs.review }}
     needs:
       - scope
       - validation_results
@@ -1539,7 +1606,7 @@ jobs:
       - packaged_toolchain
       - source_coverage
       - sdk_api_report
-    if: ${{ !cancelled() && inputs.test_file == '' }}
+    if: ${{ !cancelled() && inputs.test_file == '' && !inputs.review }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:

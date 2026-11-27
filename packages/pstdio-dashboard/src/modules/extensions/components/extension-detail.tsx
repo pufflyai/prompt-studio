@@ -1,4 +1,4 @@
-import { Button, Flex, HStack, Icon, Stack, Tabs, Text } from "@chakra-ui/react";
+import { Flex, HStack, Icon, Stack, Tabs, Text } from "@chakra-ui/react";
 import type {
   ExtensionDiagnostic,
   ExtensionSettingValueRecord,
@@ -8,7 +8,7 @@ import type {
 import { AlertMessage, Switch } from "@pstdio/ui";
 import type { WorkbenchCore } from "@pstdio/workbench";
 import type { ExecuteOptionCommand } from "@pstdio/workbench/react";
-import { Blocks, RotateCw, SlidersHorizontal, Timer } from "lucide-react";
+import { Blocks, SlidersHorizontal, Timer } from "lucide-react";
 import type { AgentInfo } from "pstdio-api-contracts";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -16,18 +16,18 @@ import { getRuntimeCollections } from "@/lib/sync/collections";
 import { PageContentLayout } from "@/shared/components/page-content-layout";
 import { createExtensionStringResolver } from "@/shared/extensions/extension-localization";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/types";
-import { ExtensionActionButton } from "./extension-action-button";
 import { ExtensionActionFeedback, type ExtensionActionState } from "./extension-action-feedback";
 import { ExtensionContributions } from "./extension-contributions";
 import { ExtensionDeleteSection } from "./extension-delete-section";
+import { ExtensionDetailControls } from "./extension-detail-controls";
 import { ExtensionDetailHealth } from "./extension-detail-health";
 import { ExtensionHealthPopover } from "./extension-health-popover";
 import { ExtensionHostAccess, hasExtensionHostAccess } from "./extension-host-access";
 import { ExtensionIcon } from "./extension-icon";
 import { ExtensionAuthorBadge, ExtensionScopeBadge } from "./extension-labels";
+import { ExtensionManagementNotice } from "./extension-management-notice";
 import { ExtensionSettingsForm } from "./extension-settings-form";
 import { settingsToParams } from "./extension-settings-params";
-import { ExtensionToggle } from "./extension-toggle";
 
 export interface ExtensionDetailProps {
   projectId?: string;
@@ -62,9 +62,6 @@ export interface ExtensionDetailProps {
   onUpgrade: () => void;
   onUninstall: () => void;
 }
-
-const hasUpgradeControl = (extension: ProjectExtensionInstance, action: ExtensionActionState | undefined) =>
-  extension.canUpgrade || extension.hasPublishedAlternative || Boolean(action);
 
 export const ExtensionDetail = (props: ExtensionDetailProps) => {
   const {
@@ -162,42 +159,18 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
                     onUpgrade={onUpgrade}
                   />
                 )}
-                {hasUpgradeControl(extension, upgradeAction) && (
-                  <ExtensionActionButton
-                    variant="primary"
-                    size="2xs"
-                    onAction={onUpgrade}
-                    action={upgradeAction}
-                    onDismiss={onDismissUpgrade}
-                    onRetry={onRetryUpgrade}
-                    disabled={changingSource}
-                    data-testid="extension-upgrade"
-                  >
-                    {extension.hasPublishedAlternative
-                      ? t("projectSettings.extensionsPanel.upgrade.publishedAlternative", "Review published version")
-                      : t("projectSettings.extensionsPanel.upgrade.action")}
-                  </ExtensionActionButton>
-                )}
-                {showReload && (
-                  <Button
-                    variant="primary"
-                    size="2xs"
-                    onClick={onReload}
-                    loading={reloading}
-                    disabled={changingSource}
-                    data-testid="extension-reload"
-                    flexShrink="0"
-                  >
-                    <RotateCw size={12} />
-                    {t("projectSettings.extensionsPanel.reload.action")}
-                  </Button>
-                )}
-                <ExtensionToggle
-                  name={extension.displayName}
-                  enabled={extension.enabled}
-                  action={toggleAction}
-                  disabled={changingSource}
+                <ExtensionDetailControls
+                  extension={extension}
+                  upgradeAction={upgradeAction}
+                  onUpgrade={onUpgrade}
+                  onDismissUpgrade={onDismissUpgrade}
+                  onRetryUpgrade={onRetryUpgrade}
+                  reloading={reloading}
+                  onReload={onReload}
+                  toggleAction={toggleAction}
                   onToggle={onToggle}
+                  changing={changingSource}
+                  showReload={showReload}
                 />
               </HStack>
 
@@ -205,9 +178,10 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
                 action={toggleAction}
                 onDismiss={onDismissToggle}
                 onRetry={onRetryToggle}
-                retryDisabled={changingSource}
+                retryDisabled={changingSource || Boolean(extension.choiceRestriction)}
               />
               {actionFeedback}
+              <ExtensionManagementNotice extension={extension} />
               {extension.description && (
                 <Text textStyle="paragraph/S/regular" color="fg.muted">
                   {extension.description}
@@ -341,7 +315,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
           <ExtensionDeleteSection
             scope={extension.scope}
             uninstalling={uninstalling}
-            disabled={changingSource}
+            disabled={changingSource || Boolean(extension.sourceRestriction)}
             onUninstall={onUninstall}
           />
         </Stack>

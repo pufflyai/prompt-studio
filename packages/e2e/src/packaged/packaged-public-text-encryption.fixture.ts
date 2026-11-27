@@ -4,6 +4,7 @@ import { openState, openUpdate, type SyncSpace } from "pstdio-sync/encryption";
 import { readTextDocumentSeed } from "pstdio-sync/text";
 import * as Y from "yjs";
 import type { RelayContents } from "./packaged-public-text-peer.fixture";
+import { uniqueDocument } from "./packaged-sync-document-key.fixture";
 
 /** Source bindings travel in the record stream; editor text travels in its own encrypted Yjs document. */
 export const readEncryptedPublicText = async (space: SyncSpace, contents: RelayContents) => {
@@ -13,7 +14,7 @@ export const readEncryptedPublicText = async (space: SyncSpace, contents: RelayC
   const source = createNativeSourceKey(["artifact", mount, "selected"]);
   const name = JSON.stringify(["native-markdown", source]);
   const documentId = await space.documentId(JSON.stringify([extensionId, name]));
-  const encrypted = new Map(contents.documents).get(`~${documentId}`);
+  const encrypted = uniqueDocument(contents.documents, documentId);
   if (!encrypted?.state || !encrypted.payload)
     throw new Error("The selected public source has no encrypted founding state");
   const document = new Y.Doc();

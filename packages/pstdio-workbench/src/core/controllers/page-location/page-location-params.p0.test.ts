@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { resolvePageParams } from "pstdio-api-contracts";
 import { createWorkbench } from "../../workbench-core";
 import { createWorkbenchPageBreadcrumbItems } from "./page-breadcrumbs";
-import { createPageLocationHarness, pageRef } from "./page-location-controller.test-support";
+import { createPageLocationHarness, pageRef, ticketTarget } from "./page-location-controller.test-support";
 
 const ref = pageRef("acme", "board");
 const createHarness = (url?: string) => {
@@ -46,6 +46,33 @@ test("invalid param navigation and patches leave the location and history untouc
   expect(() => h.controller.updateParams({ refresh: "bad" })).toThrow("page_param_invalid");
   expect(h.registry.store.getState()).toBe(before);
   expect(h.browser.current()).toEqual(url);
+});
+
+test("params and same-location hydration preserve Sidenav scope until explicit page navigation", () => {
+  const h = createHarness();
+  h.controller.navigate({ kind: "page", page: ref });
+  h.registry.setNavigationLocation(null);
+  h.controller.updateParams({ range: "now-6h" });
+  expect(h.registry.store.getState().navigationLocation).toBeNull();
+  h.controller.replay(h.registry.store.getState().location!);
+  expect(h.registry.store.getState().navigationLocation).toBeNull();
+  h.controller.navigate({ kind: "page", page: ref });
+  expect(h.registry.store.getState().navigationLocation).toBeUndefined();
+});
+
+test("hydrating the current resource preserves Sidenav scope while Back clears it", () => {
+  const h = createHarness();
+  h.controller.navigate(ticketTarget("ticket:ps-1"));
+  h.controller.navigate(ticketTarget("ticket:ps-2"));
+  h.registry.setNavigationLocation(null);
+
+  h.controller.replay(h.registry.store.getState().location!);
+  expect(h.registry.store.getState().location?.resource?.id).toBe("PS-2");
+  expect(h.registry.store.getState().navigationLocation).toBeNull();
+
+  h.browser.pop(h.browser.pushes[0]!);
+  expect(h.registry.store.getState().location?.resource?.id).toBe("PS-1");
+  expect(h.registry.store.getState().navigationLocation).toBeUndefined();
 });
 
 test("page URL params override history params while keeping contextual parents", () => {

@@ -3,6 +3,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { PGlite } from "@electric-sql/pglite";
+import compactJournal from "../../drizzle/meta/_journal.json";
 import { createDb } from "./connection.pglite";
 import { retireLegacyRecordTables } from "./legacy-record-retirement";
 import { createTextLogOwnerFixture } from "./log-owner-upgrade.fixture";
@@ -58,7 +59,7 @@ test("a populated early 0.49 database and a new installation share the compact j
     let expectedLayout: Awaited<ReturnType<typeof layout>>;
     try {
       expectedJournal = await journal(fresh.pglite);
-      expect(expectedJournal).toHaveLength(1);
+      expect(expectedJournal).toHaveLength(compactJournal.entries.length);
       expectedLayout = await layout(fresh.pglite);
     } finally {
       await fresh.close();

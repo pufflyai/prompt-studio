@@ -3,7 +3,7 @@ import { Check, Copy } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Tooltip } from "@/components/primitives/tooltip";
 import { MessageForkAction } from "./message-fork-action";
-import { MessageSender } from "./message-sender";
+import { hasVisibleMessageSender, MessageSender } from "./message-sender";
 import type { ChatMessagePart, SessionMessage } from "./message-types";
 
 interface MessageActionPanelProps {
@@ -49,7 +49,8 @@ export const MessageActionPanel = (props: MessageActionPanelProps) => {
   } = props;
   const [isCopied, setIsCopied] = useState(false);
   const copyResetTimeoutRef = useRef<number | null>(null);
-  const trayVisible = alwaysVisible || Boolean(message.sender);
+  const hasSender = hasVisibleMessageSender(message.sender);
+  const trayVisible = alwaysVisible || hasSender;
   const { copyText, timestampLabel } = showActions
     ? { copyText: getMessageCopyText(message), timestampLabel: getMessageTimestampLabel(message) }
     : { copyText: "", timestampLabel: "" };
@@ -77,7 +78,7 @@ export const MessageActionPanel = (props: MessageActionPanelProps) => {
     }
   };
 
-  if (!message.sender && !copyText && !timestampLabel) return null;
+  if (!hasSender && !copyText && !timestampLabel) return null;
 
   return (
     <HStack

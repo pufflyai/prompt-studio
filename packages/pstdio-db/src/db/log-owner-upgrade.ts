@@ -1,37 +1,66 @@
-import { isDeepStrictEqual } from "node:util";
-import { and, eq, sql } from "drizzle-orm";
-import { ensureStorageOwner } from "../services/extension-storage/storage-owner-key";
+import { sql } from "drizzle-orm";
 import type { DbClient } from "./connection.pglite";
-import { storage_log_entries as entries, storage_log_streams as streams } from "./schemas.pg";
-import { decodeUpgradeBytes as decodeBytes } from "./upgrade-bytes";
+import { decodeUpgradeBytes } from "./upgrade-bytes";
 import { prepareUpgradeSnapshot } from "./upgrade-snapshot";
 
-type LegacyAddress = {
-  workbench_id: string;
-  extension_id: string;
-  log_name: string;
-  scope: string;
-  stream: string;
-};
-type LegacyStream = LegacyAddress & {
-  head: number;
-  complete_through: number;
-  state_id: string | null;
-  through: number;
-};
-type LegacyEntry = LegacyAddress &
-  Omit<typeof entries.$inferSelect, "stream_id" | "entry" | "envelope"> & {
-    entry: string;
-    envelope: string | null;
+type UpgradeTx = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
+
+function logBatch(db: DbClient, restore: (tx: UpgradeTx, values: string) => Promise<void>) {
+  const rows: string[] = [];
+  let bytes = 0;
+  const flush = async () => {
+    if (!rows.length) return;
+    const values = `[${rows.splice(0).join(",")}]`;
+    bytes = 0;
+    await db.transaction((tx) => restore(tx, values));
   };
-const streamWhere = (ownerId: number, row: LegacyAddress) =>
-  and(
-    eq(streams.owner_id, ownerId),
-    eq(streams.log_name, row.log_name),
-    eq(streams.scope, row.scope),
-    eq(streams.stream, row.stream),
-  );
-const ownerOf = (row: LegacyAddress) => ({ workbenchId: row.workbench_id, extensionId: row.extension_id });
+  const add = async (row: Record<string, unknown>) => {
+    const json = JSON.stringify(row);
+    const size = Buffer.byteLength(json);
+    if (rows.length && (rows.length >= 200 || bytes + size > 4 * 1024 * 1024)) await flush();
+    rows.push(json);
+    bytes += size;
+  };
+  return { add, flush };
+}
+
+const restoreLogStreams = async (tx: UpgradeTx, values: string) => {
+  const input = sql`jsonb_to_recordset(${values}::jsonb) AS i(workbench_id text, extension_id text,
+    log_name text, scope text, stream text, head bigint, complete_through bigint, state_id text, through bigint)`;
+  await tx.execute(sql`INSERT INTO owners(project_id,extension_id)
+    SELECT DISTINCT workbench_id,extension_id FROM ${input}
+    ON CONFLICT(project_id,extension_id) DO NOTHING`);
+  const mapped = sql`SELECT o.id AS owner_id, i.log_name,i.scope,i.stream,i.head,i.complete_through,i.state_id,i.through
+    FROM ${input} JOIN owners o ON (o.project_id,o.extension_id)=(i.workbench_id,i.extension_id)`;
+  await tx.execute(sql`INSERT INTO log_streams(owner_id,log_name,scope,stream,head,complete_through,state_id,through)
+    ${mapped} ON CONFLICT(owner_id,log_name,scope,stream) DO NOTHING`);
+  const conflict = await tx.execute(sql`WITH expected AS (${mapped})
+    SELECT 1 FROM expected e LEFT JOIN log_streams s USING(owner_id,log_name,scope,stream)
+    WHERE s.id IS NULL OR (s.head,s.complete_through,s.state_id,s.through)
+      IS DISTINCT FROM (e.head,e.complete_through,e.state_id,e.through) LIMIT 1`);
+  if (conflict.rows.length) throw new Error("Log stream restoration conflict");
+};
+
+const restoreLogEntries = async (tx: UpgradeTx, values: string) => {
+  const mapped = sql`SELECT s.id AS stream_id,i.entry_id,i.writer_id,i.created_at,i.fingerprint,i.entry,
+    i.local_sequence,i.local,i.relay_sequence,i.relay_index,i.envelope
+    FROM jsonb_to_recordset(${values}::jsonb) AS i(workbench_id text, extension_id text, log_name text, scope text,
+      stream text, entry_id text, writer_id text, created_at bigint, fingerprint text, entry bytea,
+      local_sequence bigint, local boolean, relay_sequence bigint, relay_index integer, envelope bytea)
+    LEFT JOIN owners o ON (o.project_id,o.extension_id)=(i.workbench_id,i.extension_id)
+    LEFT JOIN log_streams s ON (s.owner_id,s.log_name,s.scope,s.stream)=(o.id,i.log_name,i.scope,i.stream)`;
+  // A missing parent produces a NULL stream_id and fails the transaction. A replay must
+  // match every stored byte and cursor, even when a different entry has the same address.
+  await tx.execute(sql`INSERT INTO log_entries(stream_id,entry_id,writer_id,created_at,fingerprint,entry,
+    local_sequence,local,relay_sequence,relay_index,envelope) ${mapped} ON CONFLICT(stream_id,entry_id) DO NOTHING`);
+  const conflict = await tx.execute(sql`WITH expected AS (${mapped})
+    SELECT 1 FROM expected e LEFT JOIN log_entries a USING(stream_id,entry_id)
+    WHERE a.stream_id IS NULL OR (a.writer_id,a.created_at,a.fingerprint,a.entry,a.local_sequence,a.local,
+      a.relay_sequence,a.relay_index,a.envelope) IS DISTINCT FROM
+      (e.writer_id,e.created_at,e.fingerprint,e.entry,e.local_sequence,e.local,e.relay_sequence,e.relay_index,e.envelope)
+    LIMIT 1`);
+  if (conflict.rows.length) throw new Error("Log entry restoration conflict");
+};
 
 /** Capture both released tables before generated DDL; keep exact rows for recovery. */
 export const prepareLogOwnerUpgrade = async (db: DbClient, path: string) => {
@@ -50,6 +79,7 @@ export const prepareLogOwnerUpgrade = async (db: DbClient, path: string) => {
       sequence = { lastValue: Number(row.last_value), called: row.is_called };
     },
   );
+  const streamBatch = logBatch(db, restoreLogStreams);
   const restoreStreams = await prepareUpgradeSnapshot(
     db,
     path,
@@ -57,30 +87,12 @@ export const prepareLogOwnerUpgrade = async (db: DbClient, path: string) => {
       table: "storage_log_streams",
       keys: ["workbench_id", "extension_id", "log_name", "scope", "stream"],
       name: "log-stream-owners",
+      copyJson: true,
       archive: "log-streams",
     },
-    async (input) => {
-      const row = input as unknown as LegacyStream;
-      await db.transaction(async (tx) => {
-        const ownerId = await ensureStorageOwner(tx, ownerOf(row));
-        const expected = {
-          owner_id: ownerId,
-          log_name: row.log_name,
-          scope: row.scope,
-          stream: row.stream,
-          head: Number(row.head),
-          complete_through: Number(row.complete_through),
-          state_id: row.state_id,
-          through: Number(row.through),
-        };
-        const [existing] = await tx.select().from(streams).where(streamWhere(ownerId, row));
-        if (existing) {
-          const { id: _id, ...retained } = existing;
-          if (!isDeepStrictEqual(retained, expected)) throw new Error("Log stream restoration conflict");
-        } else await tx.insert(streams).values(expected);
-      });
-    },
+    streamBatch.add,
   );
+  const entryBatch = logBatch(db, restoreLogEntries);
   const restoreEntries = await prepareUpgradeSnapshot(
     db,
     path,
@@ -88,39 +100,13 @@ export const prepareLogOwnerUpgrade = async (db: DbClient, path: string) => {
       table: "storage_log_entries",
       keys: ["workbench_id", "extension_id", "log_name", "scope", "stream", "entry_id"],
       name: "log-entry-streams",
+      copyJson: true,
       archive: "log-entries",
     },
-    async (input) => {
-      const row = input as unknown as LegacyEntry;
-      await db.transaction(async (tx) => {
-        const ownerId = await ensureStorageOwner(tx, ownerOf(row));
-        const [stream] = await tx.select({ id: streams.id }).from(streams).where(streamWhere(ownerId, row));
-        if (!stream) throw new Error("An exported log entry has no restored stream");
-        const {
-          workbench_id: _project,
-          extension_id: _extension,
-          log_name: _name,
-          scope: _scope,
-          stream: _stream,
-          ...fields
-        } = row;
-        const expected = {
-          ...fields,
-          created_at: Number(row.created_at),
-          local_sequence: Number(row.local_sequence),
-          relay_sequence: row.relay_sequence === null ? null : Number(row.relay_sequence),
-          stream_id: stream.id,
-          entry: decodeBytes(row.entry),
-          envelope: row.envelope === null ? null : decodeBytes(row.envelope),
-        };
-        const [existing] = await tx
-          .select()
-          .from(entries)
-          .where(and(eq(entries.stream_id, stream.id), eq(entries.entry_id, row.entry_id)));
-        if (existing) {
-          if (!isDeepStrictEqual(existing, expected)) throw new Error("Log entry restoration conflict");
-        } else await tx.insert(entries).values(expected);
-      });
+    async (row) => {
+      decodeUpgradeBytes(row.entry);
+      if (row.envelope !== null) decodeUpgradeBytes(row.envelope);
+      await entryBatch.add(row);
     },
     async (row) => ({
       ...row,
@@ -131,7 +117,9 @@ export const prepareLogOwnerUpgrade = async (db: DbClient, path: string) => {
   if (!restoreStreams && !restoreEntries && !restoreSequence) return;
   return async () => {
     await restoreStreams?.(true);
+    await streamBatch.flush();
     await restoreEntries?.(true);
+    await entryBatch.flush();
     await restoreSequence?.(true);
     // Public cursors can name rows already removed by retention: preserve the sequence,
     // not just the maximum position of the entries that survived.

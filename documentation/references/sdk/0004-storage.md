@@ -104,16 +104,14 @@ The query and batch methods are additive APIs on `main`, planned for 0.46.
 They require an updated host as well as SDK types. Existing `list()` still returns
 the complete list; it does not become a paged response.
 
-Declare definitions in `defineExtension({ storageIndexes: [...] })`. The host
-installs them on each device before publishing the extension runtime. Registration
-replaces that owner's definitions and populates derived data. A query requires an
-installed index and never builds one as a side effect. Keep definitions
-deterministic across devices. `records.defineIndexes` is the same explicit local
-installation operation; do not put local index installation behind the synced
-`storage.migrate` version. A second device can receive that version without having
-local indexes. Memory fixtures accept `createMemoryStorage({ indexes })`.
+Declare query fields, filters and ordering in `defineExtension({ storageIndexes: [...] })`.
+The host registers these local query definitions before publishing commands. Both
+`storageIndexes` and `records.defineIndexes` retain their existing SDK names.
+They save metadata and may backfill derived values. The host owns physical database
+indexes. Each device needs the query definitions even if it has already received
+the synced `storage.migrate` version. Memory fixtures accept `createMemoryStorage({ indexes })`.
 
-The host accepts all index definitions for a runtime in one database transaction.
+The host accepts all query definitions for a runtime in one database transaction.
 If any extension's installation fails, the previous runtime keeps its definitions.
 If a newer source arrives after acceptance, the accepted candidate owns those
 definitions while the host retries the newer load; a failed retry falls back to
@@ -130,8 +128,7 @@ The host supplies the owner; callers cannot query another extension or workbench
 For an existing collection, set `collection` on its index definition. Its field
 paths are relative to the collection item. The host resolves addresses in the
 selected storage scope, keeping other collections and scopes out of the index.
-Declare these in `storageIndexes` to install them before commands become available;
-the first action must not build indexes. Do not parse opaque record addresses.
+Declare these in `storageIndexes` so they are available to the first command. Do not parse opaque record addresses.
 This addition requires extension API 0.4.2 and a matching SDK build.
 
 For records saved at `records.id(keyPrefix + key)`, such as a collection moved with
@@ -164,7 +161,7 @@ const page = await ctx.storage.records.query({
 const values = await readCollectionRecords(ctx.storage, page.records.map(({ recordId }) => recordId));
 ```
 
-A storage index can declare `alternateOrders` for common nondefault page sorts, such as newest first with a stable position tie-breaker. The host maintains each order on writes. Use `countBy` for up to four low-cardinality derived scalar fields, such as archived state and status. Core maintains exact counts for their combinations, including changes to resource identity membership. Eligible count and group queries read those combinations at the same revision as the page. Other filters, metrics and oversized group values use the ordinary aggregate. Index installation builds this data once for existing records. Additional orders and count dimensions consume disk space and increase write work.
+Use `alternateOrders` to declare supported page sorts and `countBy` for up to four low-cardinality derived scalar fields. The shared store computes counts from the current projection at the query revision. Additional sort and count declarations can use the existing database schema.
 
 `readCollectionPage(ctx.storage, selection)` from `@pstdio/sdk/data` combines a
 bounded indexed page with global view counts. Declare `index`, selected `fields`,
@@ -358,8 +355,7 @@ the record value, or to the item when the index declares a collection.
 
 Index installation computes these values in bounded pages. Ordinary record and
 native-text edits update them in the same transaction as the canonical projection;
-querying never scans bodies to rebuild them. This is a local database index, not
-another editable source of record data. Point reads keep their original value.
+querying never scans bodies to rebuild them. These derived values live in the local record projection. Point reads keep their original value.
 The public `deriveMarkdownTitle(content, empty?)` helper uses the same text rules.
 
 ### Resolved selection fields

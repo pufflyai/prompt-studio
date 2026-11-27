@@ -230,7 +230,8 @@ const run = async (
     const controller = new AbortController();
     const timer = setTimeout(
       () => controller.abort(new Error(`The ${phase} runtime did not become ready`)),
-      PACKAGED_TEST_TIMEOUT,
+      // A converting runtime may use the whole upgrade limit before it is ready.
+      Math.max(PACKAGED_TEST_TIMEOUT, limitMs),
     );
     try {
       return await startPackagedServe(

@@ -6,6 +6,9 @@ export const PAGE_MAIN_SLOT_ID = "$main";
 export const isSingleViewPage = (page: WorkbenchPageContribution | undefined) =>
   page?.main.kind === "view" && page.main.presentation === "page";
 
+export const canOpenPageWithoutResource = (page: WorkbenchPageContribution) =>
+  !page.resource || (isSingleViewPage(page) && Boolean(page.main.empty));
+
 export const isPageContent = (page: WorkbenchPageContribution | undefined, identity: PlacementIdentity | undefined) =>
   isSingleViewPage(page) &&
   identity?.kind === "page" &&

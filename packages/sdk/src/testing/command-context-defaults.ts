@@ -159,6 +159,8 @@ export const createCommandContextDefaults = (input: {
       status: async () => ({ login: null, cloudProjects: [], cloudProjectsLoaded: true, features: null }),
       login: unavailable,
       createTeam: unavailable,
+      readTeamMembership: unavailable,
+      writeTeamMembership: unavailable,
       loginStatus: unavailable,
       cancelLogin: unavailable,
       logout: unavailable,

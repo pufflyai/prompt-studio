@@ -10,7 +10,7 @@ import {
   useSetProjectExtensionEnabled,
   useUpgradeProjectExtension,
 } from "@/shared/extensions/use-project-extensions";
-import { marketplaceActionKey } from "./extension-actions";
+import { confirmedExtensionEdits, marketplaceActionKey } from "./extension-actions";
 import { useExtensionActions } from "./use-extension-actions";
 
 const extensionSource = (id: string, label: string) => ({
@@ -57,7 +57,9 @@ export const useExtensionPanelActions = (projectId: string | undefined, capacity
             ? {
                 id: dashboardCommandIds.openExtensions,
                 args: { resolveInstanceId: extension.id, projectId },
-                label: t("projectSettings.extensionsPanel.upgrade.resolve", "Resolve"),
+                label: confirmedExtensionEdits(error)
+                  ? t("projectSettings.extensionsPanel.upgrade.resolve", "Resolve")
+                  : t("projectSettings.extensionsPanel.upgrade.chooseVersion", "Choose version"),
               }
             : { id: dashboardCommandIds.openExtensions },
       },

@@ -63,6 +63,7 @@ export const verifyPackagedCollectionBreadcrumb = async (
     dispatchEvent(new PopStateEvent("popstate"));
   }, sessions.href);
   await expect(breadcrumbs).toContainText("Sessions");
+  const sessionUrl = page.url();
   expect(await searchBefore!.evaluate((row) => row.isConnected)).toBe(true);
   const modeReturn = sidenav.getByRole("button", { name: "Back to project", exact: true });
   await expect(modeReturn).toBeVisible();
@@ -99,10 +100,8 @@ export const verifyPackagedCollectionBreadcrumb = async (
   );
   await modeReturn.click();
   for (const frame of await returningRows) expect(frame).toEqual({ home: home!.y, sessions: sessionsEntry!.y });
-  await expect(page).toHaveURL(projectReturnUrl);
+  await expect(page).toHaveURL(sessionUrl);
   await expect(modeReturn).toHaveCount(0);
-  await page.goBack();
-  await expect(modeReturn).toBeVisible();
   await page.goBack();
   await expect(page).toHaveURL(projectReturnUrl);
   await expect(breadcrumbs.getByText(title, { exact: true })).toBeVisible();

@@ -24,19 +24,20 @@ export const scenarios = [
   },
   {
     id: "B2",
+    workloadVersion: 2,
     label: "Saved project process launch",
     platforms: primary,
     file: "packages/e2e/src/perf/critical/saved-launch.p3.bench.ts",
-    cache: "saved local project; fresh app and runtime processes",
+    cache: "saved local project; clean runtime shutdown; fresh app and runtime processes",
     throttle: 1,
     actions: [
       "seed conversation fixture",
-      "stop all owners",
+      "cleanly stop seed runtime and desktop",
       "spawn",
       "restore conversation, file and terminal",
       "first interaction",
     ],
-    metrics: [elapsed("usable"), elapsed("first-interaction")],
+    metrics: [metric("extensions-ready", "ms", "product"), elapsed("usable"), elapsed("first-interaction")],
   },
   {
     id: "B3",

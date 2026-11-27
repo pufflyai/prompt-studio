@@ -3,6 +3,9 @@ import { type SQL, sql } from "drizzle-orm";
 import type { RecordEdit, StorageRecordIndex } from "pstdio-sync-contracts";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
+import { createFirstRecordLookups } from "./record-first-match";
+import { defineRecordIndexes } from "./record-index-definition";
+import { createRecordQueries } from "./record-queries";
 import { readQueryOwner } from "./record-query-owner";
 import { recordFieldSql, recordPageSql, recordScopeSql } from "./record-query-sql";
 import { relatedRecordPredicateSql } from "./record-related-query";
@@ -79,10 +82,17 @@ afterAll(async () => {
   await f?.close();
 });
 
-const explain = async (projection: SQL) => {
-  const result = await f.db.execute(
-    sql`EXPLAIN (ANALYZE, FORMAT JSON) SELECT ${projection} FROM records WHERE ${recordScopeSql(await readQueryOwner(f.db, owner), indexes[0])}`,
-  );
+type PlanOwner = Awaited<ReturnType<typeof readQueryOwner>> & {
+  firstMatches: ReturnType<typeof createFirstRecordLookups>;
+};
+const explain = async (projection: (owner: PlanOwner) => SQL) =>
+  f.db.transaction(async (tx) => {
+    const queryOwner = { ...(await readQueryOwner(tx, owner)), firstMatches: createFirstRecordLookups() };
+    const statement = sql`EXPLAIN (ANALYZE, FORMAT JSON) SELECT ${projection(queryOwner)} FROM records WHERE ${recordScopeSql(queryOwner, indexes[0])}`;
+    await queryOwner.firstMatches.prepare(tx);
+    return planNodes((await tx.execute(statement)).rows);
+  });
+const planNodes = (rows: unknown) => {
   const nodes: Record<string, unknown>[] = [];
   const walk = (value: unknown) => {
     if (!value || typeof value !== "object") return;
@@ -94,7 +104,7 @@ const explain = async (projection: SQL) => {
     if (object["Node Type"]) nodes.push(object);
     for (const child of Object.values(object)) walk(child);
   };
-  walk(result.rows);
+  walk(rows);
   return nodes;
 };
 const visits = (nodes: Record<string, unknown>[]) =>
@@ -104,11 +114,12 @@ const visits = (nodes: Record<string, unknown>[]) =>
     0,
   );
 
-test("lookup probes the target equality key instead of scanning all placements per resource", async () => {
-  const targets = (
-    await explain(recordFieldSql(indexes[0], "group", undefined, resolve, await readQueryOwner(f.db, owner)))
-  ).filter((node) => node.Alias === "records_lookup");
-  expect(visits(targets)).toBeLessThanOrEqual(600);
+test("lookup probes prepared string keys and the shared record primary key", async () => {
+  const plan = await explain((owner) => recordFieldSql(indexes[0], "group", undefined, resolve, owner));
+  const targets = plan.filter((node) => node.Alias === "records_lookup");
+  const probes = plan.filter((node) => node["Relation Name"] === "pstdio_query_matches");
+  expect(probes.some((node) => node["Index Cond"])).toBe(true);
+  expect(visits([...targets, ...probes])).toBeLessThanOrEqual(600);
   expect(targets.some((node) => node["Index Cond"])).toBe(true);
   expect((await records.aggregate({ index: "resources", groupBy: "group", groupLimit: 10 })).groups).toContainEqual({
     value: "release",
@@ -116,14 +127,49 @@ test("lookup probes the target equality key instead of scanning all placements p
   });
 });
 
+test("large relationship keys use bounded probes for every source and preserve duplicate ordering", async () => {
+  await f.db.transaction(async (tx) => {
+    const { ownerId } = await readQueryOwner(tx, owner);
+    await tx.execute(sql`INSERT INTO records(owner_id,record_id,deleted,revision,value)
+      SELECT ${ownerId}::integer, 'large/'||n, false, '1', to_jsonb(repeat('x',32768)||n) FROM generate_series(1,260) n
+      UNION ALL SELECT ${ownerId}::integer, 'large/000-first', false, '1', to_jsonb(repeat('x',32768)||1)`);
+    const keys = createFirstRecordLookups();
+    const match = keys.firstRecordByField(
+      indexes[0],
+      "id",
+      "target",
+      sql`src.keys`,
+      true,
+      (alias) => sql`${sql.identifier(alias)}.value`,
+      (alias) =>
+        sql`${sql.identifier(alias)}.owner_id=${ownerId} AND starts_with(${sql.identifier(alias)}.record_id,'large/')`,
+    )!;
+    const statement = sql`SELECT n, (SELECT target.record_id FROM records target
+      WHERE target.owner_id=${ownerId} AND ${match} ORDER BY target.record_id COLLATE "C" LIMIT 1) AS id
+      FROM (SELECT n, jsonb_build_array(NULL, 'missing', repeat('x',32768)||n) AS keys FROM generate_series(1,40) n) src ORDER BY n`;
+    await keys.prepare(tx);
+    const rows = (await tx.execute(statement)).rows;
+    expect(rows.map((row) => row.id)).toEqual(
+      Array.from({ length: 40 }, (_, i) => (i === 0 ? "large/000-first" : `large/${i + 1}`)),
+    );
+    const plan = planNodes((await tx.execute(sql`EXPLAIN (ANALYZE, FORMAT JSON) ${statement}`)).rows);
+    const probes = plan.filter((node) => node["Relation Name"] === "pstdio_query_matches");
+    expect(probes.some((node) => node["Index Cond"])).toBe(true);
+    expect(visits(probes)).toBeLessThanOrEqual(120);
+    expect(visits(plan.filter((node) => node.Alias === "target"))).toBeLessThanOrEqual(40);
+  });
+});
+
 test("dependency membership probes only referenced targets including empty source arrays", async () => {
-  const predicate = relatedRecordPredicateSql(
-    await readQueryOwner(f.db, owner),
-    indexes[0],
-    { exists: { index: "resources", on: [{ sourceField: "dependencies", relatedField: "id", op: "contains" }] } },
-    resolve,
+  const plan = await explain((owner) =>
+    relatedRecordPredicateSql(
+      owner,
+      indexes[0],
+      { exists: { index: "resources", on: [{ sourceField: "dependencies", relatedField: "id", op: "contains" }] } },
+      resolve,
+    ),
   );
-  const targets = (await explain(predicate)).filter((node) => String(node.Alias).startsWith("related_"));
+  const targets = plan.filter((node) => String(node.Alias).startsWith("related_"));
   expect(visits(targets)).toBeLessThanOrEqual(600);
   expect(
     (
@@ -140,7 +186,7 @@ test("dependency membership probes only referenced targets including empty sourc
 
 test("breadcrumbs skip absent parents and probe the parent key for the one child", async () => {
   const targets = (
-    await explain(recordFieldSql(indexes[0], "breadcrumb", undefined, resolve, await readQueryOwner(f.db, owner)))
+    await explain((owner) => recordFieldSql(indexes[0], "breadcrumb", undefined, resolve, owner))
   ).filter((node) => String(node.Alias).startsWith("hierarchy_ancestor"));
   expect(visits(targets)).toBeLessThanOrEqual(1);
   expect(
@@ -156,7 +202,7 @@ test("breadcrumbs skip absent parents and probe the parent key for the one child
 
 test("breadcrumb search walks each candidate lineage once", async () => {
   const where = { field: "breadcrumb", op: "textContains", value: "resource 0 / resource 299" } as const;
-  const plan = await explain(relatedRecordPredicateSql(owner, indexes[0], where, resolve));
+  const plan = await explain((owner) => relatedRecordPredicateSql(owner, indexes[0], where, resolve));
   const ancestryWalks = plan
     .filter((node) => node["Node Type"] === "Recursive Union")
     .reduce((sum, node) => sum + Number(node["Actual Loops"]), 0);
@@ -168,7 +214,7 @@ test("breadcrumb search walks each candidate lineage once", async () => {
 
 test("forward array lookups probe only referenced resources instead of every target", async () => {
   const targets = (
-    await explain(recordFieldSql(indexes[0], "dependencyTitle", undefined, resolve, await readQueryOwner(f.db, owner)))
+    await explain((owner) => recordFieldSql(indexes[0], "dependencyTitle", undefined, resolve, owner))
   ).filter((node) => node.Alias === "records_lookup");
   expect(visits(targets)).toBeLessThanOrEqual(600);
   expect(
@@ -180,6 +226,19 @@ test("forward array lookups probe only referenced resources instead of every tar
       })
     ).records[0].fields.dependencyTitle,
   ).toBe("Resource 0");
+});
+
+test("serial queries reuse scratch space inside an outer records transaction", async () => {
+  const { queryIn } = createRecordQueries(f.db, owner);
+  const count = sql`SELECT count(*)::int AS n FROM pg_temp.pstdio_query_matches`;
+  await f.db.transaction(async (tx) => {
+    for (let i = 0; i < 4; i++) {
+      const page = await queryIn(tx, { index: "resources", fields: ["group"], limit: 1 });
+      expect(page.records[0].fields.group).toBe("draft");
+      expect((await tx.execute(count)).rows).toEqual([{ n: 300 }]);
+    }
+  });
+  expect((await f.db.execute(count)).rows).toEqual([{ n: 0 }]);
 });
 
 test("core identity lookups probe the resource ID instead of every same-kind identity", async () => {
@@ -210,26 +269,53 @@ test("core identity lookups probe the resource ID instead of every same-kind ide
   // Install identity query values through the public query path before explaining the projection.
   await records.defineIndexes([...indexes, { ...identified, name: "identified" }]);
   await records.query({ index: "identified", fields: [], limit: 1 });
-  const targets = (
-    await explain(recordFieldSql(identified, "shorthand", undefined, resolve, await readQueryOwner(f.db, owner)))
-  ).filter((node) => node.Alias === "identity");
+  const targets = (await explain((owner) => recordFieldSql(identified, "shorthand", undefined, resolve, owner))).filter(
+    (node) => node.Alias === "identity",
+  );
   expect(visits(targets)).toBeLessThanOrEqual(600);
   const ordered: StorageRecordIndex = {
     ...identified,
     name: "identified-ordered",
     orderBy: [{ field: "title", direction: "asc" }],
   };
-  await records.defineIndexes([...indexes, ordered]);
-  const plan = await f.db.execute(
-    sql`EXPLAIN (ANALYZE, FORMAT JSON) ${recordPageSql(ordered, [], recordScopeSql(await readQueryOwner(f.db, owner), ordered), 1, 0, resolve, await readQueryOwner(f.db, owner))}`,
-  );
-  const identityVisits = (value: unknown): number => {
-    if (!value || typeof value !== "object") return 0;
-    const node = value as Record<string, unknown>;
-    return (
-      (node.Alias === "identity" ? visits([node]) : 0) +
-      Object.values(node).reduce<number>((sum, child) => sum + identityVisits(child), 0)
+  // An extension-defined order must consider every candidate's identity before sorting.
+  // A host-maintained ordering can stop after filling the page.
+  for (const mode of ["query", "host-index"] as const) {
+    await defineRecordIndexes(f.db, owner, [...indexes, ordered], mode);
+    const plan = await f.db.execute(
+      sql`EXPLAIN (ANALYZE, FORMAT JSON) ${recordPageSql(ordered, [], recordScopeSql(await readQueryOwner(f.db, owner), ordered), 1, 0, resolve, await readQueryOwner(f.db, owner))}`,
     );
-  };
-  expect(identityVisits(plan.rows)).toBeLessThanOrEqual(10);
+    const identityVisits = (value: unknown): number => {
+      if (!value || typeof value !== "object") return 0;
+      const node = value as Record<string, unknown>;
+      return (
+        (node.Alias === "identity" ? visits([node]) : 0) +
+        Object.values(node).reduce<number>((sum, child) => sum + identityVisits(child), 0)
+      );
+    };
+    expect(identityVisits(plan.rows)).toBeLessThanOrEqual(mode === "host-index" ? 10 : 300);
+  }
+});
+
+test("a selective lookup uses the host equality index without copying the target collection", async () => {
+  await defineRecordIndexes(f.db, owner, indexes, "host-index");
+  const { queryIn } = createRecordQueries(f.db, owner);
+  try {
+    await f.db.transaction(async (tx) => {
+      const result = await queryIn(tx, {
+        index: "resources",
+        fields: ["group"],
+        where: { field: "id", op: "eq", value: "299" },
+        limit: 1,
+      });
+      expect(result.records.map((r) => r.fields.group)).toEqual(["release"]);
+      const table = await tx.execute(sql`SELECT to_regclass('pg_temp.pstdio_query_matches') AS name`);
+      if (table.rows[0].name)
+        expect((await tx.execute(sql`SELECT count(*)::int AS n FROM pg_temp.pstdio_query_matches`)).rows).toEqual([
+          { n: 0 },
+        ]);
+    });
+  } finally {
+    await records.defineIndexes(indexes);
+  }
 });

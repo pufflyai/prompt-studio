@@ -3,16 +3,22 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { and, eq, sql } from "drizzle-orm";
+import { resourceActivityOwnerId } from "pstdio-api-contracts";
 import { fingerprint, type Json, type StorageRecordIndex } from "pstdio-sync-contracts";
 import { createDb } from "../../db/connection.pglite";
+import { createExtensionIndexCleanup } from "../../db/retire-extension-indexes";
 import { createProjectsDBService } from "../projects/projects";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
+import { defineRecordIndexes } from "./record-index-definition";
 import { saveRecordIndexRow, recordIndexRows as storage_record_indexes } from "./record-index-rows";
 import { storageOwnerKey } from "./storage-owner-key";
 
 // A saved home keeps its public definitions across physical query-layout upgrades.
-test("upgrades persisted v2 indexes, rejects old cursors and preserves records across reopening", async () => {
+test.each([
+  false,
+  true,
+])("retires persisted v2 indexes and preserves records (deferCleanup=%s)", async (deferCleanup) => {
   const root = mkdtempSync(join(tmpdir(), "pstdio-record-index-upgrade-"));
   const path = join(root, "database");
   let handle: Pick<Awaited<ReturnType<typeof createDb>>, "db" | "close"> | undefined;
@@ -28,7 +34,7 @@ test("upgrades persisted v2 indexes, rejects old cursors and preserves records a
       orderBy: [{ field: "rank", direction: "asc" }],
     };
     const open = () => createDocumentStorageDBService(handle!.db).open({ owner }).records;
-    await open().defineIndexes([index]);
+    await defineRecordIndexes(handle.db, owner, [index], "host-index");
     await open().commit({
       operationId: "seed-upgrade",
       edits: Array.from({ length: 12 }, (_, rank) => ({
@@ -53,8 +59,20 @@ test("upgrades persisted v2 indexes, rejects old cursors and preserves records a
     expect(legacyPage.cursor).not.toBeNull();
     await handle.close();
     handle = undefined;
-    handle = await createDb({ path });
-    await open().defineIndexes([index]);
+    const reopened = await createDb({ path, deferCleanup });
+    handle = reopened;
+    if (deferCleanup) {
+      await open().defineIndexes([index]);
+      await reopened.cleanupRetiredRows(() => true);
+      expect((await handle.db.execute(sql`SELECT to_regclass(${legacyName}) IS NOT NULL AS present`)).rows).toEqual([
+        { present: true },
+      ]);
+      expect((await open().query({ index: index.name, cursor: legacyPage.cursor!, limit: 3 })).records).toHaveLength(3);
+      await reopened.cleanupRetiredRows(() => false);
+    }
+    expect((await handle.db.execute(sql`SELECT to_regclass(${legacyName})::text AS name`)).rows).toEqual([
+      { name: null },
+    ]);
     expect(await open().read("ticket/3")).toEqual(saved);
     await expect(open().query({ index: index.name, cursor: legacyPage.cursor! })).rejects.toThrow("stale");
     const page = await open().query({ index: index.name, limit: 3 });
@@ -71,8 +89,7 @@ test("upgrades persisted v2 indexes, rejects old cursors and preserves records a
       return result.rows.map(({ name }) => name);
     };
     const names = await physical();
-    expect(names).toHaveLength(3);
-    expect(names.every((name) => name.startsWith("storage_query_v3_"))).toBe(true);
+    expect(names).toEqual([]);
     await open().defineIndexes([index]);
     expect(await physical()).toEqual(names);
     expect((await open().query({ index: index.name, limit: 3 })).revision).toBe(page.revision);
@@ -90,3 +107,30 @@ test("upgrades persisted v2 indexes, rejects old cursors and preserves records a
     rmSync(root, { recursive: true, force: true });
   }
 }, 30_000);
+
+test("quiet cleanup and host registration preserve existing core Activity indexes", async () => {
+  const fixture = await createExtensionStorageFixture();
+  try {
+    const owner = { workbenchId: fixture.projectAId, extensionId: resourceActivityOwnerId };
+    const index: StorageRecordIndex = {
+      name: "activity",
+      fields: { scope: { path: ["scope"], type: "string" } },
+      equality: ["scope"],
+    };
+    const register = () => defineRecordIndexes(fixture.db, owner, [index], "host-index");
+    const physical = async () =>
+      (
+        await fixture.db.execute(sql`
+      SELECT oid, relname FROM pg_class WHERE relkind = 'i' AND starts_with(relname, 'storage_query_') ORDER BY oid
+    `)
+      ).rows;
+    await register();
+    const before = await physical();
+    expect(before.length).toBeGreaterThan(0);
+    await createExtensionIndexCleanup(fixture.db)(() => false);
+    await register();
+    expect(await physical()).toEqual(before);
+  } finally {
+    await fixture.close();
+  }
+});

@@ -45,7 +45,7 @@ export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
         if (!openInitialSideChat || !projectId || getDashboardExtensionsReadyProjectId(ctx) !== projectId) return;
         openInitialSideChat = false;
         if (!ctx.shell.getPanelPolicy("side").canOpen || ctx.sidePanel.getMode() !== "closed") return;
-        void openDashboardSidePanel(ctx).catch((error) => reportWorkbenchError(error, projectId));
+        void openDashboardSidePanel(ctx, "attached").catch((error) => reportWorkbenchError(error, projectId));
       };
 
       const disposePending = () => {
@@ -82,27 +82,22 @@ export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
 
         ctx.pageLocations.setProject(projectId);
         ctx.modes.setActiveMode("project");
-        const boot = () => {
-          if (run !== generation || getDashboardSelectedProjectId(ctx) !== projectId) return false;
-          // A user can navigate through the core shell while an extension URL waits.
-          // That committed location takes precedence over the delayed restore.
-          if (ctx.pages.store.getState().location) {
-            waitingUnsubscribe?.();
-            waitingUnsubscribe = undefined;
-            return true;
-          }
+        let attempted = false;
+        const attemptBoot = () => {
           // Registered extension pages may still belong to the previous project.
           // Restore only core page paths before this project's metadata arrives,
           // preserving extension URLs and saved parents until their pages register.
           // This project's registered pages can serve a URL while a newer catalog read
           // loads; a URL they cannot serve waits for that newest read.
           const location = ctx.pageLocations.getBootLocation(projectId);
+          // A failed boot leaves the saved location in place. Tools that load later, such as
+          // ones enabled by an upgrade, can serve it, so retry once it resolves.
+          if (attempted && !location) return;
           const registered = getDashboardExtensionsRegisteredProjectId(ctx) === projectId && location !== undefined;
           if (getDashboardExtensionsReadyProjectId(ctx) !== projectId && !registered && !isCorePageLocation(location)) {
-            return false;
+            return;
           }
-          waitingUnsubscribe?.();
-          waitingUnsubscribe = undefined;
+          attempted = true;
           batchWorkbenchChanges(() => {
             const overlay = ctx.layout.getLayout().regions.overlay;
             ctx.pageLocations.boot(projectId);
@@ -111,15 +106,27 @@ export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
               ctx.layout.restoreLayout({ ...layout, regions: { ...layout.regions, overlay } });
             }
           });
+        };
+        const boot = () => {
+          if (run !== generation || getDashboardSelectedProjectId(ctx) !== projectId) return false;
+          // A user can navigate through the core shell while an extension URL waits.
+          // That committed location takes precedence over the delayed restore.
+          if (!ctx.pages.store.getState().location) attemptBoot();
+          if (!ctx.pages.store.getState().location) return false;
+          waitingUnsubscribe?.();
+          waitingUnsubscribe = undefined;
           return true;
         };
 
         if (!boot()) {
           const registered = subscribeDashboardExtensionsRegisteredProject(ctx, boot);
           const ready = subscribeDashboardExtensionsReadyProject(ctx, boot);
+          // Same-project re-registration keeps the registered project unchanged; new pages are the signal.
+          const pages = ctx.pages.store.subscribeSelector((state) => state.pages, boot);
           waitingUnsubscribe = () => {
             registered();
             ready();
+            pages();
           };
         }
       };

@@ -40,7 +40,7 @@ const setupCommand = (step: SetupStep, directory: string, prebuilt?: boolean) =>
     ];
   if (step.kind === "canvas")
     return ["bun", "x", "--no-install", "lerna", "run", "build:previews", "--scope", "canvas-tests"];
-  return ["bun", prebuilt ? "clients/desktop/scripts/verify-test-package.ts" : "scripts/ci/prepare-test-desktop.ts"];
+  return ["bun", "scripts/ci/prepare-test-desktop.ts", ...(prebuilt ? ["--prebuilt"] : [])];
 };
 export const executePlan = async (plan: TestPlan, options: Options) => {
   const { root } = options;

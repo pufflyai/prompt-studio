@@ -7,7 +7,12 @@ import type { SessionMessage } from "./message-types";
 import { ChatWorkspaceHub } from "./workspace-hub";
 
 const messages: SessionMessage[] = [
-  { id: "prompt", role: "user", parts: [{ type: "text", text: "Review the release checks." }] },
+  {
+    id: "prompt",
+    role: "user",
+    sender: { type: "user", id: "local", name: "Local user" },
+    parts: [{ type: "text", text: "Review the release checks." }],
+  },
   {
     id: "response",
     role: "assistant",

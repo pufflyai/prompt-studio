@@ -1,5 +1,9 @@
 import { describe, expect, mock, test } from "bun:test";
-import { createWorkbench, type WorkbenchPageLocationBrowser } from "@pstdio/workbench";
+import {
+  createWorkbench,
+  type PersistedWorkbenchPageLocation,
+  type WorkbenchPageLocationBrowser,
+} from "@pstdio/workbench";
 import { createHomeModule, dashboardHomePage } from "@/home-page.fixture";
 import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
@@ -37,7 +41,7 @@ const browserAt = (url: string): WorkbenchPageLocationBrowser => {
 };
 
 describe("createBootstrapModule", () => {
-  test("opens floating Side on the first launch after project tools are ready", async () => {
+  test("opens attached Side on the first launch after project tools are ready", async () => {
     const workbench = createWorkbench({ defaultPage: dashboardHomePage, initialSidePanelMode: "closed" });
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
@@ -50,7 +54,7 @@ describe("createBootstrapModule", () => {
       expect(workbench.sidePanel.getMode()).toBe("closed");
       setDashboardExtensionsReadyProject(workbench, "project-1");
       await flushMicrotasks();
-      expect(workbench.sidePanel.getMode()).toBe("floating");
+      expect(workbench.sidePanel.getMode()).toBe("attached");
       workbench.sidePanel.setMode("closed");
       clearDashboardExtensionsReadyProject(workbench);
       setDashboardExtensionsReadyProject(workbench, "project-1");
@@ -238,6 +242,72 @@ test.each([
     await workbench.dispose();
   }
 });
+
+for (const navigateAway of [false, true]) {
+  test(`restores a saved tool page once its upgraded tool registers unless the user navigates first (${navigateAway})`, async () => {
+    const labLocation = { page: { kind: "page", extensionId: "pstdio.extension-lab", id: "labPage" } } as const;
+    const tools = { kind: "page", extensionId: "pstdio", id: "tools" } as const;
+    const saved = new Map<string, PersistedWorkbenchPageLocation>([["project-1", { location: labLocation }]]);
+    const loads: ReturnType<typeof Promise.withResolvers<typeof metadata>>[] = [];
+    // Home is not registered, so the default page is unavailable as well.
+    const workbench = createWorkbench({
+      defaultPage: dashboardHomePage,
+      pageLocationBrowser: browserAt("/projects/project-1"),
+      pageLocationPersistence: { load: (id) => saved.get(id), save: (id, value) => saved.set(id, value) },
+    });
+    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    workbench.pages.registerPage({
+      id: "tools",
+      ref: tools,
+      path: "tools",
+      modeId: "project",
+      main: { kind: "panels" },
+      slots: [],
+    });
+    const extensions = workbench.registerModule(
+      createExtensionsModule({
+        loadAppearance: mock(async () => emptyAppearance),
+        loadMetadata: () => {
+          const load = Promise.withResolvers<typeof metadata>();
+          loads.push(load);
+          return load.promise;
+        },
+      }),
+    );
+    const bootstrap = workbench.registerModule(createBootstrapModule());
+    const writer = getWriter("extension_instances")!;
+    try {
+      await flushMicrotasks();
+      // The tool is installed but disabled until upgraded, so it contributes no pages.
+      loads[0]!.resolve({ ...metadata, pages: [], views: [], navigationItems: [] });
+      await flushMicrotasks();
+      await flushMicrotasks();
+      expect(getDashboardExtensionsReadyProjectId(workbench)).toBe("project-1");
+      expect(workbench.pages.store.getState().location).toBeUndefined();
+      expect(saved.get("project-1")?.location).toEqual(labLocation);
+      if (navigateAway) workbench.pageLocations.navigate({ kind: "page", page: tools });
+
+      writer.upsert({ id: "bootstrap-upgrade", scope_type: "project", scope_id: "project-1" });
+      await flushMicrotasks();
+      await flushMicrotasks();
+      expect(loads).toHaveLength(2);
+      loads[1]!.resolve(metadata);
+      await flushMicrotasks();
+      await flushMicrotasks();
+      expect(workbench.pages.getPage("pstdio.extension-lab.page.labPage")).toBeDefined();
+      if (navigateAway) expect(workbench.pages.store.getState().location?.page).toEqual(tools);
+      else expect(activeViewId(workbench)).toBe("pstdio.extension-lab.view.labPage");
+    } finally {
+      for (const load of loads) load.resolve(metadata);
+      bootstrap.dispose();
+      extensions.dispose();
+      writer.remove("bootstrap-upgrade");
+      clearCachedDashboardExtensionMetadata("project-1");
+      await workbench.dispose();
+    }
+  });
+}
 
 test("delayed boot preserves the active project recovery overlay", () => {
   const workbench = createWorkbench({

@@ -26,6 +26,7 @@ export const TreeModeReturn = (props: { workbench: WorkbenchCore }) => {
     () =>
       resolveNavigationLevels({
         location: pages.location,
+        navigationLocation: pages.navigationLocation,
         pages: Object.values(pages.pages),
         navigationTrees: workbench.navigationTrees,
       }).length > 0,

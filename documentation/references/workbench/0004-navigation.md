@@ -24,6 +24,10 @@ not give a delayed navigation result the previous viewer's context.
 
 ## Related resources
 
+Entering a resource-free Sidenav level changes only its navigation rows. **Back to project** and the mode-return shortcut reveal the root navigation without changing Main's document, tabs, selection, URL or history. Selecting a document or explicitly opening a page still uses normal navigation and resets this temporary Sidenav scope. Reloading follows the canonical Main location.
+
+The generated Resources menu is hidden when its only enabled row is the owning resource itself; section creation actions remain available in its Sidenav. Additional document rows and pagination keep the menu available. Floating Activity menus use a wider reading surface, fit short content, and use the region's shared ScrollArea when content exceeds the available height. All menu icons expose their titles as tooltips.
+
 Appearance's **Open related resources** setting is on by default. Opening a resource or selecting its tab evaluates its owner's optional `relatedOpenings` command. Only entries with `autoOpen: true` open automatically. Targets use their normal owner resolvers; automatic openings do not recursively open their own related resources.
 
 Ticket supplies its latest session in Side. Workspace supplies its latest session in Side. Terminals open manually. Owners choose their defaults; the host applies shared presentation rules. Page entry always places automatic tabs, including inside panels remembered as closed. Resource pages remember related resource choices and manual closures only for destinations in their current automatic openings; remembered choices do not steal selection. Panels revealed automatically close on leave unless the user keeps them through normal tab or panel controls. Other Side/Bottom state is shared within one project and mode, including closures made on another page. Page or resource navigation within that mode closes all unpinned tabs in every tray. A mode switch preserves the outgoing tabs, selection, panel visibility, sizes and running terminals and restores them on return. Modes show only their supported panels. See [related resource openings](../extensions/0019-related-resource-openings.md) for selection, focus, persistence and cleanup rules.
@@ -169,4 +173,4 @@ Workspaces declares its own ordinary page references for its grouped list, Files
 
 Bare workspace references use the project’s configured public resource opener. Workspaces owns its normal page references and capability-to-page choices. An ordinary extension can present the same core resource kind through its own declared pages. Core keeps ownership of workspace data and file services.
 
-*Updated at: 2026-11-15*
+*Updated at: 2026-11-27*

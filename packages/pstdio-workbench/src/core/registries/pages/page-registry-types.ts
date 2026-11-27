@@ -119,6 +119,8 @@ export interface WorkbenchPageRegistryStoreState<Value> {
   pageStates: Readonly<Record<string, WorkbenchPageRuntimeState>>;
   projectId?: string;
   location?: PageLocation;
+  /** Sidenav scope: undefined follows Main; null shows the mode's root navigation. */
+  navigationLocation?: PageLocation | null;
   activeModeId?: string;
   activePageId?: string;
   placements: readonly ResolvedOwnedPlacement<Value>[];
@@ -159,6 +161,7 @@ export interface WorkbenchPageRegistry<Value> {
   store: WorkbenchStore<WorkbenchPageRegistryStoreState<Value>>;
   /** Current page-owned Main content, outside the tab layout. */
   getContent(): Value | undefined;
+  setNavigationLocation(location: PageLocation | null): void;
   registerPage(page: WorkbenchPageContribution): { dispose(): void };
   getPage(pageId: string): WorkbenchPageContribution | undefined;
   listPages(): WorkbenchPageContribution[];

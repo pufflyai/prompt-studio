@@ -118,6 +118,8 @@ try {
   const removedCall = await call<{ error: string }>(laptop, "/account/devices");
   assert.equal(removedCall.status, 400);
   assert.match(removedCall.body.error, /removed from your account/);
+  // Rejection schedules refresh after the failed manager call releases its owner.
+  await laptop.account.refresh();
   assert.equal((await call<Status>(laptop, "/account")).body.login, null);
   assert.deepEqual(laptop.synced(), []);
   assert.deepEqual(

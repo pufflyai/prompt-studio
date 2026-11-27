@@ -65,6 +65,10 @@ test("warm default tools stay interactive while offline edits are inspected", as
     await page.goto(`${warm.baseUrl}/projects/${project.id}`);
     await expect(homePage(page)).toBeVisible();
     await page.getByRole("option", { name: "Sessions", exact: true }).click();
+    await page
+      .locator('[data-workbench-region="sidenav"]')
+      .getByRole("button", { name: "New session", exact: true })
+      .click();
     await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("New session");
     const usableMilliseconds = Math.round(performance.now() - started);
     await entered.promise;

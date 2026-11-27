@@ -3,6 +3,7 @@ import {
   useVirtualizer as useTanStackVirtualizer,
 } from "@tanstack/react-virtual";
 import { useLayoutEffect, useState } from "react";
+import { observeLaidOutOffset } from "./observe-laid-out-offset";
 
 type VirtualizerOptions<TScrollElement extends Element, TItemElement extends Element> = Omit<
   Parameters<typeof useTanStackVirtualizer<TScrollElement, TItemElement>>[0],
@@ -30,6 +31,7 @@ export const useVirtualizer = <TScrollElement extends Element, TItemElement exte
       const index = instance.indexFromElement(element);
       return instance.itemSizeCache.get(instance.options.getItemKey(index)) ?? instance.options.estimateSize(index);
     },
+    observeElementOffset: observeLaidOutOffset,
     // Rows measure through ref callbacks during React commits. Let React batch their updates.
     useFlushSync: false,
   });

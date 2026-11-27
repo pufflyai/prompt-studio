@@ -91,6 +91,32 @@ test("keeps unchanged source metadata stable when runtime views contain callback
   expect(refreshes).toBe(0);
 });
 
+test("keeps an explicit upgrade when discovery reads metadata and hashes across the replacement", async () => {
+  const project = await projectService.create({ name: "Extension Project" });
+  const before = createServiceInput(project.id, {
+    version: "1.0.0",
+    manifest: { version: "1.0.0" },
+    sourceHash: "old-content",
+  });
+  const enabled = await service.enableInstalledSourceForProject(before);
+  const upgraded = await service.registerInstalledSource({
+    ...before,
+    version: "2.0.0",
+    manifest: { version: "2.0.0" },
+    sourceHash: "new-content",
+  });
+  // The directory watcher read the old metadata just before the upgrade replaced the folder.
+  await service.syncInstalledSourceForProject({ ...before, sourceHash: upgraded.source_hash });
+  const record = await service.getProjectExtensionInstance(project.id, enabled.instance.id);
+  expect(record?.installedSource).toMatchObject({
+    id: upgraded.id,
+    version: "2.0.0",
+    manifest_json: { version: "2.0.0" },
+    source_hash: "new-content",
+  });
+  expect(record?.instance.enabled).toBe(true);
+});
+
 test("notifies watchers when an enabled extension is reinstalled with identical bytes", async () => {
   const source = await mkdtemp(join(tmpdir(), "extension-reinstall-"));
   try {

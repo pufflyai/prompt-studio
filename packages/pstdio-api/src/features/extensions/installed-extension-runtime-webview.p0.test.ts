@@ -15,12 +15,15 @@ describe("createInstalledExtensionRuntime targeted webview refresh", () => {
     let targetedRefreshFinished = false;
     const targetedStarted = Promise.withResolvers<void>();
     const refreshedSourcePaths: Array<string | undefined> = [];
+    const invalidations: { sourcePath?: string; reason: string }[] = [];
     const targetedBuildReleased = new Promise<void>((resolve) => {
       releaseTargetedBuild = resolve;
     });
     const runtime = createInstalledExtensionRuntime({
       harnessRegistry: {} as never,
-      projectRuntimeCatalog: { invalidate: () => {} } as never,
+      projectRuntimeCatalog: {
+        invalidate: (event: (typeof invalidations)[number]) => invalidations.push(event),
+      } as never,
       provisionWorkspacesUsingSource: async () => {},
       extensionService: {
         reloadInstalledSourceBySourcePath: async () => {},
@@ -55,6 +58,11 @@ describe("createInstalledExtensionRuntime targeted webview refresh", () => {
       releaseTargetedBuild();
       await targetedRefresh;
       expect(targetedRefreshFinished).toBe(true);
+      // Reconciling unchanged webviews at startup leaves every project’s command catalog usable.
+      expect(invalidations).toEqual([
+        { sourcePath: "/extensions/lab", reason: "source_changed" },
+        { sourcePath: "/extensions/lab", reason: "webviews_built" },
+      ]);
     } finally {
       await runtime.dispose();
     }
@@ -84,10 +92,8 @@ describe("createInstalledExtensionRuntime targeted webview refresh", () => {
       createRootWatcher: async () =>
         createProcess(async () => {
           rootRefreshCount++;
-          if (rootRefreshCount > 1) {
-            unexpectedRoot.resolve();
-            await unexpectedRootRefreshReleased;
-          }
+          unexpectedRoot.resolve();
+          await unexpectedRootRefreshReleased;
         }),
       createWebviewBuildManager: () =>
         createProcess(async (sourcePath) => {
@@ -102,7 +108,7 @@ describe("createInstalledExtensionRuntime targeted webview refresh", () => {
         await Promise.race([targetedRefresh.then(() => "targeted"), unexpectedRoot.promise.then(() => "root")]),
       ).toBe("targeted");
 
-      expect(rootRefreshCount).toBe(1);
+      expect(rootRefreshCount).toBe(0);
       expect(webviewRefreshes).toEqual([undefined, "/extensions/lab"]);
     } finally {
       releaseUnexpectedRootRefresh();

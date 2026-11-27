@@ -42,16 +42,22 @@ test("two devices of one person can open a team project without changing the per
     expect((await request(first.token, `/v1/workbenches/${project}${scope}`, {})).status).toBe(403);
     await manager.setFeature({ accountId: team.accountId, feature: "relay", enabled: true });
     expect((await request(first.token, `/v1/workbenches/${project}${scope}`, {})).status).toBe(200);
-    expect(await (await request(second.token, `/v1/workbenches${scope}`)).json()).toEqual([{ workbenchId: project }]);
+    expect(await (await request(second.token, `/v1/workbenches${scope}`)).json()).toEqual([
+      { workbenchId: project, grantId: expect.any(String) },
+    ]);
     expect(await (await request(second.token, "/v1/workbenches")).json()).toEqual([]);
     expect((await request(other.token, `/v1/workbenches${scope}`)).status).toBe(401);
 
-    const keyPath = `/v1/workbenches/${project}/keys${scope}`;
-    const keys = await (await request(first.token, keyPath)).json();
+    const grant = async (token: string) =>
+      (await (await request(token, `/v1/workbenches${scope}`)).json())[0]?.grantId as string | undefined;
+    const firstGrant = await grant(first.token);
+    const keysFor = (token: string, grantId?: string) =>
+      request(token, `/v1/workbenches/${project}/keys${scope}&grantId=${grantId ?? ""}`);
+    const keys = await (await keysFor(first.token, firstGrant)).json();
     expect(keys).toMatchObject({ project: [{ generation: 1 }], personal: [{ generation: 1 }] });
-    expect(await (await request(second.token, keyPath)).json()).toEqual(keys);
-    expect((await request(other.token, keyPath)).status).toBe(401);
-    const issued = await request(second.token, "/v1/environment-access", access);
+    expect(await (await keysFor(second.token, firstGrant)).json()).toEqual(keys);
+    expect((await keysFor(other.token, firstGrant)).status).toBe(401);
+    const issued = await request(second.token, "/v1/environment-access", { ...access, grantId: firstGrant });
     expect(issued.status).toBe(200);
     const verifier = implementation.createEnvironmentAccessVerifier({
       issuer: config.origin,
@@ -68,9 +74,9 @@ test("two devices of one person can open a team project without changing the per
     expect((await request(first.token, `${projectPath}/remove${scope}`, {})).status).toBe(200);
     await request(first.token, `/v1/devices/${second.deviceId}/remove`, {});
     expect((await request(second.token, "/v1/environment-access", access)).status).toBe(401);
-    expect((await request(first.token, `${projectPath}${scope}`, {})).status).toBe(200);
-    expect(await (await request(first.token, keyPath)).json()).toMatchObject({
-      project: [{ generation: 1 }, { generation: 2 }],
+    expect((await request(first.token, `${projectPath}${scope}`, { grantSelf: true })).status).toBe(200);
+    expect(await (await keysFor(first.token, await grant(first.token))).json()).toMatchObject({
+      project: [{ generation: 1 }, { generation: 2 }, { generation: 3 }],
       personal: [{ generation: 1 }, { generation: 2 }],
     });
     const snapshot = await manager.snapshot();
@@ -95,7 +101,7 @@ test("two devices of one person can open a team project without changing the per
     );
 
     await manager.setFeature({ accountId: team.accountId, feature: "relay", enabled: false });
-    expect((await request(first.token, keyPath)).status).toBe(404);
+    expect((await keysFor(first.token, firstGrant)).status).toBe(404);
     expect((await request(first.token, "/v1/environment-access", access)).status).toBe(401);
     expect((await request(first.token, "/v1/teams")).status).toBe(200);
 
@@ -111,8 +117,8 @@ test("two devices of one person can open a team project without changing the per
     expect(await (await request(returned.token, "/v1/teams")).json()).toEqual([]);
     await manager.reconcile({ requestId: "restore-team-account", accountId: team.accountId, state: "active" });
     await manager.setFeature({ accountId: team.accountId, feature: "relay", enabled: true });
-    expect(await (await request(returned.token, keyPath)).json()).toMatchObject({
-      project: [{ generation: 1 }, { generation: 2 }],
+    expect(await (await keysFor(returned.token, await grant(returned.token))).json()).toMatchObject({
+      project: [{ generation: 1 }, { generation: 2 }, { generation: 3 }],
       personal: [{ generation: 1 }, { generation: 2 }],
     });
   } finally {

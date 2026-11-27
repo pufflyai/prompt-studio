@@ -1,11 +1,12 @@
 import { eq, sql } from "drizzle-orm";
+import { resourceActivityOwnerId } from "pstdio-api-contracts";
 import type { StorageOwner } from "pstdio-sync";
 import { coreOwnerId } from "pstdio-sync/records";
 import type { Json, StorageRecordIndex } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import { owners, records } from "../../db/schemas.pg";
 import { formatDatabasePrefix } from "./record-format-key";
-import { dropRecordIndexObjects, installRecordIndex } from "./record-index-lifecycle";
+import { dropRecordIndexObjects, installRecordIndex, saveQueryDefinition } from "./record-index-lifecycle";
 import { recordIndexRows as storage_record_indexes } from "./record-index-rows";
 import { decodeProjectionValue } from "./record-projection-codec";
 import { storageOwnerKey, storageOwnerWhere } from "./storage-owner-key";
@@ -27,11 +28,16 @@ export const clearOwnerDocuments = async (tx: Transaction, owner: StorageOwner) 
   await tx.delete(owners).where(storageOwnerWhere(owner));
   // Deleting tool data keeps the installed tool's declared queries usable. Recreate
   // their objects for the new owner generation; derived format caches rebuild on demand.
-  for (const index of indexes)
-    if (!index.database_name.startsWith(formatDatabasePrefix))
-      await installRecordIndex(
-        tx,
-        owner,
-        decodeProjectionValue(index.definition as unknown as Json) as unknown as StorageRecordIndex,
-      );
+  for (const index of indexes) {
+    if (index.database_name.startsWith(formatDatabasePrefix)) continue;
+    const hostIndex =
+      index.database_name.startsWith("storage_host_") ||
+      (owner.extensionId === resourceActivityOwnerId && index.database_name.startsWith("storage_query_"));
+    const install = hostIndex ? installRecordIndex : saveQueryDefinition;
+    await install(
+      tx,
+      owner,
+      decodeProjectionValue(index.definition as unknown as Json) as unknown as StorageRecordIndex,
+    );
+  }
 };

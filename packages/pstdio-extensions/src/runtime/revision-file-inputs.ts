@@ -79,13 +79,17 @@ export const copyRevisionFiles = async (files: Iterable<RevisionFileCopy>) => {
 
 export const copyRevisionSource = (sourcePath: string, targetPath: string, files?: Set<string>) =>
   copyRevisionFiles(revisionSourceFiles(sourcePath, targetPath, files));
-export const hashRevisionSource = (sourcePath: string, include: (path: string) => boolean = () => true) => {
+export const hashRevisionSource = (
+  sourcePath: string,
+  include: (path: string) => boolean = () => true,
+  readSource: (path: string) => Buffer = readFileSync,
+) => {
   const hash = createHash("sha256");
   visitRevisionFiles(sourcePath, (file, rel) => {
     if (!include(rel)) return;
     hash.update(rel);
     hash.update("\0");
-    hash.update(readFileSync(file));
+    hash.update(readSource(file));
   });
   return hash.digest("hex");
 };

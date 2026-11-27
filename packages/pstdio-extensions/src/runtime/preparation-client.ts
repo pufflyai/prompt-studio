@@ -13,6 +13,7 @@ import {
   cancelQueuedPreparation,
   createJob,
   type Job,
+  needsExclusivePreparation,
   orderPreparationQueue,
   type PreparationOptions,
   preparationJobMessage,
@@ -132,7 +133,7 @@ export const createPreparationClient = (
     if (!orderPreparationQueue(pending, queuedPriority, continuations, clock)) return;
     // An exclusive job is a barrier: later installs cannot starve a watcher,
     // global scan or adoption by continually filling the other slot.
-    const barrier = pending.findIndex((job) => !job.resources);
+    const barrier = pending.findIndex(needsExclusivePreparation);
     const available = barrier < 0 ? pending : pending.slice(0, barrier + 1);
     return available.find((job) => {
       if (!orderPreparationQueue([job], queuedPriority, continuations, clock)) return false;

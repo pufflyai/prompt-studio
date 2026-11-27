@@ -1,4 +1,5 @@
 import { createServiceMonitoring, createServiceTelemetry, type ServiceFailure } from "pstdio-service-telemetry";
+import { managedPackageObjectsFromEnvironment } from "./managed-package-objects";
 import { createManagerAuthentication } from "./manager-authentication";
 import { createManagerHandler } from "./manager-http";
 
@@ -9,23 +10,26 @@ const report = (code: ServiceFailure) => {
   telemetry.report(code);
   monitoring.failure(code);
 };
-const auth = createManagerAuthentication({
-  databaseUrl: process.env.DATABASE_URL ?? "",
-  databasePoolMax: process.env.DATABASE_POOL_MAX === undefined ? undefined : number("DATABASE_POOL_MAX"),
-  origin: process.env.MANAGER_ORIGIN ?? "",
-  audience: process.env.RELAY_AUDIENCE ?? "",
-  secret: process.env.BETTER_AUTH_SECRET ?? "",
-  projectDeletionRelayToken: process.env.PROJECT_DELETION_RELAY_TOKEN || undefined,
-  googleClientId: process.env.GOOGLE_CLIENT_ID ?? "",
-  googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
-  microsoft:
-    process.env.MICROSOFT_CLIENT_ID || process.env.MICROSOFT_CLIENT_SECRET
-      ? { clientId: process.env.MICROSOFT_CLIENT_ID ?? "", clientSecret: process.env.MICROSOFT_CLIENT_SECRET ?? "" }
-      : undefined,
-  sessionLifetimeSeconds: number("SESSION_LIFETIME_SECONDS"),
-  sessionUpdateAgeSeconds: number("SESSION_UPDATE_AGE_SECONDS"),
-  accessLifetimeSeconds: number("ACCESS_LIFETIME_SECONDS"),
-});
+const auth = createManagerAuthentication(
+  {
+    databaseUrl: process.env.DATABASE_URL ?? "",
+    databasePoolMax: process.env.DATABASE_POOL_MAX === undefined ? undefined : number("DATABASE_POOL_MAX"),
+    origin: process.env.MANAGER_ORIGIN ?? "",
+    audience: process.env.RELAY_AUDIENCE ?? "",
+    secret: process.env.BETTER_AUTH_SECRET ?? "",
+    projectDeletionRelayToken: process.env.PROJECT_DELETION_RELAY_TOKEN || undefined,
+    googleClientId: process.env.GOOGLE_CLIENT_ID ?? "",
+    googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+    microsoft:
+      process.env.MICROSOFT_CLIENT_ID || process.env.MICROSOFT_CLIENT_SECRET
+        ? { clientId: process.env.MICROSOFT_CLIENT_ID ?? "", clientSecret: process.env.MICROSOFT_CLIENT_SECRET ?? "" }
+        : undefined,
+    sessionLifetimeSeconds: number("SESSION_LIFETIME_SECONDS"),
+    sessionUpdateAgeSeconds: number("SESSION_UPDATE_AGE_SECONDS"),
+    accessLifetimeSeconds: number("ACCESS_LIFETIME_SECONDS"),
+  },
+  managedPackageObjectsFromEnvironment(process.env),
+);
 const certificate = process.env.MANAGER_TLS_CERT;
 const key = process.env.MANAGER_TLS_KEY;
 const port = Number(process.env.MANAGER_PORT ?? "8443");

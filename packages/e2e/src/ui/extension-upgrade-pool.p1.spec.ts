@@ -6,6 +6,12 @@ import { extensionUpgradeNeedsReviewCode } from "pstdio-api-contracts/extension-
 import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin } from "../ui-server";
 
+const confirmedConflict = {
+  code: extensionUpgradeNeedsReviewCode,
+  error: "The installed files differ from their original release.",
+  details: { localEditsConfirmed: true },
+};
+
 const completedProposal = (reviewId: string, kind: "local" | "incoming") =>
   JSON.stringify({ reviewId, revision: "refreshed", resolutions: [{ kind, path: "src/extension.ts" }] });
 
@@ -40,7 +46,8 @@ test("keeps individual recovery after completed bulk upgrade progress disappears
     .map((extension: ProjectExtensionInstance, index: number) => ({
       ...extension,
       canUpgrade: index !== 2,
-      ...(index === 2 && { hasPublishedAlternative: true, scope: "repo", enabled: true }),
+      hasPublishedAlternative: index === 2,
+      ...(index === 2 && { scope: "repo", enabled: true }),
     }));
   expect(targets).toHaveLength(3);
   const waiting: { route: Route; extension: ProjectExtensionInstance }[] = [];
@@ -113,7 +120,7 @@ test("keeps individual recovery after completed bulk upgrade progress disappears
     const local = waiting[2]!.extension;
     await waiting[2]!.route.fulfill({
       status: 409,
-      json: { code: extensionUpgradeNeedsReviewCode, error: "This project is using a local copy." },
+      json: confirmedConflict,
     });
     const batchButton = page.getByTestId("extensions-upgrade-all");
     await expect(batchButton).toHaveCount(0);
@@ -162,9 +169,7 @@ test("keeps individual recovery after completed bulk upgrade progress disappears
             separateLocalProvider: true,
             hasOriginal: true,
             resolutions: [],
-            changes: refreshed
-              ? [{ path: "src/extension.ts", status: "conflict", localKind: "file", incomingKind: "file" }]
-              : [],
+            changes: [{ path: "src/extension.ts", status: "conflict", localKind: "file", incomingKind: "file" }],
             changedPaths: refreshed ? undefined : ["src/extension.ts"],
           },
         },
@@ -173,8 +178,9 @@ test("keeps individual recovery after completed bulk upgrade progress disappears
     await page.goBack();
     await openConflictReview(page, row(local.id));
     const review = page.getByRole("dialog", { name: `Review ${local.displayName} upgrade` });
-    await expect(review.getByRole("textbox", { name: "Additional instructions (optional)" })).toBeVisible();
-    await expect(review.getByRole("button", { name: "Ask agent" })).toBeEnabled();
+    await expect(review).toBeVisible();
+    await expect(review.getByRole("textbox", { name: "Additional instructions (optional)" })).toHaveCount(0);
+    await expect(review.getByRole("button", { name: "Ask agent" })).toHaveCount(0);
     await expect(review.getByRole("button", { name: "Keep my version" })).toBeEnabled();
     await expect(review.getByRole("button", { name: "Use their version" })).toBeDisabled();
     releaseComparison.resolve();
@@ -183,7 +189,7 @@ test("keeps individual recovery after completed bulk upgrade progress disappears
     await page.getByRole("button", { name: "System activity", exact: true }).click();
     await page
       .getByRole("alert")
-      .filter({ hasText: "This project is using a local copy." })
+      .filter({ hasText: confirmedConflict.error })
       .getByRole("button", { name: "Resolve", exact: true })
       .click();
     await expect(review).toBeVisible();
@@ -257,6 +263,7 @@ test("keeps install retries and toggle progress attached to their controls acros
     extensionId: catalog.extensionId,
     displayName: catalog.displayName,
     canUpgrade: false,
+    hasPublishedAlternative: false,
     updateAvailable: true,
     version: "1.0.0",
   };

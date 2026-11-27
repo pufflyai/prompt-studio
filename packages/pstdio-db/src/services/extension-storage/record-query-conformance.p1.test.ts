@@ -6,6 +6,7 @@ import type { Json, StoragePredicate, StorageRecordIndex } from "pstdio-sync-con
 import { createProjectsDBService } from "../projects/projects";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
+import { defineRecordIndexes } from "./record-index-definition";
 import { readQueryOwner } from "./record-query-owner";
 import { predicateSql, recordPageSql, recordScopeSql } from "./record-query-sql";
 import { storageOwnerKey } from "./storage-owner-key";
@@ -213,12 +214,15 @@ test("reinstalling unchanged Unicode index names does not rebuild the projection
 
 test("deleting a project removes its physical query indexes and statistics", async () => {
   const f = await fixture();
-  await f.records.defineIndexes([
-    { name: "notes", fields: { title: { path: ["title"], type: "string" } }, equality: ["title"] },
-  ]);
+  await defineRecordIndexes(
+    f.db,
+    f.owner,
+    [{ name: "notes", fields: { title: { path: ["title"], type: "string" } }, equality: ["title"] }],
+    "host-index",
+  );
   const physical = async () => [
-    ...(await f.db.execute(sql`SELECT indexname FROM pg_indexes WHERE indexname LIKE 'storage_query_%'`)).rows,
-    ...(await f.db.execute(sql`SELECT stxname FROM pg_statistic_ext WHERE stxname LIKE 'storage_query_%'`)).rows,
+    ...(await f.db.execute(sql`SELECT indexname FROM pg_indexes WHERE indexname LIKE 'storage_host_%'`)).rows,
+    ...(await f.db.execute(sql`SELECT stxname FROM pg_statistic_ext WHERE stxname LIKE 'storage_host_%'`)).rows,
   ];
   expect((await physical()).length).toBeGreaterThan(0);
   await createProjectsDBService(f.db).hardDelete(f.projectAId);
@@ -236,7 +240,7 @@ test("selective pages use the declared equality and ordering index before materi
     equality: ["status"],
     orderBy: [{ field: "rank", direction: "asc" }],
   };
-  await f.records.defineIndexes([index]);
+  await defineRecordIndexes(f.db, f.owner, [index], "host-index");
   await f.records.commit({
     operationId: "seed-index-access",
     edits: Array.from({ length: 1000 }, (_, rank) => ({
@@ -259,7 +263,7 @@ test("selective pages use the declared equality and ordering index before materi
   );
   const plan = await f.db.execute(sql`EXPLAIN (ANALYZE, FORMAT JSON) ${statement}`);
   const evidence = JSON.stringify(plan.rows);
-  expect(evidence).toContain("storage_query_");
+  expect(evidence).toContain("storage_host_");
   expect(evidence).toContain("Index Scan");
   expect(evidence).not.toContain("Seq Scan");
   expect(evidence).toContain('"Rows Removed by Filter":0');
@@ -277,7 +281,7 @@ test("selective in-list pages probe the declared equality index after ordinary w
     equality: ["ordinal"],
     orderBy: [{ field: "rank", direction: "asc" }],
   };
-  await records.defineIndexes([index]);
+  await defineRecordIndexes(f.db, owner, [index], "host-index");
   await records.commit({
     operationId: "seed-in-list",
     edits: Array.from({ length: 5000 }, (_, ordinal) => ({
@@ -302,7 +306,7 @@ test("selective in-list pages probe the declared equality index after ordinary w
     where,
   );
   const evidence = JSON.stringify((await f.db.execute(sql`EXPLAIN (ANALYZE, FORMAT JSON) ${statement}`)).rows);
-  expect(evidence).toContain("storage_query_");
+  expect(evidence).toContain("storage_host_");
   expect(evidence).not.toContain("Seq Scan");
   expect(evidence).toContain('"Rows Removed by Filter":0');
   // Larger owners choose a full scan when the estimate is far above the 100 matches.
@@ -583,7 +587,7 @@ test("unfiltered record-ID pages stay bounded within an equality-indexed prefix"
     fields: { status: { path: ["status"], type: "string" } },
     equality: ["status"],
   };
-  await f.records.defineIndexes([index]);
+  await defineRecordIndexes(f.db, f.owner, [index], "host-index");
   await f.records.commit({
     operationId: "seed-prefixed-id-page",
     edits: [
@@ -627,7 +631,7 @@ test("a small ordered page probes each leading equality value even with a compet
     equality: ["group"],
     orderBy: [{ field: "rank", direction: "asc" }],
   };
-  await f.records.defineIndexes([index, { ...index, name: "byRank", equality: [] }]);
+  await defineRecordIndexes(f.db, f.owner, [index, { ...index, name: "byRank", equality: [] }], "host-index");
   await f.db.execute(sql`insert into records (owner_id,record_id,deleted,value,revision)
     select ${storageOwnerKey(f.owner)},'row-'||n,false,jsonb_build_object('group',case n when 1999 then null when 2000 then '' else 'present' end,'rank',lpad(n::text,4,'0')),'1' from generate_series(1,2000) n`);
   // Other collections in the same table make null look common to the planner.
@@ -681,7 +685,7 @@ test("an indexed boolean keeps a small ordered page bounded with a competing equ
       { field: "id", direction: "desc" },
     ],
   };
-  await f.records.defineIndexes([index, { ...index, name: "published", orderBy: [] }]);
+  await defineRecordIndexes(f.db, f.owner, [index, { ...index, name: "published", orderBy: [] }], "host-index");
   await f.records.commit({
     operationId: "boolean-pages",
     edits: [

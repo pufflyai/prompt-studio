@@ -1,5 +1,5 @@
 import { createLocalJWKSet, type JSONWebKeySet, jwtVerify } from "jose";
-import { identitySchema } from "pstdio-sync-contracts";
+import { identitySchema, publicationGrantSchema } from "pstdio-sync-contracts";
 import { z } from "zod";
 
 const trust = z.strictObject({
@@ -25,6 +25,7 @@ const claims = z
     tokenType: z.literal("pstdio-environment-access"),
     accountId: identitySchema,
     userId: identitySchema.optional(),
+    publication: publicationGrantSchema.optional(),
     workbenchId: identitySchema,
     environmentId: identitySchema,
     sub: identitySchema,
@@ -55,6 +56,7 @@ export const createEnvironmentAccessVerifier = (input: EnvironmentAccessTrust) =
       return {
         accountId: access.accountId,
         ...(access.userId ? { userId: access.userId } : {}),
+        ...(access.publication && { publication: access.publication }),
         workbenchId: access.workbenchId,
         environmentId: access.environmentId,
         expiresAt: new Date(access.exp * 1000).toISOString(),

@@ -1,5 +1,8 @@
 import type { RelayOwners } from "./owners";
 
+export const relayDeviceKey = (accountId: string, userId: string | undefined, deviceId: string) =>
+  userId && userId !== accountId ? JSON.stringify([userId, deviceId]) : deviceId;
+
 /** Returns the verified access of a bearer token for this workbench, or null. */
 export const verifyBearer = async (
   owners: Pick<RelayOwners, "verifyAccess">,

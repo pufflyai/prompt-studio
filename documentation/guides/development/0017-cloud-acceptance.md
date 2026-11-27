@@ -3,6 +3,9 @@
 Prepare and run PS-789 against packaged candidates. This procedure records evidence;
 it does not approve a release, deploy services, or complete the platform rollup.
 
+Use [Qualify a Microsoft team on Cloud](0023-microsoft-team-cloud-acceptance.md)
+for PS-1373's hosted two-employee acceptance.
+
 ## Candidate and delivery gate
 
 Read the full current PS-789, PS-735 and PS-736 tickets and

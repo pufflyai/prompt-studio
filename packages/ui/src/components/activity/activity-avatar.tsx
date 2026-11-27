@@ -30,6 +30,8 @@ export const ActivityAvatar = (props: ActivityAvatarProps) => {
     );
   }
 
+  if (actor?.showAvatar === false) return null;
+
   return (
     <Avatar.Root size="2xs" flexShrink={0}>
       <Avatar.Image src={actor?.avatarSrc} alt={actor?.avatarAlt ?? actor?.name} />
