@@ -103,3 +103,17 @@ test("system notices hide when empty and retain normal widget alignment", async 
   await preview.getByRole("button", { name: "Clear all", exact: true }).click();
   await expect(activity).toBeHidden();
 });
+
+test("clear all dismisses upgrade errors and leaves recovery controls reachable", async ({ page }) => {
+  const preview = await openCanvasPreview(page, `${canvas}#SystemAndActionErrors`);
+  await preview.getByRole("button", { name: "Report failed upgrade" }).click();
+  const activity = preview.getByRole("button", { name: "System activity", exact: true });
+  await activity.press("Enter");
+  await expect(preview.getByRole("alert")).toContainText("Upgrading");
+  const clearAll = preview.getByRole("button", { name: "Clear all", exact: true });
+  await expect(clearAll).toBeEnabled();
+  await clearAll.press("Enter");
+  await expect(preview.getByRole("alert")).toHaveCount(0);
+  await expect(activity).toContainText("Recovery details");
+  await expect(preview.getByRole("button", { name: "Copy draft" })).toBeVisible();
+});

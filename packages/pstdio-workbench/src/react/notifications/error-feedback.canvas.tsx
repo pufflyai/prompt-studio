@@ -2,6 +2,8 @@ import { Box, Button, HStack, Stack } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { createWorkbench } from "../../core";
+import { getWorkbenchOperations } from "../../core/registries/mutations/operations";
+import { getWorkbenchQueries } from "../../core/workbench-queries";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { Workbench } from "../workbench/workbench";
 import { WorkbenchStatusBar } from "../workbench/workbench-panels";
@@ -87,6 +89,25 @@ const ErrorFeedback = (props: {
           onClick={() => workbench.notifications.show({ id: "update", level: "info", title: "Update ready" })}
         >
           Report system information
+        </Button>
+        <Button
+          size="sm"
+          onClick={() => {
+            const operations = getWorkbenchOperations(getWorkbenchQueries(workbench));
+            const attempt = operations.submit({
+              domain: "extension.inventory",
+              subjects: ["notes"],
+              title: "Upgrading",
+              draft: { extension: "Notes" },
+              classify: () => "rejected",
+              write: async () => {
+                throw new Error("The extension registry is unavailable.");
+              },
+            });
+            void attempt.result.catch(() => {});
+          }}
+        >
+          Report failed upgrade
         </Button>
         <Button size="sm" onClick={() => workbench.notifications.dismiss("extension-crash")}>
           Recover system
