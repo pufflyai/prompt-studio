@@ -1,0 +1,38 @@
+{
+  "name": "agent-quotas",
+  "version": "0.1.0",
+  "displayName": "Agent Quotas",
+  "description": "See how much of an agent's 5-hour and weekly allowance is left in the status bar, with a forecast at the current pace.",
+  "publisher": "pstdio",
+  "main": "./extension.ts",
+  "engines": {
+    "pstdio": "^0.5.0 || ^0.6.0"
+  },
+  "pstdio": {
+    "scope": "user"
+  },
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "bun check",
+    "lint": "bun run typecheck",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@chakra-ui/react": "3.32.0",
+    "@emotion/react": "^11.0.0",
+    "@pstdio/sdk": "0.48.0",
+    "@pstdio/ui": "0.48.0",
+    "@tanstack/react-query": "^5.90.21",
+    "lucide-react": "^0.557.0",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.4",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "typescript": "6.0.2"
+  },
+  "icon": "Hourglass"
+}

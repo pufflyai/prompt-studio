@@ -478,6 +478,10 @@
       ],
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
+    "extensions/pstdio-agent-quotas": {
+      "entry": ["package.json", "extension.ts", "src/**/*.test.ts", "src/{meter,details}-view.tsx"],
+      "project": ["*.ts", "src/**/*.{ts,tsx}"]
+    },
     "extensions/pstdio-planner": {
       "entry": [
         "package.json",
