@@ -1,12 +1,21 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { Client } from "pg";
-import { openUpdate, sealUpdate, UnreadableSyncData } from "pstdio-sync/encryption";
+import {
+  createAuthenticationFixture,
+  createOAuthCodeFixture,
+  deviceProfile,
+  fixtureMicrosoftClient,
+  oauthBrowserCookie,
+} from "pstdio-account-manager/testing";
+import { openState, openUpdate, sealState, sealUpdate, UnreadableSyncData } from "pstdio-sync/encryption";
 import { fetchSyncSpaces } from "pstdio-sync/relay";
 import {
+  createdTeamInviteCodeSchema,
   type LiveServerMessage,
   liveProtocolHeader,
   liveProtocolVersion,
   liveServerMessageSchema,
+  publicationDocumentNames,
   readResultSchema,
   type SyncRoute,
   stateResultSchema,
@@ -15,11 +24,13 @@ import {
   syncProtocolHeader,
   syncProtocolVersion,
   teamAccountSchema,
+  teamOwnershipOfferSchema,
   updateResultSchema,
 } from "pstdio-sync-contracts";
 import { z } from "zod";
 import { defaultRelayLimits } from "../limits";
 import { startRelay } from "../service";
+import { projectKey } from "../storage/accounts";
 import { encode, randomId, sha256 } from "../storage/sync-fixture";
 import { createTransportFixture } from "./integration-fixture";
 
@@ -463,13 +474,20 @@ test("devices of the same team user share encrypted data under the team's projec
     });
 
     const connectDevice = async (credential: string) => {
-      const issued = await managerRequest(credential, "/v1/environment-access", { accountId, workbenchId: projectId });
+      const roster = await managerRequest(credential, `/v1/workbenches?accountId=${accountId}`);
+      const [{ grantId }] = z.array(z.object({ grantId: z.string() })).parse(await roster.json());
+      const issued = await managerRequest(credential, "/v1/environment-access", {
+        accountId,
+        workbenchId: projectId,
+        grantId,
+      });
       expect(issued.status).toBe(200);
       const { token } = z.object({ token: z.string() }).parse(await issued.json());
       const spaces = await fetchSyncSpaces({
         managerOrigin,
         credential,
         accountId,
+        grantId,
         userId: device.accountId,
         workbenchId: projectId,
       });
@@ -508,5 +526,353 @@ test("devices of the same team user share encrypted data under the team's projec
   } finally {
     await accountService.stop(true);
     await relay.close();
+  }
+});
+
+test("two Microsoft work accounts join, share and hand over the private catalogue over Relay", async () => {
+  const relay = await open({ microsoft: fixtureMicrosoftClient, accessLifetimeSeconds: 2 });
+  const { manager, managerHandler, scope } = relay.context;
+  const oauth = await createOAuthCodeFixture();
+  const projectId = scope.workbenchId;
+  const accountService = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch: managerHandler });
+  const managerOrigin = accountService.url.origin;
+  const managerRequest = (token: string, path: string, body?: unknown) =>
+    fetch(managerOrigin + path, {
+      method: body === undefined ? "GET" : "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+  const browserOrigin = relay.context.managerOrigin;
+  const browserRequest = (path: string, body: unknown, cookie = "") =>
+    managerHandler(
+      new Request(browserOrigin + path, {
+        method: "POST",
+        headers: { origin: browserOrigin, "content-type": "application/json", cookie },
+        body: JSON.stringify(body),
+      }),
+    );
+  const tenantId = "354e60fc-fe06-4e97-aea7-664289bdd555";
+  const microsoftSession = async (sub: string, oid: string) => {
+    const callbackURL = `${browserOrigin}/v1/team-invitation`;
+    const start = await browserRequest("/api/auth/sign-in/social", { provider: "microsoft", callbackURL });
+    expect(start.status).toBe(200);
+    const { url } = z.object({ url: z.url() }).parse(await start.json());
+    const callback = await oauth.complete("microsoft", new URL(url), { claims: { tid: tenantId, sub, oid } });
+    const signedIn = await managerHandler(
+      new Request(callback.href, { headers: { cookie: oauthBrowserCookie(start) } }),
+    );
+    expect(signedIn.headers.get("location")).toBe(callbackURL);
+    return oauthBrowserCookie(signedIn);
+  };
+  const enroll = async (cookie: string) => {
+    const enrolled = await browserRequest("/v1/device-login", { ...deviceProfile(), provider: "microsoft" }, cookie);
+    expect(enrolled.status).toBe(201);
+    return z.object({ accountId: z.string(), token: z.string() }).parse(await enrolled.json());
+  };
+  try {
+    const device = await enroll(await microsoftSession("private-team-owner", crypto.randomUUID()));
+    const team = await managerRequest(device.token, "/v1/teams", { name: "Private Tool Team" });
+    expect(team.status).toBe(201);
+    const { accountId } = teamAccountSchema.parse(await team.json());
+    await manager.setFeature({ accountId, feature: "relay", enabled: true });
+    expect((await managerRequest(device.token, `/v1/workbenches/${projectId}?accountId=${accountId}`, {})).status).toBe(
+      200,
+    );
+    const colleagueSession = await microsoftSession("private-team-colleague", crypto.randomUUID());
+    const colleague = await enroll(colleagueSession);
+    const teamPath = `/v1/teams/${accountId}`;
+    const invite = await managerRequest(device.token, `${teamPath}/invite-codes`, {});
+    expect(invite.status).toBe(201);
+    const { code } = createdTeamInviteCodeSchema.parse(await invite.json());
+    expect((await managerRequest(colleague.token, "/v1/team-invitations/accept", { secret: code })).status).toBe(200);
+    const userId = colleague.accountId;
+    const projectList = (token: string) => managerRequest(token, `/v1/workbenches?accountId=${accountId}`);
+    expect(await (await projectList(colleague.token)).json()).toEqual([]);
+    const projectAccess = `${teamPath}/projects/${projectId}/access`;
+    expect((await managerRequest(device.token, projectAccess, { userId, granted: true })).status).toBe(200);
+    const grantIdFor = async (credential: string) => {
+      const list = await projectList(credential);
+      return z.array(z.object({ grantId: z.string() })).parse(await list.json())[0]?.grantId;
+    };
+    const renew = async (credential: string) => {
+      const result = await managerRequest(credential, "/v1/environment-access", {
+        accountId,
+        workbenchId: projectId,
+        grantId: await grantIdFor(credential),
+      });
+      expect(result.status).toBe(200);
+      return z.object({ token: z.string(), expiresAt: z.iso.datetime() }).parse(await result.json());
+    };
+    const [ownerLease, { token: memberToken }] = await Promise.all([renew(device.token), renew(colleague.token)]);
+    const colleagueSpaces = async () =>
+      fetchSyncSpaces({
+        managerOrigin,
+        credential: colleague.token,
+        accountId,
+        userId,
+        grantId: await grantIdFor(colleague.token),
+        workbenchId: projectId,
+      });
+    const { project } = await colleagueSpaces();
+
+    const bytes = new TextEncoder().encode("Encrypted publication");
+    for (const name of publicationDocumentNames) {
+      const documentId = await project.documentId(name);
+      const route = { kind: "document", projectId, spaceOwner: null, documentId } as const;
+      const update = await sealUpdate(project, documentId, bytes, []);
+      expect((await relay.post({ ...route, operation: "updates" }, update, memberToken)).status).toBe(200);
+      expect((await relay.post({ ...route, operation: "updates" }, update, ownerLease.token)).status).toBe(200);
+      const read = await relay.post({ ...route, operation: "read" }, { after: 0 }, memberToken);
+      const result = readResultSchema.parse(await read.json());
+      expect(result.status).toBe("updates");
+      if (result.status !== "updates") throw new Error("Expected the owner’s publication");
+      expect(await openUpdate(project, documentId, result.updates[0]!)).toEqual(bytes);
+      const state = await sealState(project, documentId, {
+        baseStateId: null,
+        through: result.lastSequence,
+        state: bytes,
+        summary: new Uint8Array(),
+        blobIds: [],
+      });
+      expect((await relay.post({ ...route, operation: "state" }, state, memberToken)).status).toBe(200);
+    }
+
+    const documentId = await project.documentId("ordinary-shared-project-data");
+    const route = { kind: "document", projectId, spaceOwner: null, documentId, operation: "updates" } as const;
+    expect((await relay.post(route, await sealUpdate(project, documentId, bytes, []), memberToken)).status).toBe(200);
+
+    const { personal } = await fetchSyncSpaces({
+      managerOrigin,
+      credential: device.token,
+      accountId,
+      userId: device.accountId,
+      grantId: await grantIdFor(device.token),
+      workbenchId: projectId,
+    });
+    const privateId = await personal.documentId("private-session-history");
+    const privateRoute = { ...route, spaceOwner: device.accountId, documentId: privateId };
+    const privateBytes = new TextEncoder().encode("Former owner's private history");
+    const privateUpdate = await sealUpdate(personal, privateId, privateBytes, []);
+    const readPrivate = (token: string) => relay.post({ ...privateRoute, operation: "read" }, { after: 0 }, token);
+    expect((await relay.post(privateRoute, privateUpdate, ownerLease.token)).status).toBe(200);
+    expect((await readPrivate(memberToken)).status).toBe(403);
+
+    const offer = await managerRequest(device.token, `${teamPath}/ownership`, { recipientUserId: userId });
+    expect(offer.status).toBe(201);
+    const { id } = teamOwnershipOfferSchema.parse(await offer.json());
+    expect((await managerRequest(colleague.token, `${teamPath}/ownership/${id}`, { decision: "accept" })).status).toBe(
+      200,
+    );
+    const [formerOwnerLease, { token: successorToken }] = await Promise.all([
+      renew(device.token),
+      renew(colleague.token),
+    ]);
+    const formerOwnerToken = formerOwnerLease.token;
+    const catalogId = await project.documentId(publicationDocumentNames[1]);
+    const catalog = { ...route, documentId: catalogId };
+    const updated = await sealUpdate(project, catalogId, new TextEncoder().encode("Earlier revision selected"), []);
+    expect((await relay.post(catalog, updated, formerOwnerToken)).status).toBe(200);
+    expect((await relay.post(catalog, updated, successorToken)).status).toBe(200);
+    expect((await readPrivate(successorToken)).status).toBe(403);
+    expect((await relay.post(privateRoute, privateUpdate, successorToken)).status).toBe(403);
+    const retained = readResultSchema.parse(await (await readPrivate(formerOwnerToken)).json());
+    if (retained.status !== "updates") throw new Error("Expected the original owner's private history");
+    expect(await openUpdate(personal, privateId, retained.updates[0]!)).toEqual(privateBytes);
+
+    const grantId = await grantIdFor(device.token);
+    expect(
+      (await managerRequest(colleague.token, projectAccess, { userId: device.accountId, granted: false })).status,
+    ).toBe(200);
+    expect(await (await projectList(device.token)).json()).toEqual([]);
+    expect(
+      (await managerRequest(device.token, "/v1/environment-access", { accountId, workbenchId: projectId, grantId }))
+        .status,
+    ).toBe(401);
+    // Issued leases remain valid until their expiry; renewal above is denied immediately.
+    await Bun.sleep(Math.max(0, Date.parse(formerOwnerLease.expiresAt) - Date.now()) + 50);
+    expect((await relay.post(catalog, updated, formerOwnerToken)).status).toBe(401);
+    expect((await managerRequest(device.token, `${teamPath}/leave`, {})).status).toBe(200);
+    const { token: remainingOwnerToken } = await renew(colleague.token);
+    const { project: rotated } = await colleagueSpaces();
+    expect(rotated.generation).toBeGreaterThan(project.generation);
+    const newRevision = new TextEncoder().encode("Successor's revision");
+    const afterCutover = await sealUpdate(rotated, catalogId, newRevision, []);
+    await expect(openUpdate(project, catalogId, afterCutover)).rejects.toBeInstanceOf(UnreadableSyncData);
+    expect((await relay.post(catalog, afterCutover, ownerLease.token)).status).toBe(401);
+    const accepted = await relay.post(catalog, afterCutover, remainingOwnerToken);
+    expect(accepted.status).toBe(200);
+    expect(updateResultSchema.parse(await accepted.json()).duplicate).toBe(false);
+    const currentCatalog = readResultSchema.parse(
+      await (await relay.post({ ...catalog, operation: "read" }, { after: 0 }, remainingOwnerToken)).json(),
+    );
+    const baseline = currentCatalog.state;
+    if (!baseline) throw new Error("Expected the member's retained catalogue state");
+    const stateBytes = await relay.request(
+      {
+        kind: "state",
+        projectId,
+        spaceOwner: null,
+        documentId: catalogId,
+        stateId: baseline.stateId,
+      },
+      { token: remainingOwnerToken },
+    );
+    expect(stateBytes.status).toBe(200);
+    expect(await openState(rotated, catalogId, baseline, new Uint8Array(await stateBytes.arrayBuffer()))).toEqual(
+      bytes,
+    );
+    const changes = readResultSchema.parse(
+      await (
+        await relay.post({ ...catalog, operation: "read" }, { after: baseline.through }, remainingOwnerToken)
+      ).json(),
+    );
+    if (changes.status !== "updates") throw new Error("Expected the successor's catalogue updates");
+    expect(await openUpdate(rotated, catalogId, changes.updates.at(-1)!)).toEqual(newRevision);
+  } finally {
+    oauth.close();
+    await Promise.all([accountService.stop(true), relay.close()]);
+  }
+});
+
+test("removing a disconnected team member cuts off the old lease and a replacement owner device recovers", async () => {
+  const relay = await open({ accessLifetimeSeconds: 2 });
+  const { manager, managerHandler, device, scope } = relay.context;
+  const identity = createAuthenticationFixture(fixture.managerDatabaseUrl);
+  const managerServer = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch: managerHandler });
+  const managerOrigin = managerServer.url.origin;
+  const request = (token: string, path: string, body?: unknown) =>
+    fetch(managerOrigin + path, {
+      method: body === undefined ? "GET" : "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+  try {
+    const projectId = scope.workbenchId;
+    const response = await request(device.token, "/v1/teams", { name: "Two-user transport team" });
+    const { accountId } = teamAccountSchema.parse(await response.json());
+    const team = `/v1/teams/${accountId}`;
+    await manager.setFeature({ accountId, feature: "relay", enabled: true });
+    expect((await request(device.token, `/v1/workbenches/${projectId}?accountId=${accountId}`, {})).status).toBe(200);
+
+    const signedIn = await identity.login(crypto.randomUUID());
+    const member = await identity.auth.loginDevice(signedIn.headers, { ...deviceProfile(), deviceId: device.deviceId });
+    const invite = await request(device.token, `${team}/invite-codes`, {});
+    const { code } = createdTeamInviteCodeSchema.parse(await invite.json());
+    const redeemed = await request(member.token, "/v1/team-invitations/accept", { secret: code });
+    expect(redeemed.status).toBe(200);
+    expect(
+      (await request(device.token, `${team}/projects/${projectId}/access`, { userId: member.accountId, granted: true }))
+        .status,
+    ).toBe(200);
+
+    const grantIdFor = async (credential: string) => {
+      const roster = await request(credential, `/v1/workbenches?accountId=${accountId}`);
+      const candidates = z.array(z.object({ grantId: z.string() })).parse(await roster.json());
+      return candidates[0]?.grantId;
+    };
+    const renew = async (credential: string, grantId?: string) =>
+      request(credential, "/v1/environment-access", {
+        accountId,
+        workbenchId: projectId,
+        grantId: grantId ?? (await grantIdFor(credential)),
+      });
+    const access = async (credential: string) => {
+      const issued = await renew(credential);
+      expect(issued.status).toBe(200);
+      return z.object({ token: z.string(), expiresAt: z.iso.datetime() }).parse(await issued.json());
+    };
+    const spaces = async (user: { token: string; accountId: string }, grantId?: string) =>
+      fetchSyncSpaces({
+        managerOrigin,
+        credential: user.token,
+        accountId,
+        grantId: grantId ?? (await grantIdFor(user.token)),
+        userId: user.accountId,
+        workbenchId: projectId,
+      });
+    const [ownerSpaces, memberSpaces, ownerLease, memberLease] = await Promise.all([
+      spaces(device),
+      spaces(member),
+      access(device.token),
+      access(member.token),
+    ]);
+    const documentId = await ownerSpaces.project.documentId("fixture.shared");
+    const route = { kind: "document", projectId, spaceOwner: null, documentId } as const;
+    const privateRoute = { ...route, spaceOwner: device.accountId, operation: "read" } as const;
+    expect((await relay.post(privateRoute, { after: 0 }, memberLease.token)).status).toBe(403);
+    expect(await memberSpaces.personal.documentId("fixture.private")).not.toBe(
+      await ownerSpaces.personal.documentId("fixture.private"),
+    );
+    const ownerLive = relay.connect(ownerLease.token);
+    expect((await ownerLive.next()).type).toBe("ready");
+    const live = relay.connect(memberLease.token);
+    expect((await live.next()).type).toBe("ready");
+    live.socket.send(
+      JSON.stringify({ type: "subscribe", spaceOwner: null, topic: documentId, requestId: "subscribed" }),
+    );
+    expect((await live.next()).type).toBe("control-result");
+    ownerLive.socket.send(JSON.stringify({ type: "follow", spaceOwner: null, topic: documentId }));
+    expect(await ownerLive.next()).toMatchObject({ type: "subscribers", active: true });
+    ownerLive.socket.send(JSON.stringify({ type: "publish", spaceOwner: null, topic: documentId, payload: "AA==" }));
+    expect(await live.next()).toMatchObject({ type: "event", payload: "AA==" });
+    live.socket.send(JSON.stringify({ type: "discover", spaceOwner: device.accountId }));
+    expect((await live.closed).code).toBe(1008);
+    const send = async (space: typeof ownerSpaces.project, text: string, token: string) => {
+      const bytes = new TextEncoder().encode(text);
+      const body = await sealUpdate(space, documentId, bytes, []);
+      const written = await relay.post({ ...route, operation: "updates" }, body, token);
+      expect(written.status).toBe(200);
+      return { bytes, update: { ...body, sequence: updateResultSchema.parse(await written.json()).sequence } };
+    };
+    const initial = await send(ownerSpaces.project, "owner contribution", ownerLease.token);
+    const reply = await send(memberSpaces.project, "member contribution", memberLease.token);
+    const read = async (token: string) => {
+      const data = await relay.post({ ...route, operation: "read" }, { after: 0 }, token);
+      const read = readResultSchema.parse(await data.json());
+      if (read.status !== "updates") throw new Error("Expected shared updates");
+      return read.updates;
+    };
+    expect(await openUpdate(memberSpaces.project, documentId, (await read(memberLease.token))[0])).toEqual(
+      initial.bytes,
+    );
+    expect(await openUpdate(ownerSpaces.project, documentId, (await read(ownerLease.token))[1])).toEqual(reply.bytes);
+
+    const removedGrant = z.string().parse(await grantIdFor(member.token));
+    const staleEdit = await sealUpdate(memberSpaces.project, documentId, new TextEncoder().encode("offline edit"), []);
+    const removeMember = `${team}/members/${member.accountId}/remove`;
+    expect((await request(device.token, removeMember, {})).status).toBe(200);
+    expect((await renew(member.token, removedGrant)).status).toBe(401);
+    await expect(spaces(member, removedGrant)).rejects.toThrow("Sync keys unavailable");
+    const lock = new Client({ connectionString: fixture.relayDatabaseUrl });
+    await lock.connect();
+    try {
+      await lock.query("BEGIN");
+      await lock.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [
+        `relay-project:${projectKey(accountId, projectId)}`,
+      ]);
+      const pending = relay.post({ ...route, operation: "read" }, { after: 0 }, memberLease.token);
+      await fixture.waitForBlockedData(1, AbortSignal.timeout(500));
+      const wait = Math.max(0, Date.parse(memberLease.expiresAt) - Date.now());
+      const expired = await Promise.race([pending, Bun.sleep(wait + 500).then(() => undefined)]);
+      expect(expired?.status).toBe(401);
+    } finally {
+      await lock.end();
+    }
+    expect((await relay.post({ ...route, operation: "read" }, { after: 0 }, memberLease.token)).status).toBe(401);
+    expect((await relay.post({ ...route, operation: "updates" }, staleEdit, memberLease.token)).status).toBe(401);
+    const rotated = await spaces(device);
+    const current = await send(rotated.project, "after cutoff", (await access(device.token)).token);
+    expect(await openUpdate(rotated.project, documentId, current.update)).toEqual(current.bytes);
+    await expect(openUpdate(memberSpaces.project, documentId, current.update)).rejects.toThrow(UnreadableSyncData);
+
+    const replacement = await manager.registerDevice({ accountId: device.accountId, ...deviceProfile() });
+    const replacementSpaces = await spaces(replacement);
+    const updates = await read((await access(replacement.token)).token);
+    const recovered = await Promise.all(
+      updates.map((update) => openUpdate(replacementSpaces.project, documentId, update)),
+    );
+    expect(recovered).toEqual([initial.bytes, reply.bytes, current.bytes]);
+  } finally {
+    await Promise.all([managerServer.stop(true), identity.close(), relay.close()]);
   }
 });

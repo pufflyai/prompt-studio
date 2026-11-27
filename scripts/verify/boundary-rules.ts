@@ -191,6 +191,8 @@ export const FORBIDDEN_FOLDER_SPECIFIERS: Record<string, { folder: string; speci
 export const DEFAULT_PRIVATE_EXPORT_LIMIT = 2;
 export const PRIVATE_EXPORT_LIMITS: Record<string, number> = {
   // These are ownership boundaries, not file-level escape hatches.
+  // Operator API, token verification and isolated service fixtures.
+  "pstdio-account-manager": 3,
   // Root, records, text, relay, encryption, presence and append-only logs.
   "pstdio-sync": 7,
   // ADR0147 adds the pure compiled input inspector alongside app and runtime routes.

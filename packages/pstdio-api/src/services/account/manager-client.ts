@@ -1,4 +1,5 @@
 import { serviceAddress, serviceUrl } from "pstdio-sync/relay";
+import { managedExtensionHostHeader, managedExtensionHostVersion } from "pstdio-sync-contracts";
 import { z } from "zod";
 
 // The manager may run under a path, such as https://base.prompt.studio/accounts.
@@ -28,6 +29,7 @@ export const managerRequest = async (
     headers: {
       origin: new URL(origin).origin,
       "content-type": "application/json",
+      [managedExtensionHostHeader]: managedExtensionHostVersion,
       ...(token ? { authorization: `Bearer ${token}` } : {}),
     },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),

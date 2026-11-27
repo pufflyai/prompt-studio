@@ -3,6 +3,8 @@ import {
   extensionResourceRefSchema,
   jsonObjectSchema,
   pageParamValueSchema,
+  teamMembershipReadSchema,
+  teamMembershipWriteSchema,
   textEditingRequestSchema,
 } from "pstdio-api-contracts";
 import type { WebviewHostCapability, WebviewHostCapabilityParams } from "pstdio-api-contracts/extension-kernel";
@@ -27,6 +29,7 @@ export class WebviewHostCapabilityError extends Error {
 }
 
 const identifier = z.string().min(1);
+const expectedAccount = z.strictObject({ accountId: identifier, managerOrigin: identifier }).optional();
 const empty = z.object({}).strict().optional();
 const command = z.object({
   commandId: identifier,
@@ -252,6 +255,11 @@ const schemas = {
     z.object({ op: z.literal("status") }),
     z.object({ op: z.literal("loginStatus"), id: identifier }),
     z.object({ op: z.literal("devices") }),
+    z.strictObject({
+      op: z.literal("readTeamMembership"),
+      request: teamMembershipReadSchema,
+      expected: expectedAccount,
+    }),
     z.object({ op: z.literal("projectSyncStatus"), ...projectId }),
   ]),
   "account.manage": z.discriminatedUnion("op", [
@@ -263,10 +271,15 @@ const schemas = {
     }),
     z.object({ op: z.literal("cancelLogin"), id: identifier }),
     z.object({ op: z.literal("logout") }),
+    z.strictObject({
+      op: z.literal("writeTeamMembership"),
+      request: teamMembershipWriteSchema,
+      expected: expectedAccount,
+    }),
     z.object({
       op: z.literal("createTeam"),
       name: z.string().trim().min(1).max(100),
-      expected: z.strictObject({ accountId: identifier, managerOrigin: identifier }).optional(),
+      expected: expectedAccount,
     }),
     z.object({ op: z.literal("renameDevice"), id: identifier, name: z.string() }),
     z.object({ op: z.literal("removeDevice"), id: identifier }),

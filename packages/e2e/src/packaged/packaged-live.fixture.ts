@@ -6,8 +6,8 @@ export interface PeerLiveData {
   projectId: string;
   accountId: string;
 }
-const topicKey = (projectId: string, spaceOwner: string | null, topic: string) =>
-  JSON.stringify([projectId, spaceOwner, topic]);
+const topicKey = (accountId: string, projectId: string, spaceOwner: string | null, topic: string) =>
+  JSON.stringify([accountId, projectId, spaceOwner, topic]);
 
 /** Wire-level subscription peer for packaged sync tests; production routing has separate integration coverage. */
 export const createPeerLive = () => {
@@ -16,7 +16,7 @@ export const createPeerLive = () => {
     socket: Bun.ServerWebSocket<PeerLiveData>,
     message: Extract<LiveClientMessage, { topic: string }>,
   ) => {
-    const key = topicKey(socket.data.projectId, message.spaceOwner, message.topic);
+    const key = topicKey(socket.data.accountId, socket.data.projectId, message.spaceOwner, message.topic);
     if (message.type === "subscribe") socket.subscribe(key);
     if (message.type === "unsubscribe") socket.unsubscribe(key);
     if (message.type === "publish")
@@ -39,9 +39,11 @@ export const createPeerLive = () => {
     changed(
       notice: { spaceOwner: string | null; documentId: string; lastSequence: number; stateId: unknown },
       created: boolean,
+      scope: Pick<PeerLiveData, "accountId" | "projectId">,
     ) {
       for (const socket of sockets) {
-        const key = topicKey(socket.data.projectId, notice.spaceOwner, notice.documentId);
+        if (socket.data.accountId !== scope.accountId || socket.data.projectId !== scope.projectId) continue;
+        const key = topicKey(socket.data.accountId, socket.data.projectId, notice.spaceOwner, notice.documentId);
         if (socket.isSubscribed(key)) socket.send(JSON.stringify({ type: "changed", ...notice }));
         else if (created && socket.data.discovery.has(notice.spaceOwner))
           socket.send(JSON.stringify({ type: "discovered", ...notice }));

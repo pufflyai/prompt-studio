@@ -410,6 +410,8 @@ test("account capabilities route reads and changes to the host account and valid
       status: record("status"),
       login: record("login"),
       createTeam: record("createTeam"),
+      readTeamMembership: record("readTeamMembership"),
+      writeTeamMembership: record("writeTeamMembership"),
       loginStatus: record("loginStatus"),
       cancelLogin: record("cancelLogin"),
       logout: record("logout"),
@@ -430,6 +432,10 @@ test("account capabilities route reads and changes to the host account and valid
   });
   const expected = { accountId: "personal-account", managerOrigin: "https://accounts.example.test" };
   await capabilities["account.manage"]({ op: "createTeam", name: "Studio Team", expected });
+  const members = { op: "members" as const, accountId: "team-account" };
+  const invite = { op: "invite" as const, accountId: "team-account", email: "morgan@example.test" };
+  await capabilities["account.read"]({ op: "readTeamMembership", request: members, expected });
+  await capabilities["account.manage"]({ op: "writeTeamMembership", request: invite, expected });
   await capabilities["account.manage"]({ op: "renameDevice", id: "device-2", name: "Studio Mac" });
   await capabilities["account.manage"]({ op: "stopProjectSync", projectId: "project-2" });
   await capabilities["account.manage"]({ op: "login" });
@@ -438,12 +444,17 @@ test("account capabilities route reads and changes to the host account and valid
   expect(calls).toEqual([
     ["projectSyncStatus", undefined],
     ["createTeam", "Studio Team", expected],
+    ["readTeamMembership", members, expected],
+    ["writeTeamMembership", invite, expected],
     ["renameDevice", "device-2", "Studio Mac"],
     ["stopProjectSync", "project-2"],
     ["login", undefined],
     ["login", "https://accounts.example.test"],
     ["retryProjectSyncSource", "sessions", "project-2"],
   ]);
+  await expect(
+    Promise.resolve().then(() => capabilities["account.read"]({ op: "readTeamMembership", request: invite })),
+  ).rejects.toMatchObject({ code: "invalid_params" });
   // Reads cannot change the account, and changes need their own capability.
   await expect(Promise.resolve().then(() => capabilities["account.read"]({ op: "logout" }))).rejects.toMatchObject({
     code: "invalid_params",
@@ -451,7 +462,7 @@ test("account capabilities route reads and changes to the host account and valid
   await expect(Promise.resolve().then(() => capabilities["account.manage"]({ op: "devices" }))).rejects.toMatchObject({
     code: "invalid_params",
   });
-  expect(calls).toHaveLength(7);
+  expect(calls).toHaveLength(9);
 });
 
 test("text editing validates scoped operations before passing them to the host adapter", async () => {
@@ -479,6 +490,8 @@ test("partial account services reject unavailable operations instead of resolvin
     status: async () => ({ login: null, features: null, cloudProjects: [], cloudProjectsLoaded: false }),
     login: unexpected,
     createTeam: unexpected,
+    readTeamMembership: unexpected,
+    writeTeamMembership: unexpected,
     loginStatus: unexpected,
     cancelLogin: unexpected,
     logout: unexpected,

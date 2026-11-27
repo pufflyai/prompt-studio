@@ -1,4 +1,4 @@
-export { createRelayAccess } from "./access";
+export { createRelayAccess, type RelayAccess } from "./access";
 export { createDeviceCommandChannel, DeviceCommandInputError } from "./device-commands";
 export { createDocumentRelayConnection } from "./document-connection";
 export { createDocumentRelay } from "./document-http";

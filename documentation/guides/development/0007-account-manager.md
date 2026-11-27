@@ -144,3 +144,35 @@ A personal account ID remains the stable user ID for existing devices and privat
 A team starts with early access disabled. Grant or revoke Cloud relay access for a specific team with `account-feature grant --account-id <team-account-id> --feature relay` or the matching `revoke` command. Email lookup continues to target a verified personal account.
 
 Snapshots keep team ownership, project grants and key history. Restoring an existing team preserves its current membership. Restored accounts remain disabled until operator reconciliation. For a team, reconcile its state without supplying a Google owner.
+
+## Team invitations and member authority
+
+A Google invitation matches the verified email associated with the signed-in Google subject. A Microsoft invitation matches the Entra tenant and user object IDs from a verified Microsoft ID token. The manager stores a digest of each invitation secret. Microsoft sign-in still uses issuer and subject as the stable Prompt Studio account identity. The link carries the secret in the URL fragment. The landing page exchanges it in same-origin POST bodies after sign-in. Team membership operations take the team account lock, the same lock used before issuing scoped renewal and keys.
+
+Snapshots capture the current team members. Invitation links are excluded from backups, and a restore cancels outstanding invitations on the surviving manager. A historical snapshot leaves the current roster on surviving teams intact.
+
+The manager records the latest verified address from the Google sign-in claim separately from the cached auth profile. Older claims cannot overwrite it. People with older sessions may need to sign in again before accepting an invitation. Removing a member closes earlier invitations for that person, including links issued to a former address.
+
+### Desktop invitation codes
+
+The owner can create a code with `POST /v1/teams/:teamId/invite-codes` and an empty JSON object. The response contains its ID, secret code and expiry. The secret is returned once; `GET` on the same route lists only IDs and expiries. Codes contain 256 random bits, expire after 24 hours and store only their SHA-256 digest. Cancel a code through the existing invitation cancellation route. Targeted Google and Microsoft invitations retain their recipient checks and seven-day lifetime.
+
+A code can be transferred to any signed-in person. Inspect and accept it through the existing invitation endpoints, putting the code in the JSON `secret` field. Acceptance consumes it under the team lock. A retry by its successful recipient returns the same team; a different recipient cannot reuse it. Joining grants team membership only, with project access assigned separately. Removing a member cancels all outstanding desktop codes, so a code they held cannot admit a fresh identity. Ask the owner for a new code if another pending invitation is affected. Restore also cancels outstanding codes.
+
+Deploy the manager and its generated migration before exposing code creation in native clients. Rehearse against a disposable database first, retaining a recovery point and the current image digest. Before rolling back to a manager image that predates codes, stop candidate instances from issuing or accepting invitations, cancel every pending untargeted code, and verify none remain pending. Use the candidate owner's code-list and cancellation APIs for every team, or an approved operator database procedure. Older targeted-invitation readers cannot interpret a live code row; expired rows may also become active if a clock changes, so cancel pending codes regardless of expiry. Keep the additive schema migration applied during an image-only rollback: existing targeted rows remain valid, and accepted-code history still prevents replay. Re-enable issuance only after a code-capable manager is running again. An image predating Microsoft invitation support also needs the separate Microsoft-compatible rollback and recovery checks in the [hosted acceptance guide](0023-microsoft-team-cloud-acceptance.md).
+
+## Team project grant removal
+
+The manager grants team project membership explicitly, including owner content access. Revoke changes are serialized under the owning account lock with key reads and the final renewal check. Removing a member or accepting their request to leave revokes their grants and rotates each affected shared generation in that transaction. Project deletion remains a separate explicit action for an owner or an assigned project member. Restore retains current team authority and the newer generation history.
+
+An already issued relay token stays valid until its configured expiry. Team sync sends writes using the lease of its existing shared live connection. Expiry aborts jobs using the old key snapshot and reconnecting fetches current keys before posting. This cutoff leaves downloads and previously issued generations on their devices. Removing a device rotates its user's private keys, reachable shared keys, and previously issued keys for paused projects.
+
+Each active team project grant has its own identity. Team devices include that identity when asking for renewed access or keys. The manager rechecks it under the team lock. If a device misses a revocation and later sees a new grant for the same project, it folds the older queued edits and runs the returning-device flow before reconnecting. Team members use a native build that supports grant identities. Personal access continues to use the device and project identity.
+
+Pausing a team project ends its active grants and rotates the shared key. An owner explicitly resumes their own access when restarting sync, then grants access to the other members again. Project discovery uses a single lease and only downloads the encrypted project record. While team HTTP requests are queued or streaming, their original lease expiry also cancels request admission or transfer.
+
+## Ownership consent and recovery
+
+Ownership offers target an active member's stable user ID. Only the current owner issues or cancels an offer, and only its recipient can accept or decline. The manager verifies that both accounts remain active, updates both roles under the team lock and commits them together. Acceptance never rewrites project grants, devices, or keys.
+
+Removing a recipient closes their pending offer. Restore closes outstanding offers and keeps the roles of existing teams. Snapshot recovery never reapplies an older offer or overwrites a surviving team with historical roles.

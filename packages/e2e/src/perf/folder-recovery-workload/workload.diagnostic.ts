@@ -30,6 +30,7 @@ import { writeSharedNotesExtension } from "../../packaged/packaged-shared-notes-
 import {
   createPackagedSyncPeer,
   packagedAccountCode,
+  packagedAccountId,
   packagedProjectKey,
 } from "../../packaged/packaged-sync-relay.fixture";
 import { runTestCommand } from "../../scripts/run-test-command";
@@ -261,7 +262,10 @@ const main = async () => {
     const notes = `~${await space.documentId(JSON.stringify(["example.shared-notes", "record-stream-v2"]))}`;
     // The device's updates, or a latest state it stored; the first save founds the stream with a state.
     const notesFrom = (device: string) => {
-      const document = peer.documents.get(notes);
+      const document = peer.scopedDocument(
+        { accountId: packagedAccountId, projectId: project.id, spaceOwner: null },
+        notes,
+      );
       const updates = document?.updates.filter((update) => update.deviceId === device).length ?? 0;
       return `${updates}:${document?.state?.deviceId === device ? document.state.stateId : ""}`;
     };

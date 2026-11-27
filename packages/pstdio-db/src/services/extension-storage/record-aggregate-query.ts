@@ -2,6 +2,7 @@ import { type SQL, sql } from "drizzle-orm";
 import { aggregateOptions, compareAggregateGroups } from "pstdio-sync/records";
 import type { Json, StorageAggregateQuery, StorageRecordIndex } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
+import { executeRecordQuery } from "./record-first-match";
 import { decodeProjectionValue, projectionKey } from "./record-projection-codec";
 import { createQueryFieldCache, queryFieldCacheSourceSql } from "./record-query-field-cache";
 import { type QuerySqlOwner, recordFieldSql } from "./record-query-sql";
@@ -72,8 +73,12 @@ export const aggregateRecordQuery = async (
   };
   const readTotals = async () =>
     (
-      await tx.execute<AggregateRow>(sql`SELECT ${cardinality}::text AS count, ${metrics} AS metrics, ${digest} AS fingerprint
-    FROM ${source()}`)
+      await executeRecordQuery<AggregateRow>(
+        tx,
+        owner?.firstMatches,
+        sql`SELECT ${cardinality}::text AS count, ${metrics} AS metrics, ${digest} AS fingerprint
+    FROM ${source()}`,
+      )
     ).rows[0];
   if (!options.groupBy.length) {
     const total = await readTotals();
@@ -99,11 +104,15 @@ export const aggregateRecordQuery = async (
         sql`, `,
       )})`
     : sql`NULL::jsonb`;
-  const grouped = await tx.execute<AggregateRow>(sql`WITH grouped AS (
+  const grouped = await executeRecordQuery<AggregateRow>(
+    tx,
+    owner?.firstMatches,
+    sql`WITH grouped AS (
     SELECT ${group} AS value, ${cardinality}::text AS count, ${metrics} AS metrics
     FROM ${source()} GROUP BY 1
   ) SELECT *, sum(count::numeric) OVER ()::text AS total_count, ${totalMetrics} AS total_metrics FROM grouped
-    ${options.groupLimit === undefined ? sql`` : sql`LIMIT ${options.groupLimit + 1}`}`);
+    ${options.groupLimit === undefined ? sql`` : sql`LIMIT ${options.groupLimit + 1}`}`,
+  );
   if (options.groupLimit !== undefined && grouped.rows.length > options.groupLimit)
     throw new Error(`Aggregate has more than ${options.groupLimit} groups; narrow its selection`);
   // Derive totals from grouped numeric values inside SQL so decimal sums retain

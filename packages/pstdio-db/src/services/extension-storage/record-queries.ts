@@ -19,6 +19,7 @@ import { aggregateRecordQuery, canCountOwnerProjection } from "./record-aggregat
 import { countIndexSource } from "./record-count-query";
 import { prepareDateFormatIndexes, pruneDateFormatIndexes } from "./record-date-format";
 import { dependencyOrderedPageSql } from "./record-dependency-order";
+import { createFirstRecordLookups, executeRecordQuery } from "./record-first-match";
 import { formatDatabasePrefix } from "./record-format-key";
 import { defineRecordIndexes } from "./record-index-definition";
 import { recordIndexRows as indexes } from "./record-index-rows";
@@ -86,7 +87,7 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
   };
   const physicalNames = new WeakMap<StorageRecordIndex, string>();
   const aggregateCache = aggregateCacheFor(db);
-  const getIndex = async (connection: Pick<DbClient, "select">, name: string) => {
+  const readIndex = async (connection: Reader, name: string, indexedDeclarations: Set<string>) => {
     const [index] = await connection
       .select()
       .from(indexes)
@@ -100,7 +101,15 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
     if (!index) throw new Error(`Storage index not installed: ${name}`);
     const declaration = decodeProjectionValue(index.definition as unknown as Json) as unknown as StorageRecordIndex;
     physicalNames.set(declaration, index.database_name);
+    if (/^storage_(?:host|query)_v[34]_[a-f0-9]{32}$/.test(index.database_name)) indexedDeclarations.add(name);
     return declaration;
+  };
+  const queryCatalog = () => {
+    const indexedDeclarations = new Set<string>();
+    return {
+      firstMatches: createFirstRecordLookups(indexedDeclarations),
+      getIndex: (connection: Reader, name: string) => readIndex(connection, name, indexedDeclarations),
+    };
   };
   // Index replacement can change selection without editing records. Both belong to a query snapshot.
   const getRevision = async (connection: Reader, identities = false) => {
@@ -132,7 +141,8 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
     return row.revision + identityRevision;
   };
   const queryIn = async (tx: Parameters<Parameters<DbClient["transaction"]>[0]>[0], query: StorageRecordQuery) => {
-    const queryOwner = await readQueryOwner(tx, owner);
+    const { firstMatches, getIndex } = queryCatalog();
+    const queryOwner = { ...(await readQueryOwner(tx, owner)), firstMatches };
     traceStorageQuery("query-start", query.index);
     const { declared, index, related } = await prepareQueryMetadata(db, tx, owner, query, getIndex, diagnostics);
     const revision = await getRevision(tx, related.hasIdentity);
@@ -140,7 +150,9 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
     const page = await prepareRecordQuery(owner, index, query, revision, related);
     if (page.limit === 0) return emptyQueryResult(owner, revision, diagnostics);
     const visible = await recordVisibilitySql(queryOwner, index, declared, physicalNames.get(declared));
-    const result = await tx.execute<QueryRow>(
+    const result = await executeRecordQuery<QueryRow>(
+      tx,
+      queryOwner.firstMatches,
       query.dependencyOrder
         ? dependencyOrderedPageSql(
             queryOwner,
@@ -189,14 +201,15 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
     };
   };
   const api: StorageRecordQueries = {
-    defineIndexes: (definitions) => defineRecordIndexes(db, owner, definitions, "immediate", diagnostics),
+    defineIndexes: (definitions) => defineRecordIndexes(db, owner, definitions, "query", diagnostics),
     query: (query) => db.transaction((tx) => queryIn(tx, query)),
     aggregate: async (input) => {
       const query = structuredClone(input);
       let cacheKey: string | undefined;
       let reused = false;
       const result = await db.transaction(async (tx) => {
-        const queryOwner = await readQueryOwner(tx, owner);
+        const { firstMatches, getIndex } = queryCatalog();
+        const queryOwner = { ...(await readQueryOwner(tx, owner)), firstMatches };
         traceStorageQuery("aggregate-start", query.index);
         validateRelatedQueryFields(query);
         const declared = await getIndex(tx, query.index);

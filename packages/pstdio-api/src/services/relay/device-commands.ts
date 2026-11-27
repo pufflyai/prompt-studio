@@ -1,15 +1,11 @@
 import type { DeviceCommand } from "pstdio-api-contracts";
-import {
-  createDeviceCommandChannel,
-  createDocumentRelayConnection,
-  fetchSyncSpaces,
-  type LiveConnection,
-} from "pstdio-sync/relay";
+import { createDeviceCommandChannel, createDocumentRelayConnection, type LiveConnection } from "pstdio-sync/relay";
 import { jsonSchema } from "pstdio-sync-contracts";
 import { apiLogger } from "../../lib/logger";
 import type { RelayDeps } from "./deps";
 import { withDeviceCommandAttachments } from "./device-command-attachments";
 import { createDeviceCommandExecutor } from "./device-command-executor";
+import { fetchNativeSyncSpaces } from "./native-relay-access";
 import type { RelayWorkbench } from "./runtime";
 
 export const startDeviceCommands = (input: {
@@ -42,7 +38,7 @@ export const startDeviceCommands = (input: {
           trustedKey: deps.accountService.deviceSigningKey,
           space: async (commandSignal) =>
             (
-              await fetchSyncSpaces({
+              await fetchNativeSyncSpaces({
                 ...config,
                 credential: config.renewalGrant,
                 signal: AbortSignal.any([signal, commandSignal]),

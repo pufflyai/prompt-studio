@@ -173,7 +173,7 @@ export type StorageStatisticResult =
   | { type: "top-values"; values: { label: string; count: number; percentage: number }[] };
 
 export interface StorageRecordQueries {
-  /** Install or upgrade local indexes explicitly. Prefer the extension's storageIndexes declaration. */
+  /** Register query metadata for this owner. The host owns the physical database schema. */
   defineIndexes(indexes: StorageRecordIndex[]): Promise<void>;
   query(query: StorageRecordQuery): Promise<StorageQueryPage>;
   aggregate(query: StorageAggregateQuery): Promise<StorageAggregateResult>;

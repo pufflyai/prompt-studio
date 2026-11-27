@@ -82,6 +82,7 @@ export const recordFieldSql = (
     if (!resolve) throw new Error("Related field needs installed indexes");
     const outer = alias ?? "records";
     const value: SQL = recordLookupSql(
+      owner?.firstMatches,
       index,
       field,
       outer,
@@ -101,6 +102,18 @@ export const recordFieldSql = (
       (alias) => recordScopeSql(owner ?? rowQueryOwner(outer), index, alias),
       (field, left, right) =>
         recordEqualitySql(index, field, sql`coalesce(${left}, 'null'::jsonb)`, sql`coalesce(${right}, 'null'::jsonb)`),
+      (alias, parent) =>
+        owner?.firstMatches
+          ? owner.firstMatches.firstRecordByField(
+              index,
+              index.hierarchy!.idField,
+              alias,
+              parent,
+              false,
+              (candidate) => recordFieldSql(index, index.hierarchy!.idField, candidate, resolve, owner),
+              (candidate) => recordScopeSql(owner, index, candidate),
+            )
+          : undefined,
     );
     return value;
   }

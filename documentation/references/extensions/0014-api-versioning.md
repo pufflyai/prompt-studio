@@ -62,6 +62,12 @@ independent authorities. Connection configuration also accepts optional
 manifests retain their earlier supported ranges and add `^0.6.0` before the host
 adopts this step. This compatibility metadata does not adopt new SDK methods.
 
+The same API 0.6.0 step adds `readTeamMembership` and `writeTeamMembership` to
+the native, process and webview account APIs. Their typed operations cover team
+administration, project grants, desktop invitation codes and managed extension
+decisions. Consumers must pin a published supporting SDK and use the matching
+host; SDK publication alone does not add these operations to an older host.
+
 API 0.6.0 also adds optional session-message `source` attribution and tab
 `tooltip` metadata. Session callers can name a source session or explicitly mark
 a human submission. The host resolves the display identity and exposes it as

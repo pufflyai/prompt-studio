@@ -969,12 +969,13 @@ Return `{ rows, page }`, where `page` contains:
 - `statistics`: requested table column summaries, keyed by field ID, when a
   visible statistics control requests them. Never calculate these from one page.
 
-Use declared `storageIndexes`, `ctx.storage.records.query`, and `aggregate` to
-serve these requests. Select the index matching the requested ordering, including
+Use `storageIndexes` to declare query fields and orderings. The host registers
+them as metadata. Use `ctx.storage.records.query` and `aggregate` with the
+definition matching the requested ordering, including
 a stable tie order. Check that every aggregate revision matches the selected page.
 When `page.cursor` is present, pass it to storage and omit `offset`; otherwise
 pass `offset`. Pass `page.revision` in either case. Direct page navigation therefore
-uses one indexed query, without visiting earlier cursors. See
+uses one query for the selected page. See
 [direct page navigation](../sdk/0004-storage.md#direct-page-navigation).
 
 Resolve related records only for returned rows, using `readMany` or
