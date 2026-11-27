@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { type BundledExtensionSources, packExtensionSource } from "pstdio-extensions/distribution";
 import { expectRejection } from "../../test-utils/expect-rejection";
-import { prepareBundledExtensionSource } from "./bundled-extension-source";
+import { prepareBundledExtensionSource, readBundledExtensionRuntimeCli } from "./bundled-extension-source";
 
 const roots: string[] = [];
 afterEach(() => {
@@ -25,6 +25,7 @@ test("prepares bundled extension sources with their lockfile and commit without 
       version: "1.0.0",
       main: "extension.ts",
       files: ["extension.ts"],
+      pstdio: { runtimeCli: "demo-cli" },
       engines: { pstdio: `^${EXTENSION_API_VERSION}` },
     }),
   );
@@ -49,6 +50,8 @@ test("prepares bundled extension sources with their lockfile and commit without 
     new File([JSON.stringify(manifest)], "extension-sources/manifest.json"),
     new File([packed.bytes], "extension-sources/demo.tgz"),
   ];
+  expect(await readBundledExtensionRuntimeCli(packed.manifest.id, origin, files)).toBe("demo-cli");
+  expect(await readBundledExtensionRuntimeCli("example.other", origin, files)).toBeUndefined();
   const prepared = await prepareBundledExtensionSource(origin, root, "release", { files });
   expect(prepared?.commit).toBe(manifest.commit);
   expect(readFileSync(join(prepared!.path, "bun.lock"), "utf8")).toBe("locked dependency inputs");

@@ -10,6 +10,7 @@ import {
   readAcceptedRevision,
 } from "pstdio-extensions";
 import { hashExtensionSourceAsync } from "./extension-preparation";
+import { preparePrebuiltHarnessRuntime } from "./prebuilt-harness-runtime";
 import type { EnabledExtensionSource } from "./project-extension-runtime-snapshot";
 
 /** The fields a source needs to be imported, so an unpersisted candidate can be loaded too. */
@@ -49,6 +50,7 @@ export const createExtensionSourceCache = (input: { loadSources?: typeof loadExt
         extensionPackages: [{ path: source.source_path, sourceKind: source.source_kind }],
         preparedRevision: revision,
         immutableAssets: true,
+        ...(revision.prebuiltRelease && { prepareRuntime: preparePrebuiltHarnessRuntime }),
       }).then((loaded) => (loaded.sources[0] ? { diagnostics: loaded.diagnostics, source: loaded.sources[0] } : null));
       byRevision.set(revision.id, work);
     }
