@@ -23,7 +23,9 @@ export const useConversationVisibility = () => {
         stopScroll();
       } else if (hidden) {
         hidden = false;
-        const saved = position;
+        // Chromium keeps a hidden scroller's offset, including an anchor adjustment or smooth-scroll
+        // step whose scroll event arrived after hiding. Fall back where a browser reset it to the top.
+        const saved = { ...position, top: viewport.scrollTop || position.top };
         stopScroll();
         viewport.scrollTop = saved.top;
         frame = requestAnimationFrame(() => {

@@ -1,5 +1,6 @@
 import {
   measureElement as measureRenderedElement,
+  observeElementOffset,
   useVirtualizer as useTanStackVirtualizer,
 } from "@tanstack/react-virtual";
 import { useLayoutEffect, useState } from "react";
@@ -30,6 +31,14 @@ export const useVirtualizer = <TScrollElement extends Element, TItemElement exte
       const index = instance.indexFromElement(element);
       return instance.itemSizeCache.get(instance.options.getItemKey(index)) ?? instance.options.estimateSize(index);
     },
+    // A scroll queued before the scroll element was hidden is delivered with no layout and offset 0.
+    // Keep the last visible offset, or the list renders and measures its first rows while hidden
+    // and drops the reader's anchor when it is shown again.
+    observeElementOffset: (instance, onChange) =>
+      observeElementOffset(instance, (offset, isScrolling) => {
+        if (instance.scrollElement?.getClientRects().length === 0) return;
+        onChange(offset, isScrolling);
+      }),
     // Rows measure through ref callbacks during React commits. Let React batch their updates.
     useFlushSync: false,
   });
