@@ -243,6 +243,9 @@ export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWor
     disposables.push(
       registerWorkbenchExtensionTreeRenderers({
         ...input,
+        publishesCommandRefreshEvents: Boolean(
+          input.publishesCommandRefreshEvents && sourceInput.subscribeRefreshEvents,
+        ),
         resolveNodeResource: input.resolveTreeNodeResource,
         renderNodeEndContent: input.renderTreeNodeEndContent,
       }),

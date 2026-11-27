@@ -38,6 +38,30 @@ test("an offline import can give notes and folders the same core migration IDs o
 });
 
 describe("notes", () => {
+  test("keeps sidebar file reads bounded while opening a note", async () => {
+    const mount = createNotesMount();
+    const notes = await Promise.all(
+      Array.from({ length: 12 }, (_, index) => createNote(mount, `note-${index}`, `Note ${index}`)),
+    );
+    const started = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
+    let queuedReads = 0;
+    const pendingList = listNotes({
+      ...mount,
+      async readText(path) {
+        queuedReads++;
+        started.resolve();
+        await release.promise;
+        return mount.readText(path);
+      },
+    });
+    await started.promise;
+    const queuedWhileBlocked = queuedReads;
+    release.resolve();
+    expect(await pendingList).toHaveLength(notes.length);
+    expect(queuedWhileBlocked).toBe(1);
+  });
+
   test("creates a new note without asking for a title", async () => {
     const mount = createNotesMount();
     const note = await createNote(mount, coreIds.create());

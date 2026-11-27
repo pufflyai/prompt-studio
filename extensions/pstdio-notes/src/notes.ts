@@ -4,6 +4,7 @@ import { buildNoteDocument, firstNoteTitle, parseNoteDocument } from "./note-fro
 import { writeResourceInOrder } from "./resource-writes";
 
 export type NotesMount = Pick<ArtifactMount, "exists" | "list" | "readText" | "writeText" | "updateText" | "delete">;
+export type NotesFileList = Awaited<ReturnType<NotesMount["list"]>>;
 
 const CONTENT_PATH = "/content.md";
 export const notePath = (id: string) => `${id}${CONTENT_PATH}`;
@@ -11,8 +12,15 @@ const titlePath = (id: string) => `${id}/title.txt`;
 export const noteOrderPath = ".order.json";
 export const noteFolderPath = (id: string) => `${id}/folder.txt`;
 
-const readNoteFolder = async (mount: NotesMount, id: string) =>
-  (await mount.exists(noteFolderPath(id))) ? (await mount.readText(noteFolderPath(id))) || undefined : undefined;
+const readSidecar = async (mount: NotesMount, path: string, paths?: ReadonlySet<string>) => {
+  if (!(paths ? paths.has(path) : await mount.exists(path))) return undefined;
+  try {
+    return await mount.readText(path);
+  } catch (error) {
+    if (await mount.exists(path)) throw error;
+    return undefined;
+  }
+};
 
 const noteTitle = (rawTitle: string) => {
   const title = rawTitle.trim();
@@ -21,18 +29,25 @@ const noteTitle = (rawTitle: string) => {
 };
 
 export const noteExists = (mount: NotesMount, id: string) => mount.exists(notePath(id));
-const readNoteDocument = async (mount: NotesMount, id: string) => {
+const readNoteDocument = async (mount: NotesMount, id: string, paths?: ReadonlySet<string>) => {
   const document = parseNoteDocument(await mount.readText(notePath(id)));
   // Existing sidecar titles move into front matter on the next save or rename.
-  if (document.title === undefined && (await mount.exists(titlePath(id)))) {
-    document.title = await mount.readText(titlePath(id));
-  }
+  if (document.title === undefined) document.title = await readSidecar(mount, titlePath(id), paths);
   return document;
 };
 export const readNote = async (mount: NotesMount, id: string) => (await readNoteDocument(mount, id)).body;
 export const readNoteSource = (mount: NotesMount, id: string) => mount.readText(notePath(id));
-export const readNoteTitle = async (mount: NotesMount, id: string) =>
-  (await readNoteDocument(mount, id)).title || "New note";
+export const readNoteTitle = async (mount: NotesMount, id: string, paths?: ReadonlySet<string>) =>
+  (await readNoteDocument(mount, id, paths)).title || "New note";
+
+export const readExistingNoteTitle = async (mount: NotesMount, id: string) => {
+  try {
+    return await readNoteTitle(mount, id);
+  } catch (error) {
+    if (await noteExists(mount, id)) throw error;
+    return undefined;
+  }
+};
 
 const saveNoteDocument = async (mount: NotesMount, id: string, body: string, title: string, fields: string) => {
   await mount.updateText(notePath(id), buildNoteDocument(body, title, fields));
@@ -76,29 +91,30 @@ export const hasSavedNoteTitle = (mount: NotesMount, id: string, title: string) 
     return parseNoteDocument(await mount.readText(notePath(id))).title === title;
   });
 
-export const listNotes = async (mount: NotesMount) => {
-  const files = await mount.list(`*${CONTENT_PATH}`);
-  const notes = await Promise.all(
-    files.map(async (file) => {
-      const id = file.path.slice(0, -CONTENT_PATH.length);
-      try {
-        return {
-          id,
-          title: await readNoteTitle(mount, id),
-          folderId: await readNoteFolder(mount, id),
-          updatedAt: file.updatedAt ?? "",
-        };
-      } catch (error) {
-        if (!(await noteExists(mount, id))) return undefined;
-        throw error;
-      }
-    }),
-  );
-  const sorted = notes
-    .filter((note) => note !== undefined)
-    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt) || a.title.localeCompare(b.title));
-  if (!(await mount.exists(noteOrderPath))) return sorted;
-  const order: string[] = JSON.parse(await mount.readText(noteOrderPath));
+export const listNotes = async (mount: NotesMount, files?: NotesFileList) => {
+  const paths = files && new Set(files.map(({ path }) => path));
+  const noteFiles = files
+    ? files.filter(({ path }) => path.endsWith(CONTENT_PATH) && path.indexOf("/") === path.length - CONTENT_PATH.length)
+    : await mount.list(`*${CONTENT_PATH}`);
+  const notes = [];
+  // Queue one row at a time so opening an editor can interleave its file reads.
+  for (const file of noteFiles) {
+    const id = file.path.slice(0, -CONTENT_PATH.length);
+    try {
+      notes.push({
+        id,
+        title: await readNoteTitle(mount, id, paths),
+        folderId: (await readSidecar(mount, noteFolderPath(id), paths)) || undefined,
+        updatedAt: file.updatedAt ?? "",
+      });
+    } catch (error) {
+      if (await noteExists(mount, id)) throw error;
+    }
+  }
+  const sorted = notes.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt) || a.title.localeCompare(b.title));
+  const savedOrder = await readSidecar(mount, noteOrderPath, paths);
+  if (savedOrder === undefined) return sorted;
+  const order: string[] = JSON.parse(savedOrder);
   const positions = new Map(order.map((id, index) => [id, index]));
   return sorted.sort((a, b) => (positions.get(a.id) ?? order.length) - (positions.get(b.id) ?? order.length));
 };

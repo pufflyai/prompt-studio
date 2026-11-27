@@ -59,8 +59,20 @@ test("Notes and Sidenav levels keep rows users pinned to the header", async ({ p
   await expect(row("Sessions")).toBeVisible();
   await expect(headerRows).toHaveText(["Search", "Tickets", "Home"]);
   await sidenav.getByText("Notes", { exact: true }).hover();
-  await sidenav.getByRole("button", { name: "New note", exact: true }).click();
+  const navReads: string[] = [];
+  const trackNotes = (req: import("@playwright/test").Request) => {
+    if (req.url().includes("pstdio.notes.view.note-list.tree.body/execute")) navReads.push(req.url());
+  };
+  page.on("request", trackNotes);
   const editor = nativePublicTextEditor(page);
+  try {
+    await sidenav.getByRole("button", { name: "New note", exact: true }).click();
+    await expect(row("New note")).toBeVisible();
+    await expect(editor).toHaveAttribute("contenteditable", "true");
+    expect(navReads).toHaveLength(1);
+  } finally {
+    page.off("request", trackNotes);
+  }
   await editor.fill("Level note");
   await expect(row("Level note")).toBeVisible({ timeout: 15_000 });
   // Individual notes are data; the Notes collection can be hidden from the customize menu.

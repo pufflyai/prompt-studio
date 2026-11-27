@@ -1,3 +1,4 @@
+import type { CommandExecutionResult } from "@pstdio/sdk/api";
 import type { TreeContext } from "../../core";
 import { executeWorkbenchExtensionCommand } from "../host/workbench-extension-command";
 import type {
@@ -89,12 +90,36 @@ export const executeTreeActionCommand = async (
       invocation: { placement: "visible" },
     },
   };
-  return executeWorkbenchExtensionCommand(input, commandId, {
-    params: rendererParams,
-    resource,
-    foreground: true,
-    onAdmitted,
-    slot: slotContext({ modeId, projectId: input.projectId, resource, treeId: record.id }),
-    metadata: { treeId: record.id },
-  });
+  let refreshedByEvent = false;
+  const value = await executeWorkbenchExtensionCommand(
+    {
+      ...input,
+      executeCommand: async (id, body, signal) => {
+        const response = await input.executeCommand(id, body, signal);
+        if (id === commandId && input.publishesCommandRefreshEvents && record.refreshEventIds?.length) {
+          const result = response as Partial<CommandExecutionResult> | undefined;
+          const events = result?.events ?? result?.eventIds?.map((id) => ({ id, projectId: undefined }));
+          refreshedByEvent = Boolean(
+            result?.outcome?.ok &&
+              events?.some(
+                (event) =>
+                  (!event.projectId || event.projectId === input.projectId) &&
+                  record.refreshEventIds?.includes(event.id),
+              ),
+          );
+        }
+        return response;
+      },
+    },
+    commandId,
+    {
+      params: rendererParams,
+      resource,
+      foreground: true,
+      onAdmitted,
+      slot: slotContext({ modeId, projectId: input.projectId, resource, treeId: record.id }),
+      metadata: { treeId: record.id },
+    },
+  );
+  return { value, refreshedByEvent };
 };

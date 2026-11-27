@@ -41,6 +41,7 @@ export interface RegisterWorkbenchExtensionTreeRenderersInput {
   executeCommand(commandId: string, body: CommandExecuteRequest, signal?: AbortSignal): Promise<unknown> | unknown;
   getHostTreeFooterNodes?: HostTreeDefaultNodesResolver;
   getHostTreeHeaderNodes?: HostTreeDefaultNodesResolver;
+  publishesCommandRefreshEvents?: boolean;
   metadata: WorkbenchExtensionMetadata;
   projectId: string;
   /**
@@ -130,8 +131,6 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
       inlineInput: action.inputPresentation ? { ...action.inputPresentation, nodeId: node?.id } : undefined,
       when: action.when,
       disabled: action.disabled,
-      // Actions mutate tree data (create/delete/...), so refresh afterwards. Plain
-      // node-target navigation runs through the runner command and must not refetch.
       run: commandId
         ? async (params, execution) => {
             const resource = node?.resource ?? (execution === undefined ? ctx.resource : execution.resource);
@@ -143,8 +142,16 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
               });
               return;
             }
-            await executeTreeActionCommand(input, record, commandId, actionParams, resource, execution?.onAdmitted);
-            ctx.refresh();
+            const { refreshedByEvent } = await executeTreeActionCommand(
+              input,
+              record,
+              commandId,
+              actionParams,
+              resource,
+              execution?.onAdmitted,
+            );
+            // The command event already invalidates the owning view when the host forwards it.
+            if (!refreshedByEvent) ctx.refresh();
           }
         : undefined,
     };
@@ -230,11 +237,11 @@ const registerTree = (input: RegisterWorkbenchExtensionTreeRenderersInput, recor
     {
       execute: async (rawArgs) => {
         const args = rawArgs as TargetCommandArgs;
-        const result = await executeTreeActionCommand(input, record, args.commandId, args.params, args.resource);
+        const { value } = await executeTreeActionCommand(input, record, args.commandId, args.params, args.resource);
         for (const view of input.workbench.views.listViews()) {
           if (view.body.kind === "file") input.workbench.views.refreshView(view.id);
         }
-        return result;
+        return value;
       },
     },
   );

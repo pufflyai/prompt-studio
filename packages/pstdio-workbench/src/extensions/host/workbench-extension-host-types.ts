@@ -80,6 +80,8 @@ export interface RegisterWorkbenchExtensionContributionsInput extends ChatComman
   renderWebview?(input: WorkbenchPanelRenderInput): unknown;
   settingsSectionId?: string;
   settingsSectionTitle?: string;
+  /** Local command responses publish their refresh events before the host returns them. */
+  publishesCommandRefreshEvents?: boolean;
   subscribeRefreshEvents?: (listener: (event: WorkbenchExtensionRefreshEvent) => void) => Disposable;
   subscribeRefreshReset?: (listener: (event?: QueryChangeEnvelope) => void) => Disposable;
   webviewArtifacts?: ExtensionWebviewArtifactCapabilities;

@@ -1,7 +1,15 @@
 import { defineCommand, l10n, params } from "@pstdio/sdk/extensions";
 import { notesFileAccess } from "./file-access";
 import { moveNote, requireFolder } from "./folders";
-import { createNote, deleteNote, hasSavedNoteTitle, noteExists, readNoteTitle, renameNote } from "./notes";
+import {
+  createNote,
+  deleteNote,
+  hasSavedNoteTitle,
+  noteExists,
+  readExistingNoteTitle,
+  readNoteTitle,
+  renameNote,
+} from "./notes";
 import { noteResource, notesChanged, notesMount, noteTarget } from "./pages";
 import { noteActionsSlot } from "./resource-kinds";
 
@@ -20,9 +28,8 @@ export const resolveNoteCommand = defineCommand({
   async run(ctx, input) {
     const { readable, writable } = await notesFileAccess(ctx);
     if (!readable) return noteResource(input.noteId, ctx.resource?.label ?? input.noteId, ctx, false);
-    const mount = notesMount(ctx);
-    if (!(await noteExists(mount, input.noteId))) return null;
-    return noteResource(input.noteId, await readNoteTitle(mount, input.noteId), ctx, writable);
+    const title = await readExistingNoteTitle(notesMount(ctx), input.noteId);
+    return title === undefined ? null : noteResource(input.noteId, title, ctx, writable);
   },
 });
 
@@ -33,9 +40,8 @@ export const resolveNoteOpeningCommand = defineCommand({
   async run(ctx, input) {
     const { readable, writable } = await notesFileAccess(ctx);
     if (!readable) return null;
-    const mount = notesMount(ctx);
-    if (!(await noteExists(mount, input.noteId))) return null;
-    return noteTarget(input.noteId, await readNoteTitle(mount, input.noteId), ctx, writable);
+    const title = await readExistingNoteTitle(notesMount(ctx), input.noteId);
+    return title === undefined ? null : noteTarget(input.noteId, title, ctx, writable);
   },
 });
 

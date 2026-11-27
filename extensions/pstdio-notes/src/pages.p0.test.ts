@@ -60,7 +60,13 @@ describe("note editor", () => {
   test("opens a new note with an empty body", async () => {
     const { ctx, mount } = createContext();
     const note = await createNote(mount, coreIds.create(), "Release checklist");
+    mount.exists = () => {
+      throw new Error("A successful read does not need a separate existence check");
+    };
     expect(await load(ctx, note.id)).toMatchObject({ mimeType: "text/markdown", content: "" });
+    expect(
+      await notePage.main.tab.query(ctx as never, { renderer: { resource: { type: "note", id: note.id } } }),
+    ).toEqual({ label: "Release checklist" });
   });
 
   test("asks for a note when the page has none open", async () => {
@@ -91,7 +97,7 @@ describe("note editor", () => {
     });
   });
 
-  test("handles a note removed between the existence check and editor read", async () => {
+  test("handles a note removed while the editor is opening", async () => {
     const { ctx, mount } = createContext();
     const note = await createNote(mount, coreIds.create(), "Removing");
     const readText = mount.readText;
