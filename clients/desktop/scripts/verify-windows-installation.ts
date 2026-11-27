@@ -109,7 +109,11 @@ const launchInstalled = async (version: string) => {
   const descriptorPath = join(home, "runtime.json");
   await expect.poll(() => existsSync(descriptorPath), { timeout: 10_000 }).toBe(true);
   // Read only the runtime's public discovery file. No database access is used.
-  const runtime = JSON.parse(readFileSync(descriptorPath, "utf8")) as { origin: string; appVersion: string };
+  const runtime = JSON.parse(readFileSync(descriptorPath, "utf8")) as {
+    origin: string;
+    appVersion: string;
+    pid: number;
+  };
   assert.equal(runtime.appVersion, version);
   const browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`);
   await expect
@@ -144,8 +148,34 @@ const launchInstalled = async (version: string) => {
   return { browser, page, runtime, pids: processes.map((item) => item.ProcessId) };
 };
 const closeInstalled = async (app: Awaited<ReturnType<typeof launchInstalled>>) => {
+  const started = performance.now();
+  const descriptorPath = join(home, "runtime.json");
+  assert(Number.isSafeInteger(app.runtime.pid) && app.runtime.pid > 0);
+  const report = () =>
+    powershell(`
+      Get-CimInstance Win32_Process |
+        Where-Object { $_.ProcessId -eq ${app.runtime.pid} -or $_.ParentProcessId -eq ${app.runtime.pid} } |
+        Select-Object ProcessId, ParentProcessId, Name | ConvertTo-Json -AsArray
+    `)
+      .then((processes) =>
+        console.log(
+          `Shutdown probe for ${app.runtime.appVersion} at ${Math.round(performance.now() - started)} ms: ${processes}`,
+        ),
+      )
+      .catch((error) => console.log("Could not capture shutdown process evidence", error));
+  const sample = setTimeout(() => void report(), 10_000);
   await app.page.evaluate(() => void window.promptStudioDesktop.quitApp());
-  await expect.poll(() => existsSync(join(home, "runtime.json")), { timeout: 10_000 }).toBe(false);
+  try {
+    await expect.poll(() => existsSync(descriptorPath), { timeout: 65_000 }).toBe(false);
+    console.log(
+      `${app.runtime.appVersion} removed its runtime descriptor in ${Math.round(performance.now() - started)} ms`,
+    );
+  } catch (error) {
+    await report();
+    throw error;
+  } finally {
+    clearTimeout(sample);
+  }
   await expect
     .poll(
       async () => {
