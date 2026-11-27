@@ -559,7 +559,8 @@ jobs:
           # benchmarks.yml, which stops the whole run on any other platform.
           platforms=$(jq -r 'map(select(IN("linux-x64", "darwin-arm64", "win32-x64"))) | join(",")' <<< "$TARGETS")
           gh workflow run benchmarks.yml --ref "$TAG" \
-            -f commits="$COMMIT" -f platforms="$platforms" -f release_tag="$TAG"
+            -f commits="$COMMIT" -f platforms="$platforms" -f release_tag="$TAG" \
+            -f suites='B1,B2,B3,B4,B5,B6,B7,B8'
 
       - name: Start artifact performance observations
         if: ${{ !cancelled() && env.CANDIDATE_ARTIFACT_ID != '' }}

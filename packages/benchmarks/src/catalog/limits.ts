@@ -40,6 +40,11 @@ export const meetsLimit = (value: number, budget: number, unit: BenchmarkUnit) =
   unit === "share" ? Number.isFinite(value) && value <= budget : isBelowBudget(value, budget);
 
 export const retainedLimit = (scenario: string, metric: string, platform: string = process.platform) => {
+  if (scenario === "B9" && metric === "click-to-type")
+    return {
+      value: 1_000,
+      evidence: "User-approved 2026-11-27 in PS-309: New note under 1,000 ms with 100 notes on Apple Silicon Chromium",
+    };
   if (scenario === "B2" && metric === "extensions-ready")
     return {
       value: 1_800,

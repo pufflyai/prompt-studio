@@ -1,12 +1,12 @@
 # Frozen critical workload benchmarks
 
-PS-233 authorizes a one-time consolidation into **exactly eight scenarios**. The executable owners are [suites.ts](../../../packages/benchmarks/src/suites.ts), [scenario manifest revision 1](../../../packages/benchmarks/src/catalog/scenarios.ts) and [catalog lock](../../../packages/benchmarks/catalog.lock.json). This candidate is **not qualified**. See the [disposition and qualification ledger](../../references/performance/0009-frozen-workload-ledger.md).
+PS-233 authorizes the eight critical release scenarios. PS-309 adds the on-demand Notes benchmark. The executable owners are [suites.ts](../../../packages/benchmarks/src/suites.ts), the [scenario manifest](../../../packages/benchmarks/src/catalog/scenarios.ts) and [catalog lock](../../../packages/benchmarks/catalog.lock.json). See the [disposition and qualification ledger](../../references/performance/0009-frozen-workload-ledger.md).
 
 ## Human authorization
 
 After this consolidation, agents must not add, delete, replace, resize, reorder, relax or extend scenarios, metrics, fixtures, variants or platforms without an explicit human instruction identifying that change. Do not automatically add a benchmark for a feature. Ordinary product regression tests remain allowed. Never add tests of benchmark setup, instrumentation, selection or reports.
 
-`bun run verify:benchmarks` checks the exact eight entry points, single case registration, metric allowlist and source digest. Executable workload/fixture/runner source is included in the digest, so grouping another loop or case under an existing ID changes the reviewed source. Formatting and comments do not change the TypeScript digest. A harness repair can keep the scenario version and fixture identity when semantics are unchanged.
+`bun run verify:benchmarks` checks the nine authorized entry points, single case registration, metric allowlist and source digest. Executable workload/fixture/runner source is included in the digest, so grouping another loop or case under an existing ID changes the reviewed source. Formatting and comments do not change the TypeScript digest. A harness repair can keep the scenario version and fixture identity when semantics are unchanged.
 
 A self-edited lock is not human authorization. Add the `benchmark` label to PRs that change benchmarks, workload definitions, fixtures, metrics, budgets or runners. Agents must leave these PRs for human review and merge, even when CI is green: do not merge directly, enable auto-merge or add them to the merge queue, and do not remove the label to bypass the rule. The PR records the human review and merge decision. There is no deployment approval or separate environment permission. See [PR labels](0004-pull-request-labels.md#benchmark-review-and-merge).
 
@@ -22,6 +22,7 @@ A self-edited lock is not human authorization. Add the `benchmark` label to PRs 
 | B6 | 1,000 Planner tickets, three edits each, one saved filtered list; cold actionable content, search, page, move, reopen | Linux x64, Apple Silicon Mac, Windows x64 |
 | B7 | 10,000 deterministic records with three history edits; cold/warm page of 100, one edit, read during 100-record write/maintenance | Linux x64, Apple Silicon Mac, Windows x64 |
 | B8 | One idle-session runtime crash; feedback, restored authenticated API/tools/content, first action, persisted data and cleanup | Linux x64, Apple Silicon Mac, Windows x64 |
+| B9 | New note with 100 existing notes; loaded Notes sidebar; first click to focused, painted text and Markdown save verification | Apple Silicon Mac, Chromium, on demand |
 
 Every B1–B8 scenario runs once on each of the three hosts in nightly and stable validation: **24 scenario/host combinations** per candidate. Intel Mac is excluded. The manual workflow and Performance run form default to all three hosts. Stable consumers keep signed release artifact identities; nightly Windows builds an unpublished production-mode desktop package and labels it source-diagnostic.
 
@@ -47,6 +48,7 @@ Timing and average-memory targets use strict **<**, including equality as a fail
 | B6 | Advisory targets for benchmark qualification: actionable/reopen <5,000ms, filter/page/move <250ms, longest stall <200ms. Correctness requires bounded query pages, at most 100 mounted rows and persisted edits. |
 | B7 | Cold read <300ms; warm read <180ms; one-record edit <120ms; read during maintenance <120ms. Correct page contents, persisted edits and maintenance results remain required. |
 | B8 | Recovery feedback <480ms; restored usable state <6,000ms; first action <300ms |
+| B9 | Click to first painted typed text <1,000ms. Verify the new Markdown file contains the typed text after recording the timing. |
 
 The user raised the Linux B5 average native-memory limit to 2.5GB on 2026-11-17. Earlier measurements retain their recorded limits and outcomes.
 
@@ -61,7 +63,19 @@ CPU profiling, Electron traces and forced-GC heap belong in separately labelled 
 
 `bun run verify:benchmarks` is the fast PR/queue check. Measured scenarios run in dedicated nightly/release/source qualification; editing a benchmark must not add it to PS-232's ten-minute gate.
 
-For a first-attempt local investigation, `BENCHMARK_BASELINE=1` permits capture without pretending that pending human limit decisions are resolved. Such results are explicitly unqualified and cannot certify a production consumer. Use the registered CLI's prepare and sample commands, select a supported B1–B8 ID, and retain all output. The [result reference](../../references/performance/0006-benchmark-results.md) describes identity and transport.
+For a first-attempt local investigation, `BENCHMARK_BASELINE=1` permits capture without pretending that pending human limit decisions are resolved. Such results are explicitly unqualified and cannot certify a production consumer. Use the registered CLI's prepare and sample commands, select a supported scenario ID, and retain all output. The [result reference](../../references/performance/0006-benchmark-results.md) describes identity and transport.
+
+### New note
+
+PS-309 records the user's authorization on 2026-11-27 for the Apple Silicon Chromium workload and its strict 1,000 ms ceiling. B9 runs on demand with a packaged dashboard and the Notes extension from the measured checkout. It seeds 100 Markdown notes in a disposable project and opens Notes in fresh Chromium. The timer starts when the New note button receives the click and stops after the typed text is visible in the focused editor. The sidebar can finish refreshing while the benchmark types. The test verifies the Markdown save after recording the timing.
+
+```sh
+sha=$(git rev-parse HEAD)
+bun packages/benchmarks/src/cli.ts prepare --suites B9 --sha "$sha"
+bun packages/benchmarks/src/cli.ts sample --suite B9 --sha "$sha" --out test-results/production-performance/B9-metrics.jsonl
+```
+
+Use `B9` and `darwin-arm64` to select this workload in the manual Benchmarks workflow. The release plan continues to select B1–B8.
 
 ## Desktop benchmarks
 

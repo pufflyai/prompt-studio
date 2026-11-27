@@ -11,6 +11,13 @@ export const conversationFixture = {
   file: { name: "memory.ts", content: "export const memoryWorkload = true;\n".repeat(100) },
   terminal: "echo __memory_idle__",
 };
+export const noteCreationFixture = {
+  notes: 100,
+  paragraphsPerNote: 50,
+  paragraph: "A representative paragraph with **bold text** and meaningful note content.\n\n",
+  typedText: "Ready",
+  viewport: { width: 1440, height: 900 },
+};
 export const scenarios = [
   {
     id: "B1",
@@ -187,6 +194,23 @@ export const scenarios = [
       "verify persisted data and cleanup",
     ],
     metrics: [elapsed("feedback"), elapsed("usable"), elapsed("first-action"), metric("processes", "count")],
+  },
+  {
+    id: "B9",
+    workloadVersion: 1,
+    label: "New note with 100 existing notes",
+    platforms: ["darwin-arm64"],
+    file: "packages/e2e/src/perf/critical/note-creation.p3.bench.ts",
+    cache: "fresh Chromium; Notes list loaded; no Markdown editor opened",
+    throttle: 1,
+    fixture: noteCreationFixture,
+    actions: [
+      "load the Notes sidebar",
+      "click New note",
+      "type into the focused editor and observe the painted text",
+      "verify the saved Markdown",
+    ],
+    metrics: [metric("click-to-type", "ms", "regression")],
   },
 ] as const;
 export type ScenarioId = (typeof scenarios)[number]["id"];
