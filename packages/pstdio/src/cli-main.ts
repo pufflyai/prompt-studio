@@ -1,10 +1,9 @@
-import yargs from "yargs";
 import { commandGroupPaths } from "./adapters/cli/command-group";
 import { topLevelCommandModules, topLevelCommandNames } from "./adapters/cli/commands";
 import * as dashboardCommand from "./adapters/cli/commands/dashboard";
+import { createCliParser, parseCli } from "./cli-parser";
 import { shouldEnsureApiForCommand } from "./features/cli-api-startup";
 import type { bindCliOutput } from "./features/cli-output";
-import { CLI_VERSION } from "./features/cli-version";
 import { findProjectRoot, readConfig } from "./features/config/config";
 import { ensureApi } from "./features/ensure-api";
 import { dispatchExtensionCliCommand } from "./features/extensions/extension-cli-router";
@@ -21,16 +20,6 @@ import { shouldLoadEmbedManifest } from "./features/should-load-embed-manifest";
 
 type CommandTracker = ReturnType<typeof createCliCommandTracker>;
 type ExitCli = ReturnType<typeof bindCliOutput>["exit"];
-
-// yargs keeps parsing after a `fail` handler returns, so usage errors are thrown and reported once.
-class UsageError extends Error {
-  constructor(
-    message: string,
-    readonly showHelp: () => void,
-  ) {
-    super(message);
-  }
-}
 
 // True-core commands only. Domain namespaces (the ticket board's
 // tickets/statuses/tags) are not listed here — they resolve entirely through
@@ -106,15 +95,7 @@ const tryDispatchExtensionCommand = async (
 };
 
 const buildCli = (rawArgs: string[], helpers: ArgHelpers, commandTracker: CommandTracker) => {
-  const cli = yargs(rawArgs)
-    .scriptName("pstdio")
-    .version(CLI_VERSION)
-    .strict()
-    .fail((msg, err, yargs) => {
-      // A `check` that returns a message passes it as `err` too; treat it as a usage error.
-      if (err instanceof Error) throw err;
-      throw new UsageError(msg, () => yargs.showHelp("error"));
-    })
+  const cli = createCliParser(rawArgs)
     .middleware(async (argv) => {
       commandTracker.captureArgv(argv);
       commandTracker.logStart();
@@ -183,18 +164,5 @@ export const runCli = async (rawArgs: string[], exit: ExitCli) => {
   const cli = buildCli(rawArgs, helpers, commandTracker);
   await augmentRootHelpWithNamespaces(cli, rawArgs, helpers);
 
-  try {
-    await cli.parseAsync();
-    commandTracker.logSuccess();
-  } catch (error) {
-    commandTracker.logFailure(error);
-    if (error instanceof UsageError) {
-      console.error(`${error.message}\n`);
-      error.showHelp();
-      console.error("");
-    } else {
-      console.error(`Error: ${error instanceof Error ? error.message : String(error)}`);
-    }
-    await exit(1);
-  }
+  await parseCli(cli, exit, commandTracker);
 };

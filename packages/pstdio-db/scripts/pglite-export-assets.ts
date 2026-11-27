@@ -1,6 +1,7 @@
-import { cp } from "node:fs/promises";
+import { rm } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
+import { packIcu } from "./pack-icu";
 import { vendorPgliteAssets } from "./pglite-assets";
 
 const require = createRequire(import.meta.url);
@@ -14,7 +15,9 @@ export const buildPgliteExportAssets = async (directory: string) => {
   const current = join(directory, "pglite");
   vendorPgliteAssets({ vendorDir: current, pglitePackageDir: packageRoot("@electric-sql/pglite") });
   // Preserve the package's actual data, rather than the default small ICU bundle.
-  await cp(join(dirname(require.resolve("@electric-sql/pglite-icu-full")), "icu.76.tgz"), join(current, "icu.76.tgz"));
+  const archive = Bun.file(join(dirname(require.resolve("@electric-sql/pglite-icu-full")), "icu.76.tgz"));
+  await Bun.write(join(current, "icudt76l.dat.zst"), await packIcu(archive));
+  await rm(join(current, "icu.76.tgz"), { force: true });
   const built = await Bun.build({
     entrypoints: [join(import.meta.dirname, "../src/db/pglite-export-worker.ts")],
     target: "bun",

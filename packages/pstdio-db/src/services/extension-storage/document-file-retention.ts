@@ -106,7 +106,8 @@ async function* documentFileBatches(db: DbClient, project?: string, limit = 200)
 
 /** Keep the cursor between quiet periods and retry the same batch after a filesystem error. */
 export const createDeferredDocumentSweep = (db: DbClient) => {
-  let batches = documentFileBatches(db, undefined, 32);
+  const openBatches = () => documentFileBatches(db, undefined, 16);
+  let batches = openBatches();
   let pending: { projectId: string; ids: number[] } | undefined;
   let done = false;
   return {
@@ -123,7 +124,7 @@ export const createDeferredDocumentSweep = (db: DbClient) => {
             }
             pending = next.value;
           } catch (error) {
-            batches = documentFileBatches(db, undefined, 32);
+            batches = openBatches();
             throw error;
           }
         }

@@ -35,9 +35,10 @@ export interface IndexNodeFiles {
   /** Moves nodes outside retained projects to a renamed extension id; existing target nodes win. */
   moveExtension(from: string, to: string, retainedProjects?: ReadonlySet<string>): Promise<void>;
   /** Whether any project keeps nodes under this extension id. */
-  hasExtension(extensionId: string): Promise<boolean>;
-  /** Removes every project folder whose id is not in `projectIds`. */
-  retainProjects(projectIds: ReadonlySet<string>): Promise<void>;
+  extensionIds(): Promise<Set<string>>;
+  directory?(projectId: string): string;
+  projectIds(): Promise<string[]>;
+  removeProject(projectId: string): Promise<void>;
 }
 
 /** Child order matches the relay's stored order: plain code-unit order, never locale order. */
@@ -74,6 +75,7 @@ const decode = (file: Buffer): IndexNode => {
 };
 
 const missing = (error: unknown) => (error as NodeJS.ErrnoException).code === "ENOENT";
+const inaccessible = (error: unknown) => ["EACCES", "EPERM"].includes((error as NodeJS.ErrnoException).code ?? "");
 const exists = (error: unknown) => (error as NodeJS.ErrnoException).code === "EEXIST";
 
 export const createIndexNodeFiles = (root: string): IndexNodeFiles => {
@@ -83,10 +85,25 @@ export const createIndexNodeFiles = (root: string): IndexNodeFiles => {
     const name = fileName(id);
     return join(kindDirectory(owner, kind), name.slice(0, 2), name);
   };
+  const directoryIds = async (directory: string) => {
+    const entries = await readdir(directory, { withFileTypes: true }).catch((error) => {
+      // A detached project can regain access at a later open. Leave its files alone.
+      if (missing(error) || inaccessible(error)) return [];
+      throw error;
+    });
+    return entries
+      .filter((entry) => entry.isDirectory() && segment(unsegment(entry.name)) === entry.name)
+      .map((entry) => unsegment(entry.name));
+  };
+  const names = (directory: string) =>
+    readdir(directory).catch((error) => {
+      if (missing(error)) return [];
+      throw error;
+    });
   const files = async (directory: string) => {
     const found: { id: string; path: string }[] = [];
-    for (const shard of await readdir(directory).catch(() => [] as string[])) {
-      for (const name of await readdir(join(directory, shard)).catch(() => [] as string[])) {
+    for (const shard of await names(directory)) {
+      for (const name of await names(join(directory, shard))) {
         if (!name.endsWith(".tmp")) found.push({ id: idOf(name), path: join(directory, shard, name) });
       }
     }
@@ -103,10 +120,8 @@ export const createIndexNodeFiles = (root: string): IndexNodeFiles => {
     await rm(file, { force: true });
     return undefined;
   };
-  const directories = new Set<string>();
   // Receipt folders are flushed level by level, so a crash cannot drop a new folder with its files.
   const ensureDirectory = async (directory: string, durable: boolean) => {
-    if (directories.has(directory)) return;
     const created = await mkdir(directory, { recursive: true });
     if (durable && created) {
       const levels: string[] = [];
@@ -118,7 +133,6 @@ export const createIndexNodeFiles = (root: string): IndexNodeFiles => {
       }
       for (const level of levels.reverse()) await flushDirectory(dirname(level));
     }
-    directories.add(directory);
   };
   const stage = async (kind: IndexNodeKind, file: string, node: IndexNode) => {
     const temporary = `${file}.${crypto.randomUUID()}.tmp`;
@@ -145,6 +159,20 @@ export const createIndexNodeFiles = (root: string): IndexNodeFiles => {
       await rm(temporary, { force: true });
     }
     if (kind === "receipts") await flushDirectory(dirname(file));
+  };
+  const moveOwner = async (source: string, target: string) => {
+    for (const kind of ["receipts", "logs"] as const) {
+      for (const file of await files(join(source, kind))) {
+        const name = fileName(file.id);
+        const destination = join(target, kind, name.slice(0, 2), name);
+        await ensureDirectory(dirname(destination), kind === "receipts");
+        await link(file.path, destination).catch((error) => {
+          if (!exists(error)) throw error;
+        });
+        if (kind === "receipts") await flushDirectory(dirname(destination));
+      }
+    }
+    await rm(source, { recursive: true, force: true });
   };
   return {
     async read(owner, kind, id) {
@@ -216,41 +244,33 @@ export const createIndexNodeFiles = (root: string): IndexNodeFiles => {
       return removed;
     },
     async removeOwner(owner) {
-      directories.clear();
       await rm(ownerDirectory(owner), { recursive: true, force: true });
     },
     async moveExtension(from, to, retainedProjects) {
-      for (const project of await readdir(root).catch(() => [] as string[])) {
-        if (project.startsWith(".") || retainedProjects?.has(unsegment(project))) continue;
+      for (const projectId of await directoryIds(root)) {
+        if (retainedProjects?.has(projectId)) continue;
+        const project = segment(projectId);
         const source = join(root, project, segment(from));
         const target = join(root, project, segment(to));
-        for (const kind of ["receipts", "logs"] as const) {
-          for (const file of await files(join(source, kind))) {
-            const name = fileName(file.id);
-            const destination = join(target, kind, name.slice(0, 2), name);
-            await ensureDirectory(dirname(destination), kind === "receipts");
-            await link(file.path, destination).catch((error) => {
-              if (!exists(error)) throw error;
-            });
-            if (kind === "receipts") await flushDirectory(dirname(destination));
-          }
+        try {
+          await moveOwner(source, target);
+        } catch (error) {
+          if (!inaccessible(error)) throw error;
+          // Keep the source when a project or receipt is inaccessible. Retry on the next open.
         }
-        await rm(source, { recursive: true, force: true });
       }
-      directories.clear();
     },
-    async hasExtension(extensionId) {
-      for (const project of await readdir(root).catch(() => [] as string[])) {
-        if (await stat(join(root, project, segment(extensionId))).catch(() => null)) return true;
+    async extensionIds() {
+      const ids = new Set<string>();
+      for (const projectId of await directoryIds(root)) {
+        for (const id of await directoryIds(join(root, segment(projectId)))) ids.add(id);
       }
-      return false;
+      return ids;
     },
-    async retainProjects(projectIds) {
-      for (const name of await readdir(root).catch(() => [] as string[])) {
-        if (name.startsWith(".")) continue;
-        if (!projectIds.has(unsegment(name))) await rm(join(root, name), { recursive: true, force: true });
-      }
-      directories.clear();
+    directory: (projectId) => join(root, segment(projectId)),
+    projectIds: () => directoryIds(root),
+    async removeProject(projectId) {
+      await rm(join(root, segment(projectId)), { recursive: true, force: true });
     },
   };
 };
@@ -312,9 +332,12 @@ export const createMemoryIndexNodeFiles = (): IndexNodeFiles => {
         nodes.delete(entry);
       }
     },
-    hasExtension: async (extensionId) => select(([, e]) => e === extensionId).length > 0,
-    async retainProjects(projectIds) {
-      for (const entry of select(([w]) => !projectIds.has(w))) nodes.delete(entry);
+    extensionIds: async () => new Set([...nodes.keys()].map((key) => parse(key)[1])),
+    async projectIds() {
+      return [...new Set([...nodes.keys()].map((key) => parse(key)[0]))];
+    },
+    async removeProject(projectId) {
+      for (const entry of select(([w]) => w === projectId)) nodes.delete(entry);
     },
   };
 };

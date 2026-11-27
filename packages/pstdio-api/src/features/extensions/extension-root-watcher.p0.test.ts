@@ -229,3 +229,23 @@ describe("createExtensionRootWatcher", () => {
     }
   });
 });
+
+test("a transient attachment failure retries without a project event", async () => {
+  let attempts = 0;
+  const attached = Promise.withResolvers<void>();
+  const watcher = await createExtensionRootWatcher({
+    listExtensionRoots: async () => [{ path: "/fixture", ownerRoot: "/fixture", sync: async () => {} }],
+    ensureRoot: () => {},
+    watch: () => {
+      if (++attempts === 1) throw Object.assign(new Error("watch unavailable"), { code: "EMFILE" });
+      return { close() {} };
+    },
+    onAttach: () => attached.resolve(),
+  });
+  try {
+    await attached.promise;
+    expect(attempts).toBe(2);
+  } finally {
+    watcher.dispose();
+  }
+});
