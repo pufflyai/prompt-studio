@@ -6,9 +6,9 @@ import {
 } from "pstdio-extensions";
 import {
   createWebviewUsage,
-  hasAcceptedNativeWebviews,
   hasAcceptedWebviews,
   notifyAcceptedWebviewPublication,
+  retainAcceptedWebviews,
 } from "./accepted-webview-output";
 import { createInitialWebviewCompletion } from "./complete-initial-webviews";
 import type { LoadedExtensionSnapshot } from "./extension-runtime";
@@ -27,7 +27,11 @@ import {
   type CreateExtensionWebviewBuildManagerInput,
   createBuildReporters,
 } from "./extension-webview-build-reporters";
-import { expectedWebviewBuildSource, type InstalledSourceWithManifest } from "./extension-webview-build-runner";
+import {
+  expectedWebviewBuildSource,
+  failedWebviewId,
+  type InstalledSourceWithManifest,
+} from "./extension-webview-build-runner";
 import { buildExtensionWebview } from "./extension-webview-builder";
 import {
   inspectWebviewLoadKey,
@@ -125,11 +129,6 @@ const currentSourceLoader =
     });
     return isDisposed() ? null : current;
   };
-
-const canRetainNativeWebviews = (
-  input: CreateExtensionWebviewBuildManagerInput,
-  validatedSource?: LoadedExtensionSnapshot,
-) => !validatedSource && !input.loadSource && !input.buildWebview;
 
 const refreshInstalledSources = async (
   rows: InstalledSourceWithManifest[],
@@ -277,11 +276,11 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
 
   const refreshRow = async (installedExtensionId: string, validatedSource?: LoadedExtensionSnapshot) => {
     if (disposed) return null;
-    if (
-      canRetainNativeWebviews(input, validatedSource) &&
-      (await hasAcceptedNativeWebviews(await getInstalledSource(installedExtensionId)))
-    )
-      return [];
+    if (!validatedSource && !input.loadSource && !input.buildWebview) {
+      const row = await getInstalledSource(installedExtensionId);
+      const retained = await retainAcceptedWebviews(row, webviewCacheRoot);
+      if (retained && !retained.includes(failedWebviewId(row) ?? "")) return retained;
+    }
     let current = await loadCurrentSource(installedExtensionId, validatedSource);
     if (!current || disposed) return null;
     let handled = false;

@@ -34,6 +34,7 @@ import {
 } from "./preparation-watchers";
 import { prepareWebviewArtifact, prepareWebviewArtifacts } from "./prepared-webview";
 import { type PreparePublishedInput, preparePublishedExtension } from "./publication/prepare";
+import { matchesPreparedReleaseSource } from "./release-working-copy";
 import { warmExtensionRelease } from "./warm-extension-release";
 
 const prepareCheckout = async (
@@ -89,6 +90,7 @@ const handle = createPreparationHandler({
       ReturnType<typeof checkExtensionsRoot>
     >,
   "source.inspect": inspectWebviewSourceInWorker,
+  "source.matches-release": matchesPreparedReleaseSource,
   "source.webview-key": inspectWebviewLoadKeyInWorker,
   "source.validate": validateCandidateInWorker,
   "checkout.shared": prepareCheckout,

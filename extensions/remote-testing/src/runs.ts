@@ -13,7 +13,7 @@ import {
 import { notifyRunChange } from "./events";
 import { persistResult } from "./result-persistence";
 import { readCollectionReceipt, readCollectionState } from "./run-collection-state";
-import { TRANSFER_ALLOWANCE_SECONDS } from "./run-deadline";
+import { runTimeoutSeconds, TRANSFER_ALLOWANCE_SECONDS } from "./run-deadline";
 import { type Receipt, receiptSummary, summarize, timeoutSummary } from "./run-result";
 import { isDefinitiveSubmissionRejection, saveSubmissionFailure } from "./run-submission";
 import { saveTimedOutRun } from "./run-timeout";
@@ -30,6 +30,7 @@ export interface RunDeps {
   recoverRun?(runId: string): Promise<unknown>;
   publishTemplate?(kind: BranchKind, source: BranchSource, signal?: AbortSignal): Promise<TemplateRef>;
   storage: RunStorage;
+  kitoWorkflow?: boolean;
   store: ExtensionStorageApi;
   process: ExtensionProcessApi;
   settings: Settings;
@@ -81,6 +82,12 @@ export interface RunSummary {
 const sources = (runId: string) => `sources/${runId}.tar.gz`;
 const logs = (runId: string) => `logs/${runId}.log`;
 
+function previewMetadata(kind: BranchKind, kitoWorkflow?: boolean) {
+  const metadata: Record<string, string> = {};
+  if (kind === "preview" && kitoWorkflow) metadata.kito_workflow = "true";
+  return metadata;
+}
+
 export async function startRun(
   deps: RunDeps,
   input: {
@@ -98,7 +105,7 @@ export async function startRun(
 ) {
   const runId = crypto.randomUUID();
   const command = input.command?.trim() || deps.settings.testCommand;
-  const timeoutSeconds = Math.round((input.timeoutMinutes ?? deps.settings.timeoutMinutes) * 60);
+  const timeoutSeconds = runTimeoutSeconds(input.timeoutMinutes ?? deps.settings.timeoutMinutes, deps.kitoWorkflow);
   const kind = input.kind ?? "tests";
   const publish = kind === "preview" || input.branchTemplate || input.ref !== undefined;
   if (publish && input.environmentId) throw new Error("A branch template needs a new environment.");
@@ -129,6 +136,7 @@ export async function startRun(
         {
           pstdio_project_id: deps.projectId,
           purpose: kind === "preview" ? "pstdio-preview" : "remote-testing",
+          ...previewMetadata(kind, deps.kitoWorkflow),
           revision,
           source_sha256: sha256,
         },

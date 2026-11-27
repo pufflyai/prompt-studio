@@ -15,6 +15,7 @@ import {
   installExtensionSource as installExtensionSourceDefault,
   toExtensionEnableInput,
 } from "../features/extensions/install-extension-source";
+import { isManagedCatalogSource } from "../features/extensions/managed-catalog-source";
 import { compatibilityError } from "../features/extensions/project-extension-instance";
 import type { BundledReleaseTarget, RegistryReleaseTarget } from "../features/extensions/warm-extension-release";
 import { createExtensionMarketplacePreview } from "./extension-marketplace-preview";
@@ -105,8 +106,18 @@ const extensionUpgradeDestination = async (
 };
 
 type UpgradeInstance = NonNullable<Awaited<ReturnType<ExtensionService["getProjectExtensionInstance"]>>>;
-const separateLocalProvider = async (service: ExtensionService, projectId: string, current: UpgradeInstance) => {
-  if (current.instance.enabled && current.installedSource.source_kind === "local_path") return current;
+const findLocalProvider = async (
+  catalog: Promise<ExtensionCatalog>,
+  service: ExtensionService,
+  projectId: string,
+  current: UpgradeInstance,
+) => {
+  if (current.instance.enabled && current.installedSource.source_kind === "local_path") {
+    // Older hosts rediscovered catalog installs as local paths. The normal install
+    // still verifies their exact original working tree before replacing any files.
+    if (isManagedCatalogSource(current.installedSource, await catalog)) return undefined;
+    return current;
+  }
   if (current.instance.enabled !== false) return undefined;
   const id = canonicalExtensionId(current.installedSource.extension_id);
   return (await service.listProjectExtensionInstances(projectId)).find(
@@ -162,6 +173,8 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
   const install = deps.installExtensionSource ?? installExtensionSourceDefault;
   const registry = createRegistryExtensionSource(deps, install);
   const catalog = deps.catalog ? Promise.resolve(deps.catalog) : getExtensionCatalog();
+  const separateLocalProvider = (projectId: string, current: UpgradeInstance) =>
+    findLocalProvider(catalog, deps.extensionService, projectId, current);
   const publishedAlternative = createPublishedExtensionAlternative(catalog, deps.release);
   const releaseCommits = new Map<string, Promise<string>>();
   const catalogEntry = async (installName: string) => selectExtensionCatalogEntry(await catalog, installName);
@@ -343,7 +356,7 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
   const upgrade = async (projectId: string, instanceId: string) => {
     const existing = await mutableProjectExtension(deps.extensionService, projectId, instanceId);
     if (!existing) return null;
-    const local = await separateLocalProvider(deps.extensionService, projectId, existing);
+    const local = await separateLocalProvider(projectId, existing);
     if (local) {
       throw new ExtensionUpgradeNeedsReviewError(
         `This project is using a local copy of ${local.installedSource.display_name}. The local files were kept.`,

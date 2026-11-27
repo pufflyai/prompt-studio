@@ -5,7 +5,6 @@ import type {
   OperationRecovery,
   OperationRecoverySource,
   OperationSnapshot,
-  OperationSourceCommand,
   ProjectRecoveryAvailability,
 } from "./operation-types";
 
@@ -20,7 +19,7 @@ export interface Entry {
   check?: () => Promise<void>;
   reject: (error: unknown) => void;
   source?: ResourceRef;
-  sourceCommand?: OperationSourceCommand;
+  sourceCommand?: OperationInput<unknown>["sourceCommand"];
   recoverySource?: OperationRecoverySource;
   draft?: unknown;
   describeRecovery?: () => string;
@@ -102,6 +101,9 @@ export const initialPreview = <T>(
   ...(input.showPending ? { showPending: true } : {}),
 });
 
+const recoverySourceCommand = ({ sourceCommand, error }: Entry) =>
+  typeof sourceCommand === "function" ? sourceCommand(error) : sourceCommand;
+
 export const snapshotForOperations = (entries: Iterable<Entry>, owner: string): OperationSnapshot => {
   const pending: OperationPreview[] = [];
   const recovery: OperationRecovery[] = [];
@@ -120,7 +122,7 @@ export const snapshotForOperations = (entries: Iterable<Entry>, owner: string): 
         title,
         domain,
         source: entry.source,
-        sourceCommand: entry.sourceCommand,
+        sourceCommand: recoverySourceCommand(entry),
         draft: entry.draft,
         description: entry.describeRecovery?.(),
         files: entry.recoveryFiles?.(),

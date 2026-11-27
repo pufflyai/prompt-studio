@@ -9,6 +9,13 @@ export interface Settings {
 }
 
 export const settingsSchema = {
+  kitoWorkflow: {
+    type: "boolean",
+    title: l10n("remote-testing.kito-workflow.title", "Kito API key"),
+    scope: "project",
+    default: false,
+    description: l10n("remote-testing.kito-workflow.description", "Use Kito for source storage and preview links."),
+  },
   previewBridgePath: {
     type: "string",
     title: l10n("remote-testing.preview-helper.title", "Preview URL helper"),
@@ -77,7 +84,8 @@ export const settingsSchema = {
   },
 } as const;
 
-export function readSettings(values: Partial<Record<keyof Settings, unknown>>) {
+export function readSettings(values: Partial<Record<keyof Settings | "kitoWorkflow", unknown>>) {
+  const kitoWorkflow = values.kitoWorkflow === true;
   const text = (key: keyof Settings) => {
     const value = values[key] ?? settingsSchema[key].default;
     return typeof value === "string" ? value.trim() : "";
@@ -90,9 +98,11 @@ export function readSettings(values: Partial<Record<keyof Settings, unknown>>) {
     storageBucket: text("storageBucket"),
     signerAccount: text("signerAccount"),
   };
-  const problems = (["templateName", "templateVersion", "testCommand", "storageBucket", "signerAccount"] as const)
+  const required: (keyof Settings)[] = ["templateName", "templateVersion", "testCommand"];
+  if (!kitoWorkflow) required.push("storageBucket", "signerAccount");
+  const problems = required
     .filter((key) => !settings[key])
     .map((key) => `Set the ${settingsSchema[key].title.default} setting.`);
   if (!(settings.timeoutMinutes > 0)) problems.push("Set a positive Timeout (minutes) setting.");
-  return { settings, problems };
+  return { settings, problems, kitoWorkflow };
 }

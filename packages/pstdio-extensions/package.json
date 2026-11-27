@@ -29,7 +29,7 @@
     "./authoring": "./src/authoring/index.ts",
     "./distribution": "./src/distribution/index.ts",
     "./preparation-worker": "./src/runtime/preparation-tasks.ts",
-    "./preparation-server": "./src/runtime/preparation-server.ts",
+    "./preparation-server": "./src/runtime/worker-entrypoints.ts",
     "./prepared-cache": "./src/runtime/prepared-cache.ts",
     "./revision-dependencies": "./src/runtime/revision-dependencies.ts",
     "./preparation-command": "./src/runtime/preparation-command.ts",

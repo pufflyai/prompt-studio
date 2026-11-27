@@ -61,7 +61,7 @@
         "errorCopied": "Error copiado"
       },
       "upgrade": {
-        "reviewNeeded": "Archivos locales conservados",
+        "reviewNeeded": "Actualización pausada",
         "waiting": "En espera de actualización",
         "action": "Actualizar versión",
         "current": "La extensión ya está al día",

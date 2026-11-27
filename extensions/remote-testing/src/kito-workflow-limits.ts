@@ -1,0 +1,1 @@
+export const KITO_LOG_UPLOAD_MAX_SECONDS = 9000;

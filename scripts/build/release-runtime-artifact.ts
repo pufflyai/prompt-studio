@@ -4,8 +4,6 @@ import { join } from "node:path";
 import { extensionReleaseBundleSchema, type PackageIdentity } from "pstdio-extensions/distribution";
 
 export const buildReleaseRuntimeArtifact = async (root: string, source: PackageIdentity & { bytes: Uint8Array }) => {
-  // Planner is the packaged pilot. Releases without an artifact use normal source preparation.
-  if (source.id !== "pstdio.planner") return;
   const work = await mkdtemp(join(tmpdir(), "pstdio-release-runtime-"));
   const archive = join(work, "source.tgz");
   try {

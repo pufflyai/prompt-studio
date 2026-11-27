@@ -36,7 +36,7 @@ export const ExtensionActionFeedback = (props: ExtensionActionFeedbackProps) => 
           onRetry && (
             <Button onClick={onRetry} disabled={retryDisabled}>
               {action.needsReview
-                ? t("projectSettings.extensionsPanel.upgrade.review", "Review upgrade")
+                ? t("projectSettings.extensionsPanel.upgrade.resolve", "Resolve")
                 : t("projectSettings.extensionsPanel.feedback.retry", "Retry")}
             </Button>
           )

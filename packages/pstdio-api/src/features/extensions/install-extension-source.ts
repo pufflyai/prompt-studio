@@ -47,6 +47,15 @@ export type {
 
 type InstallTransport = (data: unknown, options: PreparationOptions) => Promise<InstalledExtensionSource>;
 const prepareInstall: InstallTransport = (data, options) => runExtensionPreparation("install", data, options);
+// These keys cross the preparation worker boundary. Bundled constructor names can change.
+const installErrorTypes = {
+  ExtensionAlreadyInstalledError,
+  ExtensionValidationFailedError,
+  ExtensionUpgradeNeedsReviewError,
+  RepoScopedExtensionNeedsProjectFolderError,
+  ExtensionRegistryError,
+  GitUnavailableError,
+};
 export const installExtensionSource = async (
   input: InstallExtensionSourceInput,
   transport: InstallTransport = prepareInstall,
@@ -86,17 +95,8 @@ export const installExtensionSource = async (
     if (installed.installation) claimPreparedInstall(installed.installation);
     return installed;
   } catch (error) {
-    if (error instanceof Error) {
-      const type = [
-        ExtensionAlreadyInstalledError,
-        ExtensionValidationFailedError,
-        ExtensionUpgradeNeedsReviewError,
-        RepoScopedExtensionNeedsProjectFolderError,
-        ExtensionRegistryError,
-        GitUnavailableError,
-      ].find((type) => type.name === error.name);
-      if (type) Object.setPrototypeOf(error, type.prototype);
-    }
+    if (error instanceof Error && Object.hasOwn(installErrorTypes, error.name))
+      Object.setPrototypeOf(error, installErrorTypes[error.name as keyof typeof installErrorTypes].prototype);
     throw error;
   } finally {
     if (callbackRoot) await rm(callbackRoot, { recursive: true, force: true });

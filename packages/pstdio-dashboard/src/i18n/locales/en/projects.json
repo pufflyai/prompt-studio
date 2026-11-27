@@ -61,7 +61,7 @@
         "errorCopied": "Error copied"
       },
       "upgrade": {
-        "reviewNeeded": "Local files kept",
+        "reviewNeeded": "Update paused",
         "waiting": "Waiting to upgrade",
         "action": "Upgrade",
         "current": "Extension is already current",

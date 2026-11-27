@@ -6,6 +6,8 @@ import type {
 } from "@pstdio/sdk/api";
 import { ChakraProvider, psTheme } from "@pstdio/ui";
 import { renderToStaticMarkup } from "react-dom/server";
+import type { ExtensionActionState } from "./extension-action-feedback";
+import type { ExtensionUpgradeBatch } from "./extension-actions";
 import { ExtensionDetailControls } from "./extension-detail-controls";
 import { ExtensionsPanelView } from "./extensions-panel-view";
 
@@ -201,6 +203,58 @@ test("team requirements disable the project switch while a shared source preserv
     const reload = detail.match(/<button\b[^>]*data-testid="extension-reload"[^>]*>/)?.[0];
     expect(reload).toContain("disabled");
   }
+});
+
+test.each([
+  { name: "one update", count: 1, paused: 0, visible: false },
+  { name: "all updates paused", count: 2, paused: 2, visible: false },
+  { name: "one runnable update", count: 2, paused: 1, visible: false },
+  { name: "multiple runnable updates", count: 3, paused: 1, visible: true },
+])("Upgrade all visibility with $name", ({ count, paused, visible }) => {
+  const extensions = Array.from({ length: count }, (_, index) => ({
+    ...groupedExtension(`tool-${index}`, true, "global", true),
+    canUpgrade: true,
+    updateAvailable: true,
+  }));
+  const actionStates: Record<string, ExtensionActionState> = Object.fromEntries(
+    extensions.slice(0, paused).map(({ id }) => [id, { status: "error", label: "Update paused", needsReview: true }]),
+  );
+  const batch: ExtensionUpgradeBatch | undefined = paused
+    ? { ids: extensions.map(({ id }) => id), completed: count, failed: 0, reviewRequired: paused, running: false }
+    : undefined;
+  const markup = renderToStaticMarkup(
+    <ChakraProvider value={psTheme}>
+      <ExtensionsPanelView
+        extensions={extensions}
+        actionStates={actionStates}
+        batch={batch}
+        marketplace={[]}
+        diagnostics={[]}
+        automations={[]}
+      />
+    </ChakraProvider>,
+  );
+  expect(markup.includes('data-testid="extensions-upgrade-all"')).toBe(visible);
+});
+
+test.each(["running", "queued"] as const)("does not count an individual %s update toward Upgrade all", (status) => {
+  const extensions = ["one", "two"].map((id) => ({
+    ...groupedExtension(id, true, "global", true),
+    canUpgrade: true,
+    updateAvailable: true,
+  }));
+  const markup = renderToStaticMarkup(
+    <ChakraProvider value={psTheme}>
+      <ExtensionsPanelView
+        extensions={extensions}
+        actionStates={{ one: { status, label: "Upgrading" } }}
+        marketplace={[]}
+        diagnostics={[]}
+        automations={[]}
+      />
+    </ChakraProvider>,
+  );
+  expect(markup).not.toContain('data-testid="extensions-upgrade-all"');
 });
 
 test("groups enabled before other installed extensions and searches across authors and scopes", () => {
