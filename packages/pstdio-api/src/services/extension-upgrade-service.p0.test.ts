@@ -327,7 +327,7 @@ test("requires review when the project is using a separate local copy with the s
     workspaceService: emptyWorkspaceService,
   });
 
-  await expect(service.upgrade("project-1", "instance-1")).rejects.toThrow("using a local copy of Local Planner");
+  await expect(service.upgrade("project-1", "instance-1")).rejects.toThrow("Choose which version of Local Planner");
   expect(installExtensionSource).not.toHaveBeenCalled();
 });
 

@@ -168,9 +168,7 @@ test("keeps individual recovery after completed bulk upgrade progress disappears
             separateLocalProvider: true,
             hasOriginal: true,
             resolutions: [],
-            changes: refreshed
-              ? [{ path: "src/extension.ts", status: "conflict", localKind: "file", incomingKind: "file" }]
-              : [],
+            changes: [{ path: "src/extension.ts", status: "conflict", localKind: "file", incomingKind: "file" }],
             changedPaths: refreshed ? undefined : ["src/extension.ts"],
           },
         },
@@ -179,8 +177,9 @@ test("keeps individual recovery after completed bulk upgrade progress disappears
     await page.goBack();
     await openConflictReview(page, row(local.id));
     const review = page.getByRole("dialog", { name: `Review ${local.displayName} upgrade` });
-    await expect(review.getByRole("textbox", { name: "Additional instructions (optional)" })).toBeVisible();
-    await expect(review.getByRole("button", { name: "Ask agent" })).toBeEnabled();
+    await expect(review).toBeVisible();
+    await expect(review.getByRole("textbox", { name: "Additional instructions (optional)" })).toHaveCount(0);
+    await expect(review.getByRole("button", { name: "Ask agent" })).toHaveCount(0);
     await expect(review.getByRole("button", { name: "Keep my version" })).toBeEnabled();
     await expect(review.getByRole("button", { name: "Use their version" })).toBeDisabled();
     releaseComparison.resolve();
@@ -189,7 +188,7 @@ test("keeps individual recovery after completed bulk upgrade progress disappears
     await page.getByRole("button", { name: "System activity", exact: true }).click();
     await page
       .getByRole("alert")
-      .filter({ hasText: "This project is using a local copy." })
+      .filter({ hasText: confirmedConflict.error })
       .getByRole("button", { name: "Resolve", exact: true })
       .click();
     await expect(review).toBeVisible();

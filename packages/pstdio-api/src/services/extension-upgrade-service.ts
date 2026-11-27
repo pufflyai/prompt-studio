@@ -331,7 +331,7 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
         : undefined;
     if (local && !fingerprint) {
       throw new ExtensionUpgradeNeedsReviewError(
-        `This project is using a local copy of ${local.installedSource.display_name}. The local files were kept.`,
+        `Choose which version of ${local.installedSource.display_name} to use in this project.`,
       );
     }
     const input = await resolveUpgradeInput(projectId, existing);
