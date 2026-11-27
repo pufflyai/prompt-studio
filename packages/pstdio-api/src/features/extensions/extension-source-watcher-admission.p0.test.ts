@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, realpath, rm, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createPreparationScope, stopExtensionPreparation, subscribePreparationEvents } from "pstdio-extensions";
@@ -37,10 +37,24 @@ test("source edits overtake pending attachment reconciliation without losing off
     },
     onError: (error) => errors.push(error),
   });
+  let liveWatchReady = false;
+  const unsubscribe = subscribePreparationEvents((event) => {
+    if (event.sourcePath === paths[2] && !event.attachment && typeof event.sourceHash === "string")
+      liveWatchReady = true;
+  });
   try {
     await entered.promise;
     expect(observed).toEqual([paths[0]!]);
-    await writeFile(join(paths[2]!, "SKILL.md"), "live edit");
+    const skill = join(paths[2]!, "SKILL.md");
+    const readinessDeadline = Date.now() + 3_000;
+    // A metadata touch proves native event delivery while the original attachment remains held.
+    while (!liveWatchReady && Date.now() < readinessDeadline) {
+      const now = new Date();
+      await utimes(skill, now, now);
+      await Bun.sleep(150);
+    }
+    expect(liveWatchReady).toBe(true);
+    await writeFile(skill, "live edit");
     await edited.promise;
     expect(observed).toEqual([paths[0]!, paths[2]!]);
     release.resolve();
@@ -48,6 +62,7 @@ test("source edits overtake pending attachment reconciliation without losing off
     expect(observed).toEqual([paths[0]!, paths[2]!, paths[1]!]);
     expect(errors).toEqual([]);
   } finally {
+    unsubscribe();
     release.resolve();
     await watcher.dispose();
     await stopExtensionPreparation();
