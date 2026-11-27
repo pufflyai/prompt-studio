@@ -5,6 +5,15 @@ import { Chart, type ChartProps } from "@tanstack/charts/react";
 import { createContext, type ReactNode, useContext } from "react";
 
 export const releaseHealthDashboardLayout = defineStyle({
+  "& [data-dashboard-widget-body]": {
+    containerName: "release-health-widget",
+    containerType: "size",
+  },
+  "@container release-health-widget (max-height: 14rem)": {
+    // Header descriptions sit in the heading stack. Metric descriptions sit beneath the value row.
+    "& [data-dashboard-widget-body] > .chakra-stack > .chakra-stack > p, & [data-dashboard-widget-body] > div:has(> .chakra-stack) > p":
+      { display: "none" },
+  },
   "& [data-dashboard-widget-body] [data-dashboard-controls]": {
     alignSelf: "flex-start",
   },
