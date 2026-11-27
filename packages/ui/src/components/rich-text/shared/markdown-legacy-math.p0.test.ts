@@ -74,6 +74,20 @@ Use \) to close it.`);
     ]);
   });
 
+  test("keeps the next heading when a single-line display formula contains dollars", () => {
+    const doc = parseMarkdown(String.raw`\[ $$ \]
+
+## Next`);
+    expect(doc.children).toMatchObject([{ type: "math", value: "$$" }, { type: "heading" }]);
+  });
+
+  test("rejects an indented display closer even when its line is the end of the file", () => {
+    const doc = parseMarkdown(String.raw`\[
+x
+    \]`);
+    expect(doc.children.map((node) => node.type)).toEqual(["paragraph"]);
+  });
+
   test("matches mixed inline delimiters independently and retains escaped dollars", () => {
     const doc = parseMarkdown(String.raw`A leftover \[ before \(\text{\$5}\), then \[y + z\].`);
     expect(doc.children).toMatchObject([

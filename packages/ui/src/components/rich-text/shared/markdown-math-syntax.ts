@@ -1,3 +1,4 @@
+import { type Math as MathNode, mathFromMarkdown } from "mdast-util-math";
 import { math } from "micromark-extension-math";
 
 type SyntaxExtension = ReturnType<typeof math>;
@@ -30,7 +31,7 @@ const decimalAmount: TextConstruct = {
   },
 };
 
-const startsMath = (code: Code) => code !== null && /[\p{L}\p{N}\\([\]{_+−-]/u.test(String.fromCharCode(code));
+const startsMath = (code: Code) => code !== null && /[\p{L}\p{N}\\([\]{_+|−-]/u.test(String.fromCharCode(code));
 
 const dollarInline: TextConstruct = {
   ...nativeInline,
@@ -42,17 +43,41 @@ const dollarInline: TextConstruct = {
     function after(code: Code) {
       if (code !== period && !startsMath(code)) return ok(code);
       const source = context.sliceSerialize({ start, end: context.now() });
-      if (!/^\$(?:[0-9]|\.[0-9])/.test(source)) return ok(code);
-      if (/^\$(?:[0-9]+(?:[.,][0-9]+)*|\.[0-9]+)\$$/.test(source)) return ok(code);
+      const amount = /^\$(?:[0-9]+(?:[.,][0-9]+)*|\.[0-9]+)/.exec(source)?.[0];
+      if (!amount) return ok(code);
+      const following = source.slice(amount.length, -1);
+      const separator = /^[\s,.;:!?–—−-]+$/.test(following);
+      const prose = /^(?:\s+\p{L}{2,}|[,.;:!?]\s+\p{L})[\p{L}\p{N}\s,.;:!?‘’'-]*\s$/u.test(following);
+      if (!separator && !prose) return ok(code);
 
       // A price's dollar can look like a closing math delimiter before the next amount or formula.
       if (code === period) return effects.check(decimalAmount, nok, ok)(code);
-      return isDigit(code) || /\s\$$/.test(source) ? nok(code) : ok(code);
+      return isDigit(code) || /\s$/.test(following) ? nok(code) : ok(code);
     }
   },
 };
 
 export const dollarMath: SyntaxExtension = { ...nativeMath, text: { ...nativeMath.text, [dollar]: dollarInline } };
+
+const nativeMathAst = mathFromMarkdown();
+const displayFences = new WeakMap<MathNode, { closingLine?: number }>();
+export const closingMathFenceLine = (node: MathNode) => displayFences.get(node)?.closingLine;
+
+export const mathAst: ReturnType<typeof mathFromMarkdown> = {
+  ...nativeMathAst,
+  exit: {
+    ...nativeMathAst.exit,
+    mathFlowFence(token) {
+      const node = this.stack.findLast((entry) => entry.type === "math");
+      if (node?.type === "math") {
+        const fences = displayFences.get(node);
+        if (fences) fences.closingLine = token.start.line;
+        else displayFences.set(node, {});
+      }
+      nativeMathAst.exit?.mathFlowFence?.call(this, token);
+    },
+  },
+};
 
 export const legacyInlineMath = (matches: ReadonlyMap<number, number>): SyntaxExtension => ({
   text: {

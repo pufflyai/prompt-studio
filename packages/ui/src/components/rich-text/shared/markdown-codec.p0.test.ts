@@ -1,6 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { $getRoot } from "lexical";
-import { exportLexicalToMarkdown, importMarkdownToLexical, parseMarkdown } from "./markdown-codec";
+import {
+  exportLexicalToMarkdown,
+  importMarkdownToLexical,
+  parseMarkdown,
+  serializeMarkdownAst,
+} from "./markdown-codec";
 import { $isRawHtmlNode } from "./nodes/RawHtmlNode";
 import { createHeadlessEditor } from "./transformers/markdown-transformers-test-utils";
 
@@ -166,7 +171,7 @@ a + b = c
     ]);
   });
 
-  test.each(["-x", "α", "[x]"])("keeps a price separate from a formula beginning with %s", (formula) => {
+  test.each(["-x", "α", "[x]", "|x|"])("keeps a price separate from a formula beginning with %s", (formula) => {
     const markdown = `It costs $5 and $${formula}$ is a term.`;
     expect(parseMarkdown(markdown).children).toMatchObject([
       {
@@ -178,6 +183,39 @@ a + b = c
         ],
       },
     ]);
+  });
+
+  test("keeps a numeric coefficient formula followed immediately by a digit", () => {
+    const source = "Use $2x$2 times.";
+    expect(parseMarkdown(roundTrip(source)).children).toMatchObject([
+      {
+        type: "paragraph",
+        children: [
+          { type: "text", value: "Use " },
+          { type: "inlineMath", value: "2x" },
+          { type: "text", value: "2 times." },
+        ],
+      },
+    ]);
+  });
+
+  test("serializes adjacent equations containing backticks as distinct math", () => {
+    const serialized = serializeMarkdownAst({
+      type: "root",
+      children: [
+        {
+          type: "paragraph",
+          children: [
+            { type: "inlineMath", value: "`a" },
+            { type: "inlineMath", value: "b`" },
+          ],
+        },
+      ],
+    });
+    const paragraph = parseMarkdown(serialized).children[0];
+    expect(
+      paragraph?.type === "paragraph" && paragraph.children.filter((child) => child.type === "inlineMath"),
+    ).toMatchObject([{ value: "`a" }, { value: "b`" }]);
   });
 
   test("keeps unmatched square bracket escapes as text around valid equations", () => {

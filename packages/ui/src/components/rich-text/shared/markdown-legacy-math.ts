@@ -1,4 +1,5 @@
 import type { Nodes, Paragraph, Parent, Root } from "mdast";
+import { closingMathFenceLine } from "./markdown-math-syntax";
 
 interface SourceRange {
   start: number;
@@ -170,6 +171,12 @@ const findDisplayPairs = (
   return pairs;
 };
 
+const displayFence = (value: string) => {
+  let width = 2;
+  for (const [dollars] of value.matchAll(/\$+/g)) width = Math.max(width, dollars.length + 1);
+  return "$".repeat(width);
+};
+
 const displayLines = (sourceLines: string[], literals: SourceRange[]) => {
   let offset = 0;
   return sourceLines.map((line) => {
@@ -177,7 +184,8 @@ const displayLines = (sourceLines: string[], literals: SourceRange[]) => {
     offset += line.length + 1;
     const [, indent = "", expression = ""] = singleLineDisplayPattern.exec(line) ?? [];
     if (expression.trim() && !literalAt(literals, lineStart, lineStart + line.length)) {
-      return [`${indent}$$`, expression.trim(), `${indent}$$`];
+      const fence = displayFence(expression);
+      return [`${indent}${fence}`, expression.trim(), `${indent}${fence}`];
     }
     return [line];
   });
@@ -186,39 +194,46 @@ const displayLines = (sourceLines: string[], literals: SourceRange[]) => {
 const renderLegacyMath = (source: string[], normalized: string[][], pairs: DisplayPair[]) => {
   const lines: string[] = [];
   const fences: string[] = [];
+  const standalone = new Map<number, string>();
   let next = 0;
   const appendNormalized = (end: number) => {
-    for (; next < end; next++) lines.push(...normalized[next]!);
+    for (; next < end; next++) {
+      const row = normalized[next]!;
+      if (row.length > 1)
+        standalone.set(next, `${lines.length}:${row[0]!.indexOf("$")}:${lines.length + row.length - 1}`);
+      lines.push(...row);
+    }
   };
   for (const { open, close } of pairs) {
     appendNormalized(open.index);
-    const start = lines.length;
-    lines.push(`${open.prefix}$$`);
+    const body = source.slice(open.index + 1, close.index);
     const first = source[open.index]!.slice(open.offset + 2).trim();
-    if (first) lines.push(continuedPrefix(open.prefix) + first);
-    for (let index = open.index + 1; index < close.index; index++) lines.push(source[index]!);
-
+    if (first) body.unshift(continuedPrefix(open.prefix) + first);
     const last = source[close.index]!.slice(0, close.offset).trimEnd();
-    const prefix = continuedPrefix(close.prefix);
-    if (last.trim() !== close.prefix.trim()) lines.push(last);
+    if (last.trim() !== close.prefix.trim()) body.push(last);
+
+    const fence = displayFence(body.join("\n"));
+    const start = lines.length;
+    lines.push(`${open.prefix}${fence}`);
+    for (const line of body) lines.push(line);
     fences.push(`${start}:${open.offset}:${lines.length}`);
-    lines.push(`${prefix}$$`);
+    lines.push(`${continuedPrefix(close.prefix)}${fence}`);
     next = close.index + 1;
   }
   appendNormalized(normalized.length);
-  return { markdown: lines.join("\n"), fences };
+  return { markdown: lines.join("\n"), fences, standalone };
 };
 
-const acceptedDisplayPairs = (tree: Root, rendered: ReturnType<typeof renderLegacyMath>, pairs: DisplayPair[]) => {
-  const parsedFences = new Set<string>();
+const recognizedDisplayFences = (tree: Root) => {
+  const fences = new Set<string>();
   forEachChild(tree, (node) => {
-    if (node.type === "math" && node.position) {
-      const { start, end } = node.position;
-      parsedFences.add(`${start.line - 1}:${start.column - 1}:${end.line - 1}`);
-    }
+    if (node.type !== "math" || !node.position) return;
+    const closingLine = closingMathFenceLine(node);
+    if (closingLine === undefined) return;
+    const { start } = node.position;
+    fences.add(`${start.line - 1}:${start.column - 1}:${closingLine - 1}`);
   });
-  // Only retain a replacement when Markdown recognizes both fences in the same math block.
-  return pairs.filter((_, index) => parsedFences.has(rendered.fences[index]!));
+  return fences;
 };
 
 type ParseMath = (markdown: string, matches?: ReadonlyMap<number, number>) => Root;
@@ -234,15 +249,30 @@ const planDisplay = (markdown: string, syntax: ReturnType<typeof readSyntax>, in
   return { source, pairs, lines };
 };
 
-const displaySourceRanges = (plan: ReturnType<typeof planDisplay>, parse: ParseMath) => {
+const validateDisplay = (plan: ReturnType<typeof planDisplay>, parse: ParseMath) => {
   const { source, pairs, lines } = plan;
-  const ends = new Map<number, number>();
-  if (pairs.length) {
-    const rendered = renderLegacyMath(source, lines, pairs);
-    for (const { open, close } of acceptedDisplayPairs(parse(rendered.markdown), rendered, pairs)) {
-      ends.set(open.index, close.index);
-    }
+  const rendered = renderLegacyMath(source, lines, pairs);
+  if (!rendered.fences.length && !rendered.standalone.size) {
+    return { ...plan, markdown: rendered.markdown, tree: undefined };
   }
+
+  const tree = parse(rendered.markdown);
+  const recognized = recognizedDisplayFences(tree);
+  const accepted = pairs.filter((_, index) => recognized.has(rendered.fences[index]!));
+  const standalone = lines.map((line, index) => {
+    const fence = rendered.standalone.get(index);
+    return fence === undefined || recognized.has(fence) ? line : [source[index]!];
+  });
+  if (accepted.length === pairs.length && standalone.every((line, index) => line === lines[index])) {
+    return { ...plan, markdown: rendered.markdown, tree };
+  }
+
+  const fallback = renderLegacyMath(source, standalone, accepted);
+  return { source, pairs: accepted, lines: standalone, markdown: fallback.markdown, tree: parse(fallback.markdown) };
+};
+
+const displaySourceRanges = ({ source, pairs, lines }: ReturnType<typeof validateDisplay>) => {
+  const ends = new Map(pairs.map(({ open, close }) => [open.index, close.index]));
   const offsets = [0];
   for (const line of source) offsets.push(offsets.at(-1)! + line.length + 1);
 
@@ -264,7 +294,9 @@ export const parseLegacyInlineSource = (markdown: string, parse: ParseMath) => {
   const inline = matchInline(markdown, syntax);
   if (!inline.length) return original;
   // Keep original offsets while preventing display blocks from shifting the inline source ranges.
-  const displays = markdown.includes("\\[") ? displaySourceRanges(planDisplay(markdown, syntax, inline), parse) : [];
+  const displays = markdown.includes("\\[")
+    ? displaySourceRanges(validateDisplay(planDisplay(markdown, syntax, inline), parse))
+    : [];
   const matches = inline.filter(({ open, close }) => !literalAt(displays, open, close + 2));
   return matches.length ? parse(markdown, new Map(matches.map(({ open, close }) => [open, close]))) : original;
 };
@@ -287,15 +319,9 @@ export const parseLegacyMath = (markdown: string, parse: ParseMath) => {
 
   const syntax = readSyntax(markdown, original);
   const originalInline = matchInline(markdown, syntax);
-  const { source, pairs, lines } = planDisplay(markdown, syntax, originalInline);
-  const rendered = renderLegacyMath(source, lines, pairs);
-  const normalized = rendered.markdown === markdown ? original : parse(rendered.markdown);
-  const accepted = pairs.length ? acceptedDisplayPairs(normalized, rendered, pairs) : pairs;
-  const input =
-    accepted.length === pairs.length ? rendered.markdown : renderLegacyMath(source, lines, accepted).markdown;
-  let tree = normalized;
-  if (input === markdown) tree = original;
-  else if (input !== rendered.markdown) tree = parse(input);
+  const display = validateDisplay(planDisplay(markdown, syntax, originalInline), parse);
+  const input = display.markdown;
+  const tree = display.tree ?? original;
   const inline = input === markdown ? originalInline : matchInline(input, readSyntax(input, tree));
   return inline.length ? parse(input, new Map(inline.map(({ open, close }) => [open, close]))) : tree;
 };

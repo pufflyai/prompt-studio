@@ -1,15 +1,15 @@
 import type { Paragraph, PhrasingContent, Root, RootContent } from "mdast";
 import { fromMarkdown } from "mdast-util-from-markdown";
 import { gfmFromMarkdown, gfmToMarkdown } from "mdast-util-gfm";
-import { type InlineMath, mathFromMarkdown, mathToMarkdown } from "mdast-util-math";
+import { type InlineMath, mathToMarkdown } from "mdast-util-math";
 import { type Handle, toMarkdown } from "mdast-util-to-markdown";
 import { gfm } from "micromark-extension-gfm";
 import { parseLegacyInlineSource, parseLegacyMath } from "./markdown-legacy-math";
-import { dollarMath, legacyInlineMath } from "./markdown-math-syntax";
+import { dollarMath, legacyInlineMath, mathAst } from "./markdown-math-syntax";
 
 const parserOptions = {
   extensions: [gfm(), dollarMath],
-  mdastExtensions: [gfmFromMarkdown(), mathFromMarkdown()],
+  mdastExtensions: [gfmFromMarkdown(), mathAst],
 };
 
 const nativeMathSerializer = mathToMarkdown();
@@ -17,7 +17,7 @@ const toDollarMath = nativeMathSerializer.handlers?.inlineMath;
 if (!toDollarMath) throw new Error("Markdown's inline math serializer is missing");
 
 const canUseLegacyDelimiter = (value: string) =>
-  value.trim() && !/[\r\n]|\\[()[\]]|\\$/.test(value) && !/(?:^|[^\\])(?:\\\\)*\$/.test(value);
+  value.trim() && !/[\r\n`]|\\[()[\]]|\\$/.test(value) && !/(?:^|[^\\])(?:\\\\)*\$/.test(value);
 
 const toInlineMath: Handle = (node: InlineMath, parent, state, info) => {
   const activeIndex = state.indexStack.at(-1) ?? 0;
