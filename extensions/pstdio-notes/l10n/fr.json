@@ -1,5 +1,4 @@
 {
-  "commands.authorizeActivity": "Vérifier l’accès à la discussion de la note",
   "activity.resolve": "Résoudre les notes",
   "commands.resolveNoteOpening": "Résoudre l’ouverture de la note"
 }

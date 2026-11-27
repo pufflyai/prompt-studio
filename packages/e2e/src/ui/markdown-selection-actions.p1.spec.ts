@@ -1,9 +1,11 @@
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { folderProjectInput } from "../helpers/folder-project";
+import { createPlannerTicket, executePlannerCommand } from "../helpers/planner-api";
 import { nativePublicTextEditor } from "../helpers/verify-public-text-editor";
 import { expect, test } from "../scripts/session-test";
+import { uiOrigin } from "../ui-server";
 
 // Critical: a passage action must let the person author a comment without losing its selection.
 test("selected text opens an editable comment popover and publishes the authored text", async ({ page, request }) => {
@@ -12,33 +14,34 @@ test("selected text opens an editable comment popover and publishes the authored
   expect(created.ok()).toBe(true);
   const project = await created.json();
   try {
-    const response = await request.post(
-      `/v1/projects/${project.id}/extensions/commands/pstdio.notes.command.notes.create/execute`,
-      { data: { params: { title: "Review this passage" }, source: "api" } },
-    );
-    expect(response.ok()).toBe(true);
-    const note = (await response.json()).outcome.value;
-    await page.goto(`/projects/${project.id}/extensions/pstdio.notes/notes`);
-    const sidebar = page.locator('[data-workbench-region="sidenav"]');
-    await sidebar.getByRole("option", { name: "Notes", exact: true }).click();
-    await sidebar.getByRole("option", { name: note.title, exact: true }).click();
-    const editor = nativePublicTextEditor(page);
-    await expect(editor).toBeVisible();
-    await editor.fill("Discuss this passage before changing it.");
-    await expect
-      .poll(() =>
-        readFileSync(join(root, ".pstdio/extension-storage/pstdio.notes/documents", note.id, "content.md"), "utf8"),
-      )
-      .toContain("Discuss this passage before changing it.");
-    await editor.evaluate((element) => {
-      const text = document.createTreeWalker(element, NodeFilter.SHOW_TEXT).nextNode()!;
-      const range = document.createRange();
-      range.setStart(text, 0);
-      range.setEnd(text, 20);
-      const selection = document.getSelection()!;
-      selection.removeAllRanges();
-      selection.addRange(range);
+    const passage = "Discuss this passage";
+    const body = `${passage} before changing it.`;
+    const ticket = await createPlannerTicket(request, uiOrigin, project.id, {
+      content: `# Review this passage\n\n${body}`,
     });
+    const link = await executePlannerCommand<{ href: string }>(request, uiOrigin, project.id, "document-link", {
+      id: ticket.id,
+    });
+    await page.goto(link.href);
+    const editor = nativePublicTextEditor(page);
+    await expect(editor).toContainText(body);
+    const selectPassage = async () => {
+      await editor.focus();
+      await editor.evaluate((element, textToSelect) => {
+        const walker = element.ownerDocument.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+        let text = walker.nextNode();
+        while (text && !text.textContent?.includes(textToSelect)) text = walker.nextNode();
+        if (!text) throw new Error(`Passage unavailable: ${textToSelect}`);
+        const start = text.textContent!.indexOf(textToSelect);
+        const range = element.ownerDocument.createRange();
+        range.setStart(text, start);
+        range.setEnd(text, start + textToSelect.length);
+        const selection = element.ownerDocument.getSelection()!;
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }, passage);
+    };
+    await selectPassage();
     const toolbar = page.locator(".floating-text-format-toolbar.active");
     await expect(toolbar.getByRole("button", { name: "Comment", exact: true })).toBeVisible();
     await toolbar.getByRole("button", { name: "Comment", exact: true }).click();
@@ -68,8 +71,8 @@ test("selected text opens an editable comment popover and publishes the authored
     await expect(composer).toHaveCount(0);
     const activity = page.getByLabel("Resource activity", { exact: true });
     await expect(activity.getByText("Clarify the retry behavior.", { exact: true })).toBeVisible();
-    await expect(activity).toContainText("Discuss this passage");
-    await expect(editor).toHaveText("Discuss this passage before changing it.");
+    await expect(activity).toContainText(passage);
+    await expect(editor).toContainText(body);
 
     // A thread reply must never consume or redirect the independent top-level draft.
     const thread = activity.locator("article[data-activity-entry]").filter({
@@ -112,21 +115,13 @@ test("selected text opens an editable comment popover and publishes the authored
     await expect(activity.locator("article[data-activity-entry]")).toHaveCount(2);
     await expect(thread.getByText("Independent top-level draft.", { exact: true })).toHaveCount(0);
 
-    await editor.evaluate((element) => {
-      const text = document.createTreeWalker(element, NodeFilter.SHOW_TEXT).nextNode()!;
-      const range = document.createRange();
-      range.setStart(text, 0);
-      range.setEnd(text, 20);
-      const selection = document.getSelection()!;
-      selection.removeAllRanges();
-      selection.addRange(range);
-    });
+    await selectPassage();
     const ask = toolbar.getByRole("button", { name: "Ask agent", exact: true });
     await expect(ask).toBeVisible();
     const sessionsBefore = await (await request.get(`/v1/projects/${project.id}/sessions`)).json();
     await ask.click();
     const side = page.locator('[data-workbench-region="side"]');
-    const question = side.locator('[contenteditable="true"]').filter({ hasText: "Discuss this passage" });
+    const question = side.locator('[contenteditable="true"]').filter({ hasText: passage });
     await expect(question).toBeVisible();
     await expect(question).toContainText("About this passage");
     await question.press("End");

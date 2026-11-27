@@ -172,15 +172,10 @@ test("keeps note titles independent of the body and renames them through the con
       selection.removeAllRanges();
       selection.addRange(range);
     });
-    await page.getByRole("button", { name: "Comment", exact: true }).click();
-    const composer = page.getByRole("dialog", { name: "Comment on selection" });
-    await expect(composer.getByRole("textbox", { name: "Write a comment…" })).toBeFocused();
-    await composer.getByRole("textbox", { name: "Write a comment…" }).fill("Keep this sentence.");
-    await composer.getByRole("button", { name: "Submit comment" }).click();
-    const discussion = page.getByLabel("Resource activity", { exact: true });
-    await expect(discussion.getByText("Keep this sentence.", { exact: true })).toBeVisible();
-    await discussion.getByRole("button", { name: "“Body text”" }).click();
-    await expect(discussion.getByText("Passage unavailable")).toHaveCount(0);
+    const toolbar = page.locator(".floating-text-format-toolbar.active");
+    await expect(toolbar.getByRole("button", { name: "Bold", exact: true })).toBeVisible();
+    await expect(toolbar.getByRole("button", { name: "Comment", exact: true })).toHaveCount(0);
+    await expect(page.locator('[data-workbench-menu-id="pstdio.notes.view.note-editor:activity"]')).toHaveCount(0);
 
     // Critical: editing must not capture the host command-palette shortcut.
     await editor.press("ControlOrMeta+p");

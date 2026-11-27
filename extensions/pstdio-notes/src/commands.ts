@@ -26,19 +26,6 @@ export const resolveNoteCommand = defineCommand({
   },
 });
 
-export const authorizeNoteActivity = defineCommand({
-  id: "notes.authorize-activity",
-  title: l10n("commands.authorizeActivity", "Check note discussion access"),
-  params: { operation: params.text(), resource: params.json() },
-  async run(ctx) {
-    const noteId = ctx.resource?.id;
-    const allowed = Boolean(
-      noteId && (await notesFileAccess(ctx)).readable && (await noteExists(notesMount(ctx), noteId)),
-    );
-    return { allowed, ...(allowed ? {} : { reason: "This note is unavailable." }) };
-  },
-});
-
 export const resolveNoteOpeningCommand = defineCommand({
   id: "notes.resolve-opening",
   title: l10n("commands.resolveNoteOpening", "Resolve note opening"),

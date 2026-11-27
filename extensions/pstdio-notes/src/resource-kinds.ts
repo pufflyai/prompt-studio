@@ -6,8 +6,6 @@ export const note = defineResourceKind({
   resolveMany: { kind: "command", id: "notes.resolve-many" },
   label: l10n("resources.note", "Note"),
   icon: "file-text",
-  activity: { comments: true },
-  authorizeActivity: { kind: "command", id: "notes.authorize-activity" },
   resolve: { kind: "command", id: "notes.resolve" },
   paths: documentPaths.map((prefix) => ({ prefix, resolve: { kind: "command", id: "notes.resolve-path" } })),
   menuSlots: [{ id: "actions", placement: "context-menu", access: "owner" }],

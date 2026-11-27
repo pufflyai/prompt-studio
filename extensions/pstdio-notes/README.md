@@ -16,8 +16,6 @@ Install Notes once for your user, then turn it on in each project that should us
 
 Select **Notes** in the project sidebar to open its page. Use its chevron to expand your notes and folders. The tree starts collapsed and stays in the project sidebar when you open a note. Open a note to edit it in the Markdown editor. The editor shows headings, lists, links, tables, and code blocks as formatted text, and saves as you type.
 
-Select a passage and choose **Comment** to open a discussion in Activity. The quoted text stays with the discussion when the note changes. Click the quote to reveal the passage, or read the quote in Activity if the passage was deleted.
-
 ![A formatted Markdown note named Reading list, with a heading and a list of articles to read.](../../documentation/images/notes-editor.png)
 
 The sidebar keeps your notes within reach while Main shows the note's body. This example is a Markdown note named **Reading list**.
