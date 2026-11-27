@@ -118,6 +118,7 @@ jobs:
           sparse-checkout: |
             /scripts/ci/install-native-dependencies.ts
             /scripts/ci/native-dependency-environment.ts
+            /packages/e2e/package.json
             /packages/e2e/src/cli/timeouts.ts
             /packages/e2e/src/packaged/packaged-harness-smoke.ts
             /packages/e2e/src/packaged/packaged-helpers.ts
@@ -350,7 +351,7 @@ jobs:
             previous="$baseline_dir/$asset"
           fi
           unset GH_TOKEN
-          bun __test-tmp__/native-installer/packages/e2e/src/packaged/packaged-harness-smoke.ts "$candidate" "$previous"
+          bun run --cwd __test-tmp__/native-installer/packages/e2e test:packaged:harnesses "$PWD/$candidate" "$previous"
 
       - name: Verify macOS signatures and notarization
         if: matrix.platform == 'darwin' && !cancelled() && success()
