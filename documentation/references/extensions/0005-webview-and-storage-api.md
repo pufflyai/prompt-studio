@@ -519,6 +519,8 @@ is destroyed. A late view joins the current session instead of replacing it with
 
 The low-level `editing.session` bridge accepts `open`, `commit`, `preview`, `cancel`, `refresh`,
 `save` and `close`. The SDK manages connection IDs, edit sequences, subscriptions and stale replies.
+When Settings Reset restores a local editing session, its snapshot carries the new `resetVersion`.
+Use changes to this version to clear inline fields that hold their own drafts.
 A stale low-level `refresh` returns no snapshot; the SDK retries the backend read.
 Sessions cannot choose another project or extension, and an open key must use the same save command.
 Global views without a project do not provide this capability. Publish SDK and host support before
