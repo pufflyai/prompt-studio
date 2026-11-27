@@ -444,7 +444,9 @@ describe("catalog extension installation and upgrades", () => {
       workspaceService: emptyWorkspaceService,
     });
 
-    await expectRejection(service.upgrade("project-1", "instance-1")).toThrow("local copy");
+    await expectRejection(service.upgrade("project-1", "instance-1")).toThrow(
+      "Choose which version of Project Planner",
+    );
     expect(installExtensionSource).not.toHaveBeenCalled();
     expect(registerInstalledSource).not.toHaveBeenCalled();
   });
