@@ -160,7 +160,9 @@ export const teamSettingsFixture = async (
     }
     return route.fulfill({ json: result });
   });
-  await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
+  await page.addInitScript(() => {
+    if (window === window.top) localStorage.setItem("onboarding-complete", "true");
+  });
   await page.goto(`/projects/${projectId}/`);
   await page.locator("footer").getByRole("button", { name: "Prompt Studio Cloud", exact: true }).click();
   await page.frameLocator('iframe[title="Cloud details"]').getByRole("button", { name: "Cloud settings" }).click();

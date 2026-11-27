@@ -18,8 +18,8 @@ test("Team settings creates a team and opens project creation for its selected a
   fixture.team.features.relay = true;
   fixture.account.teamAccounts?.push(fixture.team);
   await page.reload();
-  await page.locator("footer").getByRole("button", { name: "Prompt Studio Cloud", exact: true }).click();
-  await page.frameLocator('iframe[title="Cloud details"]').getByRole("button", { name: "Cloud settings" }).click();
+  // Reload restores the open settings destination.
+  await expect(cloud.getByRole("button", { name: "Choose team", exact: true })).toBeVisible();
   await cloud.getByRole("button", { name: "Choose team", exact: true }).click();
   await cloud.getByRole("menuitem", { name: "Studio Team", exact: true }).click();
   await cloud.getByRole("button", { name: "Create project", exact: true }).click();
@@ -64,7 +64,7 @@ test("managed settings selects a verified source instance and releases its curre
   const settings = await fixture.open("Managed extensions");
   const checkbox = settings.getByRole("checkbox", { name: "Manage Prompt Studio Cloud", exact: true });
   await expect(checkbox).toBeEnabled();
-  await checkbox.check();
+  await checkbox.press("Space");
   await expect(checkbox).toBeChecked();
   expect(fixture.writes[0]).toMatchObject({
     op: "manageExtension",
@@ -72,7 +72,7 @@ test("managed settings selects a verified source instance and releases its curre
     projectId: fixture.projectId,
     expectedSelection: null,
   });
-  await checkbox.uncheck();
+  await checkbox.press("Space");
   await expect(checkbox).not.toBeChecked();
   expect(fixture.writes[1]).toEqual({
     op: "unmanageExtension",
@@ -101,7 +101,7 @@ test("members see managed policy read-only and retain project access and ownersh
   await expect(team.getByRole("button", { name: "Remove Alex Morgan", exact: true })).toHaveCount(0);
   await page.getByRole("option", { name: "Cloud", exact: true }).click();
   const cloud = page.frameLocator('iframe[title="Cloud"]');
-  await cloud.getByRole("checkbox", { name: "Project access for Alex Morgan", exact: true }).uncheck();
+  await cloud.getByRole("checkbox", { name: "Project access for Alex Morgan", exact: true }).press("Space");
   await cloud.getByRole("dialog").getByRole("button", { name: "Revoke access", exact: true }).click();
   await expect(cloud.getByRole("checkbox", { name: "Project access for Alex Morgan", exact: true })).not.toBeChecked();
   await expect(cloud.getByRole("button", { name: "Make local", exact: true })).toBeEnabled();

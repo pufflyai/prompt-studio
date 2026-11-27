@@ -6,6 +6,7 @@ export const cloudCommands = {
     title: l10n("commands.extensionSources", "List installed tools for team management"),
     cli: true,
     async run(ctx) {
+      if (!ctx.extensions) throw new Error("This host does not support extension management.");
       const { extensions } = await ctx.extensions.list();
       return extensions
         .filter((extension) => extension.enabled && extension.status === "loaded")
