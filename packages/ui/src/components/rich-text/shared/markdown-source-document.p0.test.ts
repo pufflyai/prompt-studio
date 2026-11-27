@@ -332,6 +332,22 @@ test("edits a note after an escaped placeholder and preserves the placeholder so
   expect(result).toBe(markdown.replace("fresh", "temporary"));
 });
 
+test("edits multiline display math without rewriting the original delimiter lines", () => {
+  const markdown = "\\[x + y\r\n= z\\]\r\n\r\n## Next section";
+  const result = sourceRoundTrip(markdown, (editor) => {
+    editor.update(
+      () => {
+        const equation = $getRoot().getFirstChild();
+        expect($isEquationNode(equation)).toBe(true);
+        if ($isEquationNode(equation)) equation.setEquation("x + y\n= w");
+      },
+      { discrete: true },
+    );
+  });
+
+  expect(result).toBe(markdown.replace("= z", "= w"));
+});
+
 test("maps edits within their block while preserving neighboring tokens and line endings", () => {
   const markdown = ["Before {{keep_one}} 😀.", "Target __emphasis__ {{keep_two}}.", "After {{keep_three}}."].join(
     "\r\n\r\n",

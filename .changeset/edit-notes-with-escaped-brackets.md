@@ -3,4 +3,4 @@
 "@pstdio/ui": patch
 ---
 
-Keep notes editable when their Markdown contains escaped bracket placeholders.
+Keep escaped placeholders editable and improve legacy LaTeX formula matching in Markdown notes.
