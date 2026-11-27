@@ -1,3 +1,4 @@
+import { Box } from "@chakra-ui/react";
 import { EmptyState } from "@pstdio/ui";
 import {
   type DashboardDataSource,
@@ -9,7 +10,7 @@ import {
 import { useState } from "react";
 import type { Aggregation } from "../webview/period";
 import { BugOriginsPlot } from "./bug-origins-plot";
-import { healthChart } from "./health-chart-style";
+import { healthChart, releaseHealthDashboardLayout } from "./health-chart-style";
 import { bucketMetrics, formatDuration, RunMetricPlot, TotalTestsPlot, testChartColors } from "./health-charts";
 import { HealthRuns, runVerification } from "./health-runs";
 import type { HealthBucket } from "./health-timeline";
@@ -228,5 +229,9 @@ export function HealthDashboard(props: HealthDashboardProps) {
       ),
     },
   ];
-  return <DashboardRenderer value={value} sources={sources} onChange={setValue} renderToolbar={renderToolbar} />;
+  return (
+    <Box h="full" minH="0" css={releaseHealthDashboardLayout}>
+      <DashboardRenderer value={value} sources={sources} onChange={setValue} renderToolbar={renderToolbar} />
+    </Box>
+  );
 }

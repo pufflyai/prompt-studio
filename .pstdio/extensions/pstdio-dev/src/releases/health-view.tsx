@@ -1,4 +1,4 @@
-import { Box, Button, ButtonPropsProvider, HStack, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, ButtonPropsProvider, HStack, Stack, Text, useRecipe } from "@chakra-ui/react";
 import { AlertMessage } from "@pstdio/ui";
 import { CalendarDays, Layers, RefreshCw } from "lucide-react";
 import { useState } from "react";
@@ -14,6 +14,7 @@ const HOURLY_RANGE: DateRange = "7";
 const hourOption = { value: "hour", label: "Hour" } satisfies (typeof aggregationOptions)[number];
 const healthAggregationOptions = (range: DateRange) =>
   range === HOURLY_RANGE ? [hourOption, ...aggregationOptions] : aggregationOptions;
+const toolbarButton = { size: "sm", variant: "outline" } as const;
 
 export interface HealthViewProps extends HealthHistory {
   today: string;
@@ -42,6 +43,7 @@ export const HealthView = (props: HealthViewProps) => {
     onRefresh,
     onOpen,
   } = props;
+  const buttonRecipe = useRecipe({ key: "button" });
   const [toolbar, setToolbar] = useState<HTMLDivElement | null>(null);
   const [chosen, setChosen] = useState<number>();
   const [range, setRange] = useState<DateRange>("30");
@@ -71,7 +73,7 @@ export const HealthView = (props: HealthViewProps) => {
         borderColor="border.subtle"
       >
         <HStack gap="xs" flexWrap="wrap" minW="0">
-          <Button size="xs" variant="ghost" loading={refreshing} onClick={onRefresh}>
+          <Button {...toolbarButton} loading={refreshing} onClick={onRefresh}>
             <RefreshCw aria-hidden />
             Refresh
           </Button>
@@ -81,6 +83,7 @@ export const HealthView = (props: HealthViewProps) => {
             value={range}
             options={rangeOptions}
             onValueChange={(value) => setRange(value as DateRange)}
+            triggerProps={toolbarButton}
           />
           <SelectMenu
             label="Aggregation"
@@ -88,9 +91,29 @@ export const HealthView = (props: HealthViewProps) => {
             value={aggregation}
             options={healthAggregationOptions(range)}
             onValueChange={(value) => setAggregation(value as Aggregation)}
+            triggerProps={toolbarButton}
           />
         </HStack>
-        <Box ref={setToolbar} ml="auto" minW="0" />
+        <Box
+          ref={setToolbar}
+          ml="auto"
+          minW="0"
+          css={{
+            '& button[aria-label="Display settings"]': {
+              ...buttonRecipe(toolbarButton),
+              borderWidth: "1px",
+              borderStyle: "solid",
+              borderColor: "border",
+              px: "2",
+              _after: { content: "attr(aria-label)" },
+            },
+            '& [aria-label="Dashboard controls"] > .chakra-stack': {
+              borderInlineStartWidth: "1px",
+              borderColor: "border.subtle",
+              ps: "xs",
+            },
+          }}
+        />
       </HStack>
       <Stack flexShrink={0} gap="0">
         {error ? (
@@ -128,7 +151,7 @@ export const HealthView = (props: HealthViewProps) => {
           onOpen={onOpen}
           renderToolbar={(controls) =>
             toolbar
-              ? createPortal(<ButtonPropsProvider value={{ size: "xs" }}>{controls}</ButtonPropsProvider>, toolbar)
+              ? createPortal(<ButtonPropsProvider value={toolbarButton}>{controls}</ButtonPropsProvider>, toolbar)
               : null
           }
         />

@@ -1,13 +1,12 @@
-import { Box, HStack, Stack, Text } from "@chakra-ui/react";
+import { Box, HStack, Text } from "@chakra-ui/react";
 import { EmptyState, psTheme } from "@pstdio/ui";
 import { barY, defineChart, dot, lineY, stack } from "@tanstack/charts";
-import { Chart } from "@tanstack/charts/react";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
 import { tooltip } from "@tanstack/charts/tooltip";
 import { useState } from "react";
 import type { Aggregation } from "../webview/period";
 import { periodChartMargin, periodTitle, timelineScale } from "../webview/period-chart";
-import { seriesColorSettings, useHealthChartAppearance } from "./health-chart-style";
+import { HealthChartFrame, HealthPlot, seriesColorSettings, useHealthChartAppearance } from "./health-chart-style";
 import { publicationRows, releaseMarks } from "./health-chart-timeline";
 import type { HealthBucket } from "./health-timeline";
 import { SeriesLegend } from "./series-legend";
@@ -170,24 +169,21 @@ export const TotalTestsPlot = ({ buckets, aggregation, onChoose }: RunPlotProps)
     },
   });
   return (
-    <Stack gap="2xs">
+    <HealthChartFrame>
       <SeriesLegend label="Test category legend" items={legend} selected={selected?.id} onSelect={setSelection} />
-      <Box color="fg.muted" textStyle="label/XS">
-        <Chart
-          definition={definition}
-          height={220}
-          ariaLabel={
-            selected
-              ? `${selected.label} test executions by ${aggregation}, UTC`
-              : `Total test executions by ${aggregation}, UTC`
-          }
-          onFocusChange={(focused) => {
-            const run = byDate.get(String(focused?.xValue))?.measured.at(-1);
-            if (run) onChoose(run.id);
-          }}
-        />
-      </Box>
-    </Stack>
+      <HealthPlot
+        definition={definition}
+        ariaLabel={
+          selected
+            ? `${selected.label} test executions by ${aggregation}, UTC`
+            : `Total test executions by ${aggregation}, UTC`
+        }
+        onFocusChange={(focused) => {
+          const run = byDate.get(String(focused?.xValue))?.measured.at(-1);
+          if (run) onChoose(run.id);
+        }}
+      />
+    </HealthChartFrame>
   );
 };
 
@@ -254,19 +250,16 @@ export const RunMetricPlot = ({
     },
   });
   return (
-    <Stack gap="2xs">
-      <Box color="fg.muted" textStyle="label/XS">
-        <Chart
-          definition={definition}
-          height={180}
-          ariaLabel={`${title} by ${aggregation}, UTC`}
-          onFocusChange={(focused) => {
-            const bucket = byDate.get(String(focused?.xValue));
-            const run = (duration ? bucket?.timed : bucket?.measured)?.at(-1);
-            if (run) onChoose(run.id);
-          }}
-        />
-      </Box>
-    </Stack>
+    <HealthChartFrame>
+      <HealthPlot
+        definition={definition}
+        ariaLabel={`${title} by ${aggregation}, UTC`}
+        onFocusChange={(focused) => {
+          const bucket = byDate.get(String(focused?.xValue));
+          const run = (duration ? bucket?.timed : bucket?.measured)?.at(-1);
+          if (run) onChoose(run.id);
+        }}
+      />
+    </HealthChartFrame>
   );
 };

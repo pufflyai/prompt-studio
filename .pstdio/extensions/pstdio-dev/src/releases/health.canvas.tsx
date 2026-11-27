@@ -98,14 +98,14 @@ export default {
   description: "Refresh and date filters sit on the left. Dashboard editing controls sit on the right.",
   fullscreen: true,
 };
-export const ReleaseHealth = () => {
+const ReleaseHealthPreview = ({ compact }: { compact: boolean }) => {
   const [state, setState] = useState("history");
   const refreshing = state === "refreshing";
   const hasHistory = state !== "empty" && !refreshing;
   const merges = state === "totals only" ? mergeTotals : pullRequestMerges;
   const showMerges = hasHistory && state !== "runs only";
   return (
-    <Box w="full" h="100dvh" display="flex" flexDirection="column" minW="0" minH="0">
+    <Box w="full" maxW={compact ? "xl" : undefined} h="100dvh" display="flex" flexDirection="column" minW="0" minH="0">
       <HStack p="sm" flexWrap="wrap">
         {states.map((value) => (
           <Button key={value} size="xs" onClick={() => setState(value)}>
@@ -144,4 +144,11 @@ export const ReleaseHealth = () => {
       </Box>
     </Box>
   );
+};
+
+export const ReleaseHealth = {
+  args: { compact: false },
+  controls: { compact: { type: "boolean", label: "Compact width" } },
+  description: "Compare the header in view and edit modes, then resize the ETA chart to check its last-point label.",
+  render: ReleaseHealthPreview,
 };
