@@ -1,14 +1,28 @@
 import { expect, test } from "bun:test";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join, resolve } from "node:path";
 import type { InstallExtensionResponse, UpgradeProjectExtensionResponse } from "pstdio-api-contracts";
+import type { PreparedExtensionRevision } from "pstdio-extensions";
 import { packExtension, packExtensionReleaseBundle } from "pstdio-extensions/distribution";
+import { revisionDigest } from "pstdio-extensions/prepared-cache";
 import { folderProjectInput } from "../helpers/folder-project";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { writeRegistryNotes } from "./registry-notes.fixture";
 import { startRegistryService } from "./registry-service.fixture";
 import { startRegistryWireFixture } from "./registry-wire.fixture";
+
+const expectAcceptedPrebuiltRevision = async (home: string, sourcePath: string) => {
+  // Read the published marker for this installed source while the host prepares revisions in parallel.
+  const marker = `${revisionDigest(resolve(sourcePath))}.json`;
+  const revision: PreparedExtensionRevision = await Bun.file(
+    join(home, "cache", "extension-revisions", "accepted", marker),
+  ).json();
+  expect(revision.prebuiltRelease).toBe(true);
+  expect(basename(revision.entryPath)).toBe(".pstdio-release-runtime.mjs");
+  expect(await Bun.file(revision.entryPath).exists()).toBe(true);
+  return revision;
+};
 
 test("activates a prebuilt package through the same packaged upgrade API as a source package", async () => {
   const root = await mkdtemp(join(tmpdir(), "pstdio-prebuilt-upgrade-"));
@@ -56,7 +70,7 @@ test("activates a prebuilt package through the same packaged upgrade API as a so
     expect(await unavailable.json()).toMatchObject({ error: expect.any(String) });
     const installed = await post(`${project}/install`, { source: { kind: "catalog", name: "pstdio.notes" } });
     expect(installed.status).toBe(201);
-    const { extension } = (await installed.json()) as InstallExtensionResponse;
+    const { extension, source: installedSource } = (await installed.json()) as InstallExtensionResponse;
     const measure = async (version: string, prebuilt: boolean) => {
       await publish(version, prebuilt);
       const started = performance.now();
@@ -70,8 +84,7 @@ test("activates a prebuilt package through the same packaged upgrade API as a so
     };
     const sourceMs = await measure("0.45.2", false);
     const bundleMs = await measure("0.45.3", true);
-    const cache = join(home, "cache", "extension-revisions", "revisions");
-    expect([...new Bun.Glob("**/.pstdio-release-runtime.mjs").scanSync(cache)]).toHaveLength(1);
+    await expectAcceptedPrebuiltRevision(home, installedSource.targetPath);
     console.log(JSON.stringify({ case: "packaged-upgrade-to-first-command", sourceMs, bundleMs }));
   } finally {
     if (host) await stopProcess(host.child);
@@ -105,6 +118,7 @@ test("a packaged Planner install serves its compiled views and runs a real comma
       body: JSON.stringify({ source: { kind: "catalog", name: "pstdio.planner" } }),
     });
     if (!installed.ok) throw new Error(`Planner install failed (${installed.status}): ${await installed.text()}`);
+    const { source: installedSource } = (await installed.json()) as InstallExtensionResponse;
     const command = await fetch(`${project}/commands/pstdio.planner.command.list-tickets/execute`, {
       method: "POST",
       headers,
@@ -112,11 +126,10 @@ test("a packaged Planner install serves its compiled views and runs a real comma
     });
     expect(command.status).toBe(200);
     expect(await command.json()).toMatchObject({ outcome: { ok: true } });
-    const cache = join(home, "cache", "extension-revisions", "revisions");
-    const entries = [...new Bun.Glob("**/.pstdio-release-runtime.mjs").scanSync(cache)];
-    expect(entries).toHaveLength(1);
-    const compiledViews = [...new Bun.Glob("**/webviews/*/module.js").scanSync(cache)];
+    const revision = await expectAcceptedPrebuiltRevision(home, installedSource.targetPath);
+    const compiledViews = Object.values(revision.webviews ?? {});
     expect(compiledViews.length).toBeGreaterThan(0);
+    for (const view of compiledViews) expect(await Bun.file(join(view.distDir, "module.js")).exists()).toBe(true);
   } finally {
     if (host) await stopProcess(host.child);
     await rm(root, { recursive: true, force: true });
