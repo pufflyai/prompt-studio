@@ -464,7 +464,7 @@
         "src/**/*.test.{ts,tsx}",
         "src/**/*.canvas.tsx",
         "src/.canvas/**/*.{ts,tsx}",
-        "src/{status,details,settings}-view.tsx"
+        "src/{status,details,settings,team-settings,managed-settings}-view.tsx"
       ],
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
