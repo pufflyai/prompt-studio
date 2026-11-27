@@ -75,13 +75,30 @@ test("Microsoft uses the browser code flow and owns only its tenant-scoped accou
       expect((await connect(provider === "google" ? "microsoft" : "google")).status).toBe(401);
       const device = await connect(provider);
       expect(device.status).toBe(201);
-      return (await device.json()) as { accountId: string };
+      return (await device.json()) as { accountId: string; token: string };
     };
 
     const google = await deviceLogin("google");
     const microsoft = await deviceLogin("microsoft");
     expect(google.accountId).not.toBe(microsoft.accountId);
+    const profile = async (token: string) => {
+      const response = await handler(
+        new Request(`${config.origin}/v1/account`, {
+          headers: { authorization: `Bearer ${token}` },
+        }),
+      );
+      expect(response.status).toBe(200);
+      return response.json();
+    };
+    expect(await profile(microsoft.token)).toMatchObject({ profile: { email: "owner@fixture.test" } });
+    expect(await profile(google.token)).not.toHaveProperty("profile");
+    const renamed = await deviceLogin("microsoft", {
+      claims: { email: undefined, preferred_username: "renamed@company.test" },
+    });
+    expect(renamed.accountId).toBe(microsoft.accountId);
+    expect(await profile(microsoft.token)).toMatchObject({ profile: { email: "renamed@company.test" } });
     expect((await deviceLogin("microsoft", { claims: { email: undefined } })).accountId).toBe(microsoft.accountId);
+    expect(await profile(microsoft.token)).not.toHaveProperty("profile");
     const other = await deviceLogin("microsoft", { claims: { tid: "b8cf818a-09e1-4b19-95b4-2f416fb0c607" } });
     expect(other.accountId).not.toBe(microsoft.accountId);
     const verified = oauth.exchanged();
