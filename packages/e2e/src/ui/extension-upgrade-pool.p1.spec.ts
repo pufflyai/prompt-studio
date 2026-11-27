@@ -46,7 +46,8 @@ test("keeps individual recovery after completed bulk upgrade progress disappears
     .map((extension: ProjectExtensionInstance, index: number) => ({
       ...extension,
       canUpgrade: index !== 2,
-      ...(index === 2 && { hasPublishedAlternative: true, scope: "repo", enabled: true }),
+      hasPublishedAlternative: index === 2,
+      ...(index === 2 && { scope: "repo", enabled: true }),
     }));
   expect(targets).toHaveLength(3);
   const waiting: { route: Route; extension: ProjectExtensionInstance }[] = [];
