@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import type { ExtensionContextBase, JsonObject } from "@pstdio/sdk/extensions";
-import { connectionApi, templatePublisher } from "./connection";
+import { connection, connectionApi, templatePublisher } from "./connection";
 
 export type BranchKind = "tests" | "preview";
 export type TemplateRef = { name: string; version: string };
@@ -42,7 +42,7 @@ export async function publishBranchTemplate(
   const manifest = branchTemplate(await basesOf(ctx, kind), source);
   const result = await connectionApi(
     ctx.connections,
-    templatePublisher.id,
+    (await ctx.settings.all()).kitoWorkflow === true ? connection.id : templatePublisher.id,
   )<TemplateRef>({
     method: "POST",
     path: "/v1/templates",

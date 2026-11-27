@@ -49,6 +49,15 @@ function runDeps(api: Api, store: ReturnType<typeof createMemoryStorage>) {
   } satisfies RunDeps;
 }
 
+test("Kito rejects an unsupported run duration before provisioning", async () => {
+  const deps = runDeps(async () => {
+    throw new Error("The controller should not be called");
+  }, createMemoryStorage());
+  await expect(startRun({ ...deps, kitoWorkflow: true }, { root, timeoutMinutes: 121 })).rejects.toThrow(
+    "Kito test runs can last at most 120 minutes.",
+  );
+});
+
 test.each([
   { ref: "HEAD" },
   { branchTemplate: true },

@@ -143,11 +143,8 @@ export const createExtensionSourceCache = (input: { loadSources?: typeof loadExt
     // Reads installed sources whatever their enabled state. The host-wide harness registry reads
     // every source this way, so a source that did not change keeps its harnesses and their workers.
     loadRuntime: async (installedSources: readonly LoadableExtensionSource[]) => {
-      const loaded: CachedSource[] = [];
-      for (const installedSource of installedSources) {
-        const cached = await load(installedSource);
-        if (cached) loaded.push(cached);
-      }
+      const records = await Promise.all(installedSources.map(load));
+      const loaded = records.filter((record) => record !== null);
       return normalizeExtensionSources(
         loaded.map(({ source }) => source),
         loaded.flatMap(({ diagnostics }) => diagnostics),

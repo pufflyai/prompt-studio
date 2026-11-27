@@ -9,6 +9,8 @@ const isLongRunningExtensionRequest = (request: Request) => {
   if (request.method === "GET" && segments[0] === "v1" && segments[1] === "agents") return true;
 
   if (segments[0] !== "v1" || segments[1] !== "projects") return false;
+  // Opening a recovered project provisions its folder and extensions before replying.
+  if (segments.length === 4 && segments[3] === "open" && request.method === "POST") return true;
   if (segments[3] === "boards" && request.method === "GET") {
     // Listing saved views resolves their fields through the extension's renderer.
     return segments.length === 6 && segments[5] === "views";

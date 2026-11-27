@@ -339,7 +339,7 @@ export const collectRevisionDependencies = (
   for (const name of ["tsconfig.json", "jsconfig.json"]) {
     if (existsSync(join(root, name))) packages.get(root)!.files.add(name);
   }
-  return packages;
+  return Object.assign(packages, { readSource });
 };
 export { inspectCompilerConfiguration } from "./revision-compiler-inputs";
 export {
