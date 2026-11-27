@@ -163,12 +163,6 @@ const upgradeRef = (entry: ExtensionCatalogEntry | undefined, release: Extension
 const releaseCommitKey = (origin: { url: string; path: string }, ref: string) =>
   `${origin.url}\0${origin.path}\0${ref}`;
 
-const mutableProjectExtension = async (service: ExtensionService, projectId: string, instanceId: string) => {
-  const existing = await service.getProjectExtensionInstance(projectId, instanceId);
-  if (existing) await service.assertInstalledSourceChoice(existing.installedSource.id);
-  return existing;
-};
-
 export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps) => {
   const install = deps.installExtensionSource ?? installExtensionSourceDefault;
   const registry = createRegistryExtensionSource(deps, install);
@@ -354,8 +348,9 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
   };
 
   const upgrade = async (projectId: string, instanceId: string) => {
-    const existing = await mutableProjectExtension(deps.extensionService, projectId, instanceId);
+    const existing = await deps.extensionService.getProjectExtensionInstance(projectId, instanceId);
     if (!existing) return null;
+    await deps.extensionService.assertInstalledSourceChoice(existing.installedSource.id);
     const local = await separateLocalProvider(projectId, existing);
     if (local) {
       throw new ExtensionUpgradeNeedsReviewError(

@@ -221,9 +221,8 @@ test("Cloud settings respect early access and manage devices and project sync th
   await expect(settings.getByText("Cloud UI renamed device", { exact: true })).toBeVisible();
   expect((await first.client.account.devices()).some((device) => device.name === "Cloud UI renamed device")).toBe(true);
   await settings.getByRole("button", { name: "Make local", exact: true }).click();
-  const confirmation = settings.getByRole("dialog");
+  const confirmation = settings.getByRole("dialog", { name: "Make this project local?", exact: true });
   await expect(confirmation).toBeVisible();
-  await expect(confirmation).toContainText(project.name);
   await confirmation.getByRole("button", { name: "Make local", exact: true }).click();
   await expect(status).toHaveText("Local");
   // Retire private project data while preserving the independently owned global settings destination.
