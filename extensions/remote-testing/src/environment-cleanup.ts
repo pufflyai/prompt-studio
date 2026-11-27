@@ -8,11 +8,12 @@ import {
 import { resumeUnfinishedCollection } from "./collection";
 import { type Api, canRetryControllerRequest, connectionApi, waitForControllerPoll } from "./connection";
 import { ownsEnvironment, readEnvironment, releaseEnvironment, stopEnvironment } from "./environments";
-import { changed } from "./events";
+import { changed, notifyRunChange } from "./events";
 import { handoffLegacyRun, recoverLegacyClaims } from "./legacy-claims";
 import { budgetedRecovery, RecoveryBudgetExhausted, recoveryOrder } from "./recovery-budget";
 import { resumeRunLogs } from "./run-log";
 import { recoverSetupClaims } from "./setup-claims";
+import { hasRecoverableCreations, recoverWorkspaceCreations } from "./workspace-creation";
 
 export interface EnvironmentCleanupInput {
   environmentId: string;
@@ -212,7 +213,12 @@ async function resumeCleanup(
 export async function resumeEnvironmentCleanups(
   ctx: Pick<ExtensionContextBase, "automation" | "logger" | "storage"> &
     Partial<Pick<ExtensionContextBase, "connections" | "projectId">>,
+  options: { admitCreationRecovery?: boolean } = {},
 ) {
+  if (options.admitCreationRecovery !== false && ctx.connections && ctx.projectId)
+    await admitWorkspaceCreationRecovery(ctx).catch((error) =>
+      ctx.logger.warn(`Could not queue workspace creation recovery: ${String(error)}`),
+    );
   await recoverLegacyClaims(ctx).catch((error) =>
     ctx.logger.warn(`Could not reconcile legacy workspace claims: ${String(error)}`),
   );
@@ -234,13 +240,23 @@ export async function resumeEnvironmentCleanups(
   await resumeUnfinishedCollection(budgetedRecovery(ctx, "collector"));
 }
 
+async function admitWorkspaceCreationRecovery(ctx: Pick<ExtensionContextBase, "storage" | "automation">) {
+  if (!(await hasRecoverableCreations(ctx.storage))) return;
+  await ctx.automation.enqueue({
+    command: recoverEnvironmentCleanup.ref,
+    input: { params: {} },
+    key: `remote-tests:recover-workspace-creations:${Math.floor(Date.now() / 60_000)}`,
+  });
+}
+
 export const recoverEnvironmentCleanup = defineCommand({
   id: "environments.resume-cleanup",
   title: l10n("remote-testing.resume-environment-cleanup", "Resume environment cleanup"),
   automation: true,
   mutating: true,
   async run(ctx) {
-    await resumeEnvironmentCleanups(ctx);
+    await resumeEnvironmentCleanups(ctx, { admitCreationRecovery: false });
+    if (await recoverWorkspaceCreations(ctx)) await notifyRunChange({ changed: () => ctx.events.emit(changed, {}) });
     return { checked: true };
   },
 });

@@ -1,6 +1,5 @@
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import type { Api } from "./connection";
-import type { Settings } from "./settings";
 
 // A test environment is one PocketCoder workspace of the configured template.
 export interface Environment {
@@ -43,27 +42,6 @@ export async function listEnvironments(api: Api, projectId: string, includeEnded
     cursor = page.next_cursor;
   } while (cursor);
   return environments;
-}
-
-export async function createEnvironment(
-  api: Api,
-  settings: Settings,
-  signal?: AbortSignal,
-  metadata: Record<string, string> = {},
-) {
-  const purpose = metadata.purpose ?? PURPOSE;
-  const externalId = `${purpose}-${crypto.randomUUID()}`;
-  return api<Environment>({
-    method: "POST",
-    path: "/v1/workspaces",
-    headers: { "Idempotency-Key": externalId },
-    body: {
-      external_id: externalId,
-      template: { name: settings.templateName, version: settings.templateVersion },
-      metadata: { ...metadata, purpose },
-    },
-    signal,
-  });
 }
 
 export async function readEnvironment(api: Api, id: string, signal?: AbortSignal) {

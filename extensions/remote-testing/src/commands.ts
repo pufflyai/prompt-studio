@@ -3,12 +3,14 @@ import { collectRun, startCollection, waitForCollection } from "./collection";
 import { connectionApi } from "./connection";
 import { changed, checkAccess, projectRoot, runDeps } from "./context";
 import { cleanupEnvironmentCommand, recoverEnvironmentCleanup } from "./environment-cleanup";
-import { createEnvironment, isBusy, listEnvironments, stopEnvironment } from "./environments";
+import { isBusy, listEnvironments, stopEnvironment } from "./environments";
+import { notifyRunChange } from "./events";
 import { collectRunLog } from "./run-log";
 import { awaitRun, cancelRun, listRuns, readRun, startRun } from "./runs";
 import { sessionResource } from "./session-link";
 import { readSettings } from "./settings";
 import { waitForRunSetup } from "./setup-claims";
+import { createTrackedEnvironment } from "./workspace-creation";
 
 // Table row actions pass the row as `rowId`; the CLI names it explicitly.
 const runParams = {
@@ -232,9 +234,9 @@ export const createEnvironmentCommand = defineCommand({
   },
   mutating: true,
   async run(ctx) {
-    const { api, settings } = await runDeps(ctx);
-    const created = await createEnvironment(api, settings, ctx.signal, { pstdio_project_id: ctx.projectId });
-    await ctx.events.emit(changed, {});
+    const deps = await runDeps(ctx);
+    const created = await createTrackedEnvironment(deps, deps.settings, { runId: crypto.randomUUID() }, ctx.signal);
+    await notifyRunChange(deps);
     return { id: created.id, state: created.state };
   },
 });

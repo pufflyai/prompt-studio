@@ -4,7 +4,7 @@ import { type Api, canRetryControllerRequest, waitForControllerPoll } from "./co
 import type { EnvironmentCleanupInput } from "./environment-cleanup";
 import {
   claimEnvironment,
-  createEnvironment,
+  type Environment,
   ownsEnvironment,
   readEnvironment,
   stopEnvironment,
@@ -21,6 +21,7 @@ import type { Settings } from "./settings";
 import { activateEnvironment } from "./setup-claims";
 import { withSourceArchive } from "./source";
 import type { RunStorage } from "./storage";
+import { createTrackedEnvironment, isCreatingEnvironment } from "./workspace-creation";
 
 export interface RunDeps {
   projectId: string;
@@ -88,6 +89,16 @@ function previewMetadata(kind: BranchKind, kitoWorkflow?: boolean) {
   return metadata;
 }
 
+async function claimRunSetup(
+  store: ExtensionStorageApi,
+  environmentId: string,
+  runId: string,
+  setup: { until: number; stop: boolean },
+) {
+  if (!(await claimEnvironment(store, environmentId, runId, setup)))
+    throw new Error(`Environment ${environmentId} is running another test run.`);
+}
+
 export async function startRun(
   deps: RunDeps,
   input: {
@@ -128,26 +139,29 @@ export async function startRun(
   );
 
   const setup = { until: Date.now() + TRANSFER_ALLOWANCE_SECONDS * 1000, stop: !input.environmentId };
-  const environment = template
-    ? await createEnvironment(
-        deps.api,
-        { ...deps.settings, templateName: template.name, templateVersion: template.version },
-        signal,
+  const claimSetup = (environment: Environment) => claimRunSetup(deps.store, environment.id, runId, setup);
+  const settings = template
+    ? { ...deps.settings, templateName: template.name, templateVersion: template.version }
+    : deps.settings;
+  const environment = input.environmentId
+    ? await readReusableEnvironment(deps, input.environmentId, signal)
+    : await createTrackedEnvironment(
+        deps,
+        settings,
         {
-          pstdio_project_id: deps.projectId,
+          runId,
           purpose: kind === "preview" ? "pstdio-preview" : "remote-testing",
-          ...previewMetadata(kind, deps.kitoWorkflow),
-          revision,
-          source_sha256: sha256,
+          ...(template && {
+            metadata: { ...previewMetadata(kind, deps.kitoWorkflow), revision, source_sha256: sha256 },
+          }),
+          adopt: claimSetup,
         },
-      )
-    : await pickEnvironment(deps, input.environmentId, signal);
-  let ownsEnvironment = false;
+        signal,
+      );
   let record: RunRecord | undefined;
   let submissionAttempted = false;
   try {
-    ownsEnvironment = await claimEnvironment(deps.store, environment.id, runId, setup);
-    if (!ownsEnvironment) throw new Error(`Environment ${environment.id} is running another test run.`);
+    if (input.environmentId) await claimSetup(environment);
     const ready = await waitUntilReady(deps.api, environment, signal);
     // The source URL must outlive a cold start; the log URL must outlive the run.
     const message = JSON.stringify({
@@ -206,7 +220,7 @@ export async function startRun(
     if (definitive) {
       await saveSubmissionFailure(deps, record, error, {
         signal,
-        cleanup: { environmentId: environment.id, runId, stop: !input.environmentId && ownsEnvironment },
+        cleanup: { environmentId: environment.id, runId, stop: !input.environmentId },
       });
       throw error;
     }
@@ -216,7 +230,7 @@ export async function startRun(
         deps.cleanupEnvironment({
           environmentId: environment.id,
           runId,
-          stop: !input.environmentId && ownsEnvironment,
+          stop: !input.environmentId,
         }),
       ),
     ]);
@@ -225,17 +239,13 @@ export async function startRun(
   }
 }
 
-async function pickEnvironment(deps: RunDeps, requested: string | undefined, signal?: AbortSignal) {
-  // Ownership covers provisioning as well as execution.
-  if (requested) {
-    const selected = await readEnvironment(deps.api, requested, signal);
-    if (selected.metadata.pstdio_project_id !== deps.projectId)
-      throw new Error("Select an environment created by this project.");
-    return selected;
-  }
-  // Claims live in one project's storage, while the controller lists all projects.
-  // Start isolated unless the caller explicitly selects a workspace to reuse.
-  return createEnvironment(deps.api, deps.settings, signal, { pstdio_project_id: deps.projectId });
+async function readReusableEnvironment(deps: RunDeps, requested: string, signal?: AbortSignal) {
+  const selected = await readEnvironment(deps.api, requested, signal);
+  if (selected.metadata.pstdio_project_id !== deps.projectId)
+    throw new Error("Select an environment created by this project.");
+  if (await isCreatingEnvironment(deps.store, selected))
+    throw new Error("Wait for this environment's creation to finish before reusing it.");
+  return selected;
 }
 
 const requestPath = (record: RunRecord) =>
