@@ -5,10 +5,6 @@ export const verifySessionTools = async (page: Page) => {
   const main = page.locator('[data-workbench-panel="main"]');
   const editor = main.getByTestId("content-editable").filter({ visible: true });
   await expect(editor).toBeVisible();
-  const landingPath = new URL(page.url()).pathname.replace(
-    /\/sessions\/compose$/,
-    "/extensions/pstdio.session-browser/conversations/compose",
-  );
   const breadcrumb = page.getByRole("navigation", { name: "breadcrumb" });
   await expect(breadcrumb).toContainText("Sessions");
   const sessionIcons = breadcrumb.locator("svg.lucide-message-circle");
@@ -69,10 +65,17 @@ export const verifySessionTools = async (page: Page) => {
   const ids = await side
     .locator("[data-workbench-tab]")
     .evaluateAll((tabs) => tabs.map((tab) => tab.getAttribute("data-workbench-tab")));
-  await page.getByRole("button", { name: "Back to project", exact: true }).click();
-  await page.getByRole("option", { name: "Home", exact: true }).click();
-  await page.getByRole("option", { name: "Sessions", exact: true }).click();
-  await expect(page).toHaveURL((url) => url.pathname === landingPath);
+  const sidenav = page.locator('[data-workbench-region="sidenav"]');
+  await sidenav.getByRole("button", { name: "Back to project", exact: true }).click();
+  await sidenav.getByRole("option", { name: "Home", exact: true }).click();
+  await expect(page).toHaveURL(/\/extensions\/pstdio\.home\/home$/);
+  const homeUrl = page.url();
+  await sidenav.getByRole("option", { name: "Sessions", exact: true }).click();
+  await expect(sidenav.getByRole("button", { name: "Back to project", exact: true })).toBeVisible();
+  await expect(page).toHaveURL(homeUrl);
+  await sidenav.getByText("Sessions", { exact: true }).hover();
+  await sidenav.getByRole("button", { name: "New session", exact: true }).click();
+  await expect(page).toHaveURL(/\/conversations\/new\?/);
   await expect(breadcrumb).toContainText("New session");
   await expect(side.getByRole("tab")).toHaveCount(2);
   await page.reload();
