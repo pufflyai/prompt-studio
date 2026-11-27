@@ -13,7 +13,8 @@ export const expectPackagedChatHistory = async (
   const side = page.locator('[data-workbench-panel="side"]');
   const replayTab = page.getByRole("tab", { name: "Motion replay", exact: true });
   const instanceId = await replayTab.locator("..").getAttribute("data-workbench-tab");
-  const log = page.locator(`[data-workbench-instance="${instanceId}"]`).getByRole("log", { includeHidden: true });
+  const conversation = page.locator(`[data-workbench-instance="${instanceId}"]`);
+  const log = conversation.getByRole("log", { includeHidden: true });
   const viewport = log.locator('[data-scope="scroll-area"][data-part="viewport"]').first();
   await viewport.evaluate((element) => {
     element.dispatchEvent(new WheelEvent("wheel", { deltaY: -100, bubbles: true }));
@@ -90,7 +91,7 @@ export const expectPackagedChatHistory = async (
     logTestPhase("Packaged chat history: recover overflow without an error alert");
     await expectPackagedChatOverflowRecovery(page, sessionId, baseUrl, headers);
     logTestPhase("Packaged chat history: recover observation after connection loss");
-    const retry = page.getByRole("alert").getByRole("button", { name: "Retry", exact: true });
+    const retry = conversation.getByRole("alert").getByRole("button", { name: "Retry", exact: true });
     await page.evaluate(() => Reflect.get(window, "interruptChatStream")());
     await expect(retry).toBeVisible();
     await expect(page.getByText(/^Step 30\./).filter({ visible: true })).toBeVisible();

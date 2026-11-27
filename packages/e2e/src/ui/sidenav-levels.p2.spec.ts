@@ -81,24 +81,29 @@ test("Notes and Sidenav levels keep rows users pinned to the header", async ({ p
   await expect(row("Tickets")).toHaveAttribute("aria-selected", "true");
   await row("Sessions").click();
   await expect(sidenav.getByText("Today", { exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/\/tickets$/);
   await row("Level session").click();
   await expect(page).toHaveURL(/\/extensions\/pstdio\.session-browser\/conversation\?resource=/);
+  const sessionUrl = page.url();
   await expect(headerRows).toHaveText(["Search", "Tickets", "Home"]);
   await row("Search").click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.keyboard.press("Escape");
 
-  // Leaving the level restores the last root-level page.
+  // Returning to project navigation keeps the session open in Main.
   await leaveSidenavLevel(page);
-  await expect(page).toHaveURL(/\/tickets$/);
+  await expect(page).toHaveURL(sessionUrl);
   await expect(row("Sessions")).toBeVisible();
 
   await row("Tickets").click();
   await page.getByTestId("renderer-card").filter({ hasText: ticket.title }).first().click();
+  await expect(page).toHaveURL(/\/extensions\/pstdio\.planner\/ticket\?resource=/);
+  const ticketUrl = page.url();
   await expect(sidenav.getByRole("option", { name: new RegExp(`^${ticket.shorthand} `) })).toBeVisible();
   await expect(headerRows).toHaveText(["Search", "Tickets", "Home"]);
   await expect(sidenav.getByRole("button", { name: "Help", exact: true })).toBeVisible();
   await expect(row("Settings")).toBeVisible();
   await leaveSidenavLevel(page);
+  await expect(page).toHaveURL(ticketUrl);
   await expect(row("Sessions")).toBeVisible();
 });
