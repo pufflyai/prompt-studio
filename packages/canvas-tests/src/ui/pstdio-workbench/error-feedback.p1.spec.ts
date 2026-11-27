@@ -103,3 +103,34 @@ test("system notices hide when empty and retain normal widget alignment", async 
   await preview.getByRole("button", { name: "Clear all", exact: true }).click();
   await expect(activity).toBeHidden();
 });
+
+test("clear all empties the widget and dismissed upgrades remain recoverable", async ({ page }) => {
+  const preview = await openCanvasPreview(page, `${canvas}#HiddenStatusBar`);
+  await preview.getByRole("button", { name: "Report system information" }).click();
+  await preview.getByRole("button", { name: "Report failed upgrade" }).click();
+  await preview.getByRole("button", { name: "Start operation" }).click();
+  const activity = preview.getByRole("button", { name: "System activity", exact: true });
+  await activity.press("Enter");
+  await expect(preview.getByRole("alert")).toContainText("Upgrading");
+  await expect(preview.getByRole("button", { name: "Dismiss Publish report" })).toBeVisible();
+  const clearAll = preview.getByRole("button", { name: "Clear all", exact: true });
+  await clearAll.press("Enter");
+  await expect(activity).toHaveCount(0);
+  await preview.getByRole("button", { name: "Finish operation" }).press("Alt+Shift+K");
+  const palette = preview.getByRole("dialog", { name: "Command palette" });
+  await palette.getByRole("textbox").fill(">Recover changes");
+  await palette.getByRole("option", { name: "Recover changes" }).click();
+  const recovery = preview.getByRole("dialog", { name: "Recover changes" });
+  await expect(recovery.getByRole("button", { name: "Copy draft" })).toBeVisible();
+});
+
+test("a running operation can be dismissed on its own", async ({ page }) => {
+  const preview = await openCanvasPreview(page, `${canvas}#SystemAndActionErrors`);
+  await preview.getByRole("button", { name: "Start operation" }).click();
+  const activity = preview.getByRole("button", { name: "System activity", exact: true });
+  await activity.press("Enter");
+  await preview.getByRole("button", { name: "Dismiss Publish report" }).press("Enter");
+  await expect(activity).toHaveCount(0);
+  await preview.getByRole("button", { name: "Finish operation" }).click();
+  await expect(activity).toHaveCount(0);
+});
