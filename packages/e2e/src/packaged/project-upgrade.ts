@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { appendFile, mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { isDeepStrictEqual, parseArgs } from "node:util";
@@ -12,6 +12,7 @@ import { checkCloudProjectUpgrade } from "./project-upgrade-cloud";
 import {
   assertProjectToolsRetained,
   assertUpgradeEdit,
+  BaselineProjectCreateTimeout,
   candidateToolVersions,
   editUpgradeProject,
   installedProjectTools,
@@ -365,8 +366,19 @@ if (import.meta.main) {
       await run({ home, evidence: output, profile: variant }, pair);
       await record(output, "result", { status: "passed" });
     } catch (error) {
-      failures.push(error);
-      await record(output, "result", { status: "failed", error: String(error) });
+      // PS-1371 / #2437. Remove when the released Cloud devices set up independently.
+      const quarantined =
+        process.env.QUARANTINE_NIGHTLY_048_MAC_CLOUD_SETUP === "true" &&
+        from === "pstdio@0.48.0" &&
+        process.platform === "darwin" &&
+        process.arch === "arm64" &&
+        variant === "cloud" &&
+        error instanceof BaselineProjectCreateTimeout;
+      if (quarantined) {
+        console.warn(`::warning::Quarantined 0.48 macOS Cloud baseline setup: ${error.message}`);
+        if (process.env.GITHUB_OUTPUT) await appendFile(process.env.GITHUB_OUTPUT, "quarantined=true\n");
+      } else failures.push(error);
+      await record(output, "result", { status: quarantined ? "quarantined" : "failed", error: String(error) });
     } finally {
       await rm(root, { recursive: true, force: true });
     }

@@ -246,8 +246,10 @@ jobs:
         working-directory: packages/e2e
         run: bun x --no-install playwright install chromium --with-deps --no-shell
       - name: Upgrade populated projects from the published host
+        id: upgrade
         env:
           PROFILE: ${{ matrix.profile }}
+          QUARANTINE_NIGHTLY_048_MAC_CLOUD_SETUP: ${{ inputs.build_artifact_id != '' }}
         run: |
           args=()
           if [[ -n "$PROFILE" ]]; then args+=(--profile "$PROFILE"); fi
@@ -257,12 +259,12 @@ jobs:
       # passed upgrade. The attested certification evidence below still fails the job if it can't upload.
       - name: Preserve the pair, manifests and startup logs
         if: always()
-        continue-on-error: true
+        continue-on-error: ${{ steps.upgrade.outputs.quarantined != 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: project-upgrade-${{ matrix.from }}-${{ matrix.target }}-attempt-${{ github.run_attempt }}
           path: test-results/project-upgrades
-          if-no-files-found: warn
+          if-no-files-found: ${{ steps.upgrade.outputs.quarantined == 'true' && 'error' || 'warn' }}
       - name: Attest the verified release artifacts
         if: inputs.candidate_artifact_id != ''
         working-directory: __test-tmp__/upgrade-candidate

@@ -415,6 +415,8 @@ export const seedDirectUpgrade = async (api: StackApi, home: string) => {
   return { id, firstTicket: ticket.id, file, content };
 };
 
+export class BaselineProjectCreateTimeout extends Error {}
+
 export const seedUpgradeProject = async (api: StackApi, input: ProjectUpgradeInput) => {
   const folder = join(input.home, "project");
   const name = `Upgrade ${input.profile}`;
@@ -422,7 +424,15 @@ export const seedUpgradeProject = async (api: StackApi, input: ProjectUpgradeInp
   // Aged homes carry uncommitted historical files in addition to the Git tree.
   if (input.profile === "aged")
     await Bun.write(join(folder, "handoff.txt"), "Historical handoff · 修正\n".repeat(6000));
-  const project = await api.post<{ id: string; name: string }>("/projects", folderProjectInput({ name }, folder));
+  const project = await api
+    .post<{ id: string; name: string }>("/projects", folderProjectInput({ name }, folder))
+    .catch((error: unknown) => {
+      if (error instanceof DOMException && error.name === "TimeoutError")
+        throw new BaselineProjectCreateTimeout("Released host timed out creating the fixture project", {
+          cause: error,
+        });
+      throw error;
+    });
   const prefix = `/projects/${project.id}`;
   console.log("[upgrade fixture] Preparing Home, Planner, Workspaces, and the conversation harness");
   const { marketplace, extensions } = await api.get<{
