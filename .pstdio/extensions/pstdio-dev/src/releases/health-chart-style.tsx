@@ -4,7 +4,10 @@ import type { ChartValue } from "@tanstack/charts";
 import { Chart, type ChartProps } from "@tanstack/charts/react";
 import { createContext, type ReactNode, useContext } from "react";
 
-export const releaseHealthChartLayout = defineStyle({
+export const releaseHealthDashboardLayout = defineStyle({
+  "& [data-dashboard-widget-body] [data-dashboard-controls]": {
+    alignSelf: "flex-start",
+  },
   "& [data-scope=scroll-area][data-part=content]:has(> [data-release-health-chart])": {
     display: "flex",
     flexDirection: "column",

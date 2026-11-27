@@ -149,5 +149,6 @@ const ReleaseHealthPreview = ({ compact }: { compact: boolean }) => {
 export const ReleaseHealth = {
   args: { compact: false },
   controls: { compact: { type: "boolean", label: "Compact width" } },
+  description: "In edit mode, check the ETA chart and top-right controls with Compact width enabled.",
   render: ReleaseHealthPreview,
 };
