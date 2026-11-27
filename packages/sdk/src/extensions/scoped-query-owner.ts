@@ -47,7 +47,11 @@ export const createQueryOwner = <T>(
   const assertOpen = () => {
     if (disposed) throw new Error("Query owner is disposed");
   };
-  const repeat = createQueryReadYield(() => requiredRead, assertOpen);
+  const repeat = createQueryReadYield(
+    () => requiredRead,
+    assertOpen,
+    () => client.getQueryData(queryKey) === undefined,
+  );
   const options = createQueryReadOptions({
     client,
     queryKey,

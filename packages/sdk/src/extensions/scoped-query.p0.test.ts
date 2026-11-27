@@ -15,19 +15,27 @@ test.each([
   let reads = 0;
   const query = root.query({
     id: "yielding",
-    read: () => (++reads === 1 ? initial.promise : Promise.resolve("fresh")),
+    read: () => {
+      reads++;
+      if (reads === 1) return Promise.resolve("initial");
+      return reads === 2 ? initial.promise : Promise.resolve("fresh");
+    },
   });
+  await query.read();
   const stop = query.subscribe(() => {});
+  await turn();
   try {
+    query.invalidate();
+    await turn();
     query.invalidate();
     initial.resolve("stale");
     await turn();
-    expect(reads).toBe(1);
+    expect(reads).toBe(2);
     if (ending === "required") expect(await query.read()).toBe("fresh");
     if (ending === "accepted") query.accept("accepted");
     if (ending === "disposed") root.dispose();
     await turn();
-    expect(reads).toBe(ending === "required" ? 2 : 1);
+    expect(reads).toBe(ending === "required" ? 3 : 2);
     if (ending === "accepted") expect(query.getSnapshot().data).toBe("accepted");
     if (ending === "disposed") expect(query.getSnapshot().data).toBeUndefined();
   } finally {
@@ -121,14 +129,21 @@ test("shared query observers subscribe before reading, coalesce bursts and rejec
   for (let i = 0; i < 100; i++) for (const event of events) event();
   requests[0].resolve(1);
   await turn();
-  // A background follow-up yields the host queue after a superseded read.
-  expect(requests).toHaveLength(1);
-  await new Promise((resolve) => setTimeout(resolve, 110));
+  // The first correction of an empty panel yields one turn, without the recurring-read delay.
+  await new Promise((resolve) => setTimeout(resolve, 20));
   expect(requests).toHaveLength(2);
   expect(values).not.toContain(1);
+  // Another invalidation before any data is published restores the normal background delay.
+  for (const event of events) event();
   requests[1].resolve(2);
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  expect(requests).toHaveLength(2);
+  expect(values).not.toContain(2);
+  await new Promise((resolve) => setTimeout(resolve, 110));
+  expect(requests).toHaveLength(3);
+  requests[2].resolve(3);
   await turn();
-  expect(first.getSnapshot().data).toBe(2);
+  expect(first.getSnapshot().data).toBe(3);
   stop();
   stopTwo();
   expect(events.size).toBe(0);
