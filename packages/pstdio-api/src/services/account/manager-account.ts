@@ -9,6 +9,7 @@ const workbenchesSchema = z.array(z.object({ workbenchId: identitySchema }));
 const accountSchema = z.object({
   features: z.object({ relay: z.boolean() }),
   projectDeletion: z.boolean().optional(),
+  profile: z.object({ email: z.email() }).optional(),
 });
 
 const deletionsSchema = z.array(projectDeletionStatusSchema);
