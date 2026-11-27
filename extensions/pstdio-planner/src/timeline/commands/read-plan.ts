@@ -6,7 +6,7 @@ import { ensureDefaultTags } from "../../data/seed";
 import { timelineBoard } from "../../data/ticket-board";
 import { ticketSummaryFields } from "../../data/ticket-query-summary";
 import { activeTicket } from "../../data/ticket-view-state";
-import { readWorkflowStatuses, usableWorkflowStatuses } from "../../data/workflow-statuses";
+import { readCompletedStatusIds } from "../../data/workflow-statuses";
 import { daysBetween } from "../model/days";
 import type { MilestoneDisplay } from "../model/milestone-visibility";
 import { summarizeSection } from "../model/section-summary";
@@ -36,8 +36,7 @@ export const readPlanCommand = defineCommand({
   },
   async run(ctx, input) {
     await ensureTicketStorage(ctx);
-    const [statuses] = await Promise.all([readWorkflowStatuses(ctx), ensureDefaultTags(ctx.storage)]);
-    const workflow = usableWorkflowStatuses(statuses);
+    const [completedStatusIds] = await Promise.all([readCompletedStatusIds(ctx), ensureDefaultTags(ctx.storage)]);
     const display = input.display;
     const hidden = Boolean(
       display?.collapsedMilestones?.length ||
@@ -49,7 +48,7 @@ export const readPlanCommand = defineCommand({
     const selected = input.ticketId ? await planPlacements(ctx.storage).get(input.ticketId) : undefined;
     const initializedRevision = await initializePlanPlacements(
       ctx,
-      workflow.completedStatusIds,
+      completedStatusIds,
       selected ? 0 : initializationCount,
     );
     // Keep the active-prefix proof and the displayed page on the same snapshot.

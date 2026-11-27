@@ -1,4 +1,6 @@
 import type { ExtensionContextBase } from "@pstdio/sdk/extensions";
+import { readStatusDefinitions } from "./definition-query";
+import { ensureDefaultStatuses } from "./seed";
 import { readTicketStatuses } from "./status-operations";
 import type { StoredStatus } from "./types";
 
@@ -60,6 +62,14 @@ export const usableWorkflowStatuses = (input: Awaited<ReturnType<typeof readWork
       ? null
       : input.selections.mergeTargetStatusId,
   };
+};
+
+export const readCompletedStatusIds = async (ctx: WorkflowContext) => {
+  const [settings] = await Promise.all([ctx.settings.all(), ensureDefaultStatuses(ctx.storage)]);
+  const { completedStatusIds } = parseWorkflowStatuses(settings["workflow.statuses"]);
+  if (!completedStatusIds.length) return [];
+  const known = new Set((await readStatusDefinitions(ctx.storage)).map(({ id }) => id));
+  return completedStatusIds.filter((id) => known.has(id));
 };
 
 export const readMergeDestination = async (ctx: WorkflowContext) => {

@@ -1,7 +1,7 @@
 import { createCollectionRecordsIfAbsent } from "@pstdio/sdk/data";
 import type { ExtensionContextBase, ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { withQueuedWriteGuard } from "../../data/write-guard";
-import { nextPlacementBatch } from "./placement-batch";
+import { nextPlacementBatch, PLACEMENT_BATCH_SIZE, readUnplacedPlanTicket } from "./placement-batch";
 import { readPlanMetadata } from "./placement-store";
 
 const activePlacements = (storage: ExtensionStorageApi) =>
@@ -58,6 +58,11 @@ const initializePlacements = async (
       return { id: ticketId, value: { ticketId, deadlineId: null, position } };
     });
     await createCollectionRecordsIfAbsent(storage, "timeline.placements", placements);
+    if (requiredActiveCount !== undefined && page.length < PLACEMENT_BATCH_SIZE) {
+      // Only a fresh post-commit read proves exhaustion; new work may have arrived during the write.
+      const remaining = await readUnplacedPlanTicket(storage);
+      if (!remaining.records.length) return remaining.revision;
+    }
   }
 };
 

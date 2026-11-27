@@ -27,7 +27,8 @@ import {
   projectionStringTag,
   projectionSubstringBytes,
 } from "./record-projection-codec";
-import { cachedQueryFieldSql, cachedQueryPredicateSql } from "./record-query-field-cache";
+import { cachedPredicateSql } from "./record-query-cached-predicate";
+import { cachedQueryFieldSql } from "./record-query-field-cache";
 import { recordHierarchySql } from "./record-query-hierarchy";
 import { recordLookupSql } from "./record-query-lookup";
 import { relatedRecordPredicateSql } from "./record-related-query";
@@ -220,19 +221,6 @@ type RelatedSql = (
   alias?: string,
   negated?: boolean,
 ) => SQL;
-const cachedPredicateSql = (
-  index: StorageRecordIndex,
-  predicate: StoragePredicate,
-  alias: string | undefined,
-  resolve: ((name: string) => StorageRecordIndex) | undefined,
-  owner: QuerySqlOwner | undefined,
-) => {
-  if (!resolve || !owner) return;
-  return cachedQueryPredicateSql(index, predicate, alias, (original) =>
-    relatedRecordPredicateSql(owner, original, predicate, resolve, alias ?? "records"),
-  );
-};
-
 export const predicateSql = (
   index: StorageRecordIndex,
   predicate?: StoragePredicate,

@@ -183,6 +183,11 @@ export const seedDefaultTags = async (storage: ExtensionStorageApi) => {
 };
 
 /** Finish default writes before a caller pins its query revision. */
+export const ensureDefaultStatuses = async (storage: ExtensionStorageApi) => {
+  if (!(await storage.get(STATUS_SEED_MARKER))) await seedDefaultStatuses(storage);
+};
+
+/** Finish default writes before a caller pins its query revision. */
 export const ensureDefaultTags = async (storage: ExtensionStorageApi) => {
   if (!(await storage.get(TAG_SEED_MARKER))) await seedDefaultTags(storage);
 };

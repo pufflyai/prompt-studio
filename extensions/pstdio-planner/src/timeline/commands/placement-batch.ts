@@ -11,6 +11,11 @@ const unplaced: StoragePredicate = {
     { not: { exists: { index: "timeline-placements", on: [{ sourceField: "id", relatedField: "ticketId" }] } } },
   ],
 };
+export const PLACEMENT_BATCH_SIZE = 100;
+
+export const readUnplacedPlanTicket = (storage: ExtensionStorageApi) =>
+  storage.records.query({ index: "ticket-view", where: unplaced, fields: [], orderBy: [], limit: 1 });
+
 const dependencies = (row: StorageQueryRecord) => (Array.isArray(row.fields.dependsOn) ? row.fields.dependsOn : []);
 
 const orderedWindow = (rows: StorageQueryRecord[]) => {
@@ -45,14 +50,18 @@ export const nextPlacementBatch = async (storage: ExtensionStorageApi, completed
       { field: "position", direction: "asc" },
       { field: "id", direction: "asc" },
     ],
-    limit: 100,
+    limit: PLACEMENT_BATCH_SIZE,
   };
   const window = (await storage.records.query(query)).records;
   if (!window.length) return window;
   const ids = window.map(({ fields }) => fields.id);
   const ordered = orderedWindow(window);
   if (ordered) {
-    if (window.length < 100 || window.every((row) => dependencies(row).every((id) => ids.includes(id)))) return ordered;
+    if (
+      window.length < PLACEMENT_BATCH_SIZE ||
+      window.every((row) => dependencies(row).every((id) => ids.includes(id)))
+    )
+      return ordered;
     const external = await storage.records.query({
       index: "ticket-view",
       fields: [],
