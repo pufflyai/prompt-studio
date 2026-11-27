@@ -122,6 +122,64 @@ a + b = c
     expect(roundTrip(exported)).toBe(exported);
   });
 
+  test("round-trips adjoining equations through the rich-text editor", () => {
+    const markdown = String.raw`\(x\)\[y\]`;
+    const expected = [
+      {
+        type: "paragraph",
+        children: [
+          { type: "inlineMath", value: "x" },
+          { type: "inlineMath", value: "y" },
+        ],
+      },
+    ];
+    expect(parseMarkdown(roundTrip(markdown)).children).toMatchObject(expected);
+  });
+
+  test("round-trips adjoining equations containing escaped dollar signs without adding a space", () => {
+    const markdown = String.raw`\(\$5\)\(\$6\)`;
+    expect(roundTrip(markdown)).toBe(markdown);
+    expect(parseMarkdown(markdown).children).toMatchObject([
+      {
+        type: "paragraph",
+        children: [
+          { type: "inlineMath", value: String.raw`\$5` },
+          { type: "inlineMath", value: String.raw`\$6` },
+        ],
+      },
+    ]);
+  });
+
+  test("keeps prices in prose and still matches numeric and symbolic formulas", () => {
+    const markdown = "Prices are $5 and $10. A range is $1,250.50–$1,500.75. The value is $5$ or $x + 1$.";
+    expect(parseMarkdown(markdown).children).toMatchObject([
+      {
+        type: "paragraph",
+        children: [
+          { type: "text", value: "Prices are $5 and $10. A range is $1,250.50–$1,500.75. The value is " },
+          { type: "inlineMath", value: "5" },
+          { type: "text", value: " or " },
+          { type: "inlineMath", value: "x + 1" },
+          { type: "text", value: "." },
+        ],
+      },
+    ]);
+  });
+
+  test.each(["-x", "α", "[x]"])("keeps a price separate from a formula beginning with %s", (formula) => {
+    const markdown = `It costs $5 and $${formula}$ is a term.`;
+    expect(parseMarkdown(markdown).children).toMatchObject([
+      {
+        type: "paragraph",
+        children: [
+          { type: "text", value: "It costs $5 and " },
+          { type: "inlineMath", value: formula },
+          { type: "text", value: " is a term." },
+        ],
+      },
+    ]);
+  });
+
   test("keeps unmatched square bracket escapes as text around valid equations", () => {
     const markdown = `\\]
 

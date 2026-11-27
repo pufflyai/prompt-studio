@@ -348,6 +348,41 @@ test("edits multiline display math without rewriting the original delimiter line
   expect(result).toBe(markdown.replace("= z", "= w"));
 });
 
+test("edits the second of two adjacent formulas without rewriting its delimiters", () => {
+  const markdown = String.raw`Adjacent: \(x\)\[y\].`;
+  const result = sourceRoundTrip(markdown, (editor) => {
+    editor.update(
+      () => {
+        const paragraph = $getRoot().getFirstChild();
+        expect($isElementNode(paragraph)).toBe(true);
+        if (!$isElementNode(paragraph)) return;
+        const equations = paragraph.getChildren().filter($isEquationNode);
+        expect(equations.map((equation) => equation.getEquation())).toEqual(["x", "y"]);
+        equations[1]!.setEquation("z");
+      },
+      { discrete: true },
+    );
+  });
+
+  expect(result).toBe(String.raw`Adjacent: \(x\)\[z\].`);
+});
+
+test("edits price prose without rewriting its dollar signs", () => {
+  const markdown = "Prices are $.50 and $.99. The equation is $5$.";
+  const result = sourceRoundTrip(markdown, (editor) => {
+    editor.update(
+      () => {
+        const text = $getRoot().getAllTextNodes()[0];
+        expect(text?.getTextContent()).toBe("Prices are $.50 and $.99. The equation is ");
+        text?.setTextContent(text.getTextContent().replace("and", "or"));
+      },
+      { discrete: true },
+    );
+  });
+
+  expect(result).toBe(markdown.replace("and", "or"));
+});
+
 test("maps edits within their block while preserving neighboring tokens and line endings", () => {
   const markdown = ["Before {{keep_one}} 😀.", "Target __emphasis__ {{keep_two}}.", "After {{keep_three}}."].join(
     "\r\n\r\n",

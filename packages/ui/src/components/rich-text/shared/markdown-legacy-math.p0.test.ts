@@ -155,10 +155,32 @@ Use this closing bracket: \]
     ]);
   });
 
-  test("keeps adjacent legacy formulas from becoming a single invalid formula", () => {
+  test("renders adjacent legacy formulas as separate equations", () => {
     const doc = parseMarkdown(String.raw`Adjacent: \(x\)\[y\].`);
     expect(doc.children).toMatchObject([
-      { type: "paragraph", children: [{ type: "text", value: "Adjacent: (x)[y]." }] },
+      {
+        type: "paragraph",
+        children: [
+          { type: "text", value: "Adjacent: " },
+          { type: "inlineMath", value: "x" },
+          { type: "inlineMath", value: "y" },
+          { type: "text", value: "." },
+        ],
+      },
+    ]);
+  });
+
+  test("renders a legacy and dollar formula next to each other", () => {
+    const doc = parseMarkdown(String.raw`\(x\)$y$\(z\)`);
+    expect(doc.children).toMatchObject([
+      {
+        type: "paragraph",
+        children: [
+          { type: "inlineMath", value: "x" },
+          { type: "inlineMath", value: "y" },
+          { type: "inlineMath", value: "z" },
+        ],
+      },
     ]);
   });
 });

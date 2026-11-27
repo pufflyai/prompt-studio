@@ -80,23 +80,10 @@ const literalAt = (ranges: SourceRange[], start: number, end: number) => {
 
 const containerPrefix = /^[ \t]*(?:(?:>|[-+*][ \t]+|\d{1,9}[.)][ \t]+)[ \t]*)*/;
 
-const inlineFence = (markdown: string, start: number, expression: string) => {
-  let length = 2;
-  for (const [dollars] of expression.matchAll(/\$+/g)) length = Math.max(length, dollars.length + 1);
-  const lineStart = markdown.lastIndexOf("\n", start - 1) + 1;
-  const prefix = markdown.slice(lineStart, start);
-  if (/[\r\n]/.test(expression) && containerPrefix.exec(prefix)?.[0] === prefix) {
-    // Two dollars at the start of a wrapped formula would open a display fence.
-    return expression.includes("$") ? undefined : "$";
-  }
-  return "$".repeat(length);
-};
-
 interface InlinePair {
   open: number;
   close: number;
   wrapped: boolean;
-  fence: string;
 }
 
 const inlinePairs = (markdown: string, block: SourceRange, literals: SourceRange[], autolinks: SourceRange[]) => {
@@ -120,8 +107,7 @@ const inlinePairs = (markdown: string, block: SourceRange, literals: SourceRange
     opener = undefined;
     const expression = markdown.slice(open + 2, offset);
     if (!expression.trim() || literalAt(literals, open, offset + 2)) continue;
-    const fence = inlineFence(markdown, open, expression);
-    if (fence) pairs.push({ open, close: offset, wrapped: /[\r\n]/.test(expression), fence });
+    pairs.push({ open, close: offset, wrapped: /[\r\n]/.test(expression) });
   }
 
   return pairs;
@@ -184,36 +170,16 @@ const findDisplayPairs = (
   return pairs;
 };
 
-const renderInlineLines = (markdown: string, sourceLines: string[], pairs: InlinePair[], literals: SourceRange[]) => {
-  const edits = pairs.flatMap(({ open, close, fence }, index) => {
-    const preceding = pairs[index - 1];
-    const following = pairs[index + 1];
-    // Adjacent synthetic dollar runs would be read as one delimiter.
-    if (preceding?.close === open - 2 || following?.open === close + 2) return [];
-    if (markdown[open - 1] === "$" || markdown[close + 2] === "$") return [];
-    return [
-      { offset: open, fence },
-      { offset: close, fence },
-    ];
-  });
-  let editIndex = 0;
+const displayLines = (sourceLines: string[], literals: SourceRange[]) => {
   let offset = 0;
   return sourceLines.map((line) => {
     const lineStart = offset;
     offset += line.length + 1;
-    const rendered: string[] = [];
-    let copied = 0;
-    for (; edits[editIndex] && edits[editIndex]!.offset < offset; editIndex++) {
-      const edit = edits[editIndex]!;
-      const start = edit.offset - lineStart;
-      rendered.push(line.slice(copied, start), edit.fence);
-      copied = start + 2;
-    }
     const [, indent = "", expression = ""] = singleLineDisplayPattern.exec(line) ?? [];
     if (expression.trim() && !literalAt(literals, lineStart, lineStart + line.length)) {
       return [`${indent}$$`, expression.trim(), `${indent}$$`];
     }
-    return [rendered.join("") + line.slice(copied)];
+    return [line];
   });
 };
 
@@ -243,22 +209,7 @@ const renderLegacyMath = (source: string[], normalized: string[][], pairs: Displ
   return { markdown: lines.join("\n"), fences };
 };
 
-export const parseLegacyMath = (markdown: string, parse: (markdown: string) => Root) => {
-  // Markdown itself determines code spans and block boundaries before legacy delimiters are considered.
-  const original = parse(markdown);
-  if (!/\\[([]/.test(markdown)) return original;
-
-  const source = markdown.split("\n");
-  const { paragraphs, literals, inlineBlocks, autolinks } = readSyntax(markdown, original);
-  const inline = inlineBlocks.flatMap((block) => inlinePairs(markdown, block, literals, autolinks));
-  const matchedInline = new Set(inline.filter((pair) => !pair.wrapped).flatMap(({ open, close }) => [open, close]));
-  const pairs = findDisplayPairs(source, paragraphs, literals, matchedInline);
-  const lines = renderInlineLines(markdown, source, inline, literals);
-  const rendered = renderLegacyMath(source, lines, pairs);
-  if (rendered.markdown === markdown) return original;
-  const tree = parse(rendered.markdown);
-  if (!pairs.length) return tree;
-
+const acceptedDisplayPairs = (tree: Root, rendered: ReturnType<typeof renderLegacyMath>, pairs: DisplayPair[]) => {
   const parsedFences = new Set<string>();
   forEachChild(tree, (node) => {
     if (node.type === "math" && node.position) {
@@ -266,10 +217,36 @@ export const parseLegacyMath = (markdown: string, parse: (markdown: string) => R
       parsedFences.add(`${start.line - 1}:${start.column - 1}:${end.line - 1}`);
     }
   });
-
   // Only retain a replacement when Markdown recognizes both fences in the same math block.
-  const accepted = pairs.filter((_, index) => parsedFences.has(rendered.fences[index]!));
-  if (accepted.length === pairs.length) return tree;
-  const fallback = renderLegacyMath(source, lines, accepted).markdown;
-  return fallback === markdown ? original : parse(fallback);
+  return pairs.filter((_, index) => parsedFences.has(rendered.fences[index]!));
+};
+
+type ParseMath = (markdown: string, matches?: ReadonlyMap<number, number>) => Root;
+
+const matchInline = (markdown: string, { inlineBlocks, literals, autolinks }: ReturnType<typeof readSyntax>) =>
+  inlineBlocks.flatMap((block) => inlinePairs(markdown, block, literals, autolinks));
+
+export const parseLegacyMath = (markdown: string, parse: ParseMath) => {
+  // Markdown itself determines code spans and block boundaries before legacy delimiters are considered.
+  const original = parse(markdown);
+  if (!/\\[([]/.test(markdown)) return original;
+
+  const source = markdown.split("\n");
+  const syntax = readSyntax(markdown, original);
+  const originalInline = matchInline(markdown, syntax);
+  const matchedInline = new Set(
+    originalInline.filter((pair) => !pair.wrapped).flatMap(({ open, close }) => [open, close]),
+  );
+  const pairs = findDisplayPairs(source, syntax.paragraphs, syntax.literals, matchedInline);
+  const lines = displayLines(source, syntax.literals);
+  const rendered = renderLegacyMath(source, lines, pairs);
+  const normalized = rendered.markdown === markdown ? original : parse(rendered.markdown);
+  const accepted = pairs.length ? acceptedDisplayPairs(normalized, rendered, pairs) : pairs;
+  const input =
+    accepted.length === pairs.length ? rendered.markdown : renderLegacyMath(source, lines, accepted).markdown;
+  let tree = normalized;
+  if (input === markdown) tree = original;
+  else if (input !== rendered.markdown) tree = parse(input);
+  const inline = input === markdown ? originalInline : matchInline(input, readSyntax(input, tree));
+  return inline.length ? parse(input, new Map(inline.map(({ open, close }) => [open, close]))) : tree;
 };
