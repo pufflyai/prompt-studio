@@ -13,16 +13,21 @@ import { getWorkspaceDiffSummaryHandler, getWorkspaceDiffSummaryRoute } from "./
 const fixture = async () => {
   const root = await mkdtemp(join(tmpdir(), "pstdio-diff-cancellation-"));
   await git(root, ["init"]);
-  await git(root, [
+  // Seed a real empty HEAD without running the porcelain commit machinery.
+  const tree = await git(root, ["write-tree"]);
+  const commit = await git(root, [
     "-c",
     "user.name=Fixture",
     "-c",
     "user.email=fixture@example.test",
-    "commit",
-    "--allow-empty",
+    "-c",
+    "commit.gpgSign=false",
+    "commit-tree",
+    tree,
     "-m",
     "Initial",
   ]);
+  await git(root, ["update-ref", "HEAD", commit]);
   const workspace = {
     id: "workspace",
     project_id: "project",
