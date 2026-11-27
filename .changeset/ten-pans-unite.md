@@ -1,6 +1,7 @@
 ---
 "pstdio": patch
 "@pstdio/sdk": patch
+"planner": patch
 ---
 
 Start loading an extension panel’s JavaScript while its webview connects.
