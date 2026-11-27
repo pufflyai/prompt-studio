@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
@@ -116,4 +116,18 @@ describe("extension API version declarations", () => {
     ]);
     expect(result.diagnostics[0]?.message).toContain(`"^${EXTENSION_API_VERSION}"`);
   });
+});
+
+test("the host supports every extension shipped in the repository and its project folder", () => {
+  const root = join(import.meta.dir, "../../../..");
+  for (const folder of ["extensions", ".pstdio/extensions"]) {
+    for (const entry of readdirSync(join(root, folder), { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      const source = join(root, folder, entry.name);
+      if (!existsSync(join(source, "package.json"))) continue;
+      const result = readPackageManifest(source);
+      expect(result.diagnostics, source).toEqual([]);
+      expect(result.manifest, source).toBeDefined();
+    }
+  }
 });

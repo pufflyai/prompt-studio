@@ -5,8 +5,8 @@ import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, write
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { chromium, expect as expectPage, type Page } from "@playwright/test";
-import type { ExtensionUpgradeReview, ListProjectExtensionsResponse } from "pstdio-api-contracts";
+import { chromium, expect as expectPage } from "@playwright/test";
+import type { ListProjectExtensionsResponse } from "pstdio-api-contracts";
 import { extensionUpgradeNeedsReviewCode } from "pstdio-api-contracts/extension-host";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
@@ -199,27 +199,6 @@ test("upgrades UI Canvas with its standalone webview dependencies", async () => 
   }
 });
 
-const provideUpgradeAgentReply = async (page: Page, projectId: string) => {
-  const staged = page
-    .waitForResponse(
-      (response) => response.url().endsWith("/upgrade-review") && response.request().postDataJSON().action === "begin",
-    )
-    .then(async (response) => ((await response.json()) as { review: ExtensionUpgradeReview }).review);
-  await page.route(
-    (url) => url.pathname === `/v1/projects/${projectId}/sessions` && url.searchParams.has("anchorId"),
-    (route) => route.fulfill({ json: { items: [{ id: "skills-upgrade-session", status: "completed" }] } }),
-  );
-  await page.route("**/v1/sessions/skills-upgrade-session/conversation", async (route) => {
-    const review = await staged;
-    const resolutions = review.changes
-      .filter(({ status }) => status === "conflict")
-      .map(({ path }) => ({ kind: "incoming", path }));
-    expect(resolutions.length).toBeGreaterThan(0);
-    const text = JSON.stringify({ reviewId: review.id, revision: review.revision, resolutions });
-    return route.fulfill({ json: { messages: [{ role: "assistant", parts: [{ type: "text", text }] }] } });
-  });
-};
-
 browserTest("updates an incompatible default extension and reinstalls it from Marketplace", async () => {
   const startedAt = Date.now();
   const phase = (name: string) => logTestPhase(`Marketplace upgrade: ${name} (+${Date.now() - startedAt}ms)`);
@@ -363,21 +342,20 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
     expect(adoptedResponse.status()).toBe(409);
     expect(await adoptedResponse.json()).toMatchObject({ code: extensionUpgradeNeedsReviewCode });
     await expectPage(detail).toContainText("v0.3.0");
-    await provideUpgradeAgentReply(page, project.id);
-    await detail.getByRole("button", { name: "Upgrade conflict", exact: true }).click();
-    await page.getByRole("button", { name: "Resolve", exact: true }).click();
+    await expectPage(detail.getByRole("button", { name: "Upgrade conflict", exact: true })).toHaveCount(0);
+    const chooseVersion = detail.getByRole("button", { name: "Choose version", exact: true });
+    await chooseVersion.click();
     const review = page.getByRole("dialog", { name: "Review Prompt Studio Skills upgrade" });
     await expectPage(review).toContainText("Original release unavailable");
     await review.getByRole("button", { name: "Close review" }).click();
     await expectPage(review).toHaveCount(0);
-    await detail.getByRole("button", { name: "Upgrade conflict", exact: true }).click();
-    await page.getByRole("button", { name: "Resolve", exact: true }).click();
+    await chooseVersion.click();
     await review.press("Escape");
     await expectPage(review).toHaveCount(0);
-    await detail.getByRole("button", { name: "Upgrade conflict", exact: true }).click();
-    await page.getByRole("button", { name: "Resolve", exact: true }).click();
+    await chooseVersion.click();
     const apply = review.getByRole("button", { name: "Use their version" });
-    await expectPage(review).toContainText("The agent prepared a resolution.");
+    await expectPage(review.getByRole("button", { name: "Ask agent" })).toHaveCount(0);
+    await expectPage(review.getByRole("button", { name: "Apply upgrade" })).toHaveCount(0);
     await expectPage(apply).toBeEnabled();
     await apply.click();
     await expectPage(review).toHaveCount(0);

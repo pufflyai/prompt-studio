@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { lstatSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { createRegistryClient, parseRegistrySourceRef } from "pstdio-extensions/distribution";
 import { withFileMutationLock } from "pstdio-paths";
@@ -22,6 +22,28 @@ const hashPattern = /^[a-f0-9]{64}$/;
 const baselinePath = (home: string, ref: string) => {
   const key = createHash("sha256").update(ref).digest("hex");
   return join(home, "cache", "extension-upgrade-baselines", key);
+};
+
+/** A legacy install can lose its source ref during folder discovery. Only accept an
+ * exact fingerprint previously recorded from a release, including package identity,
+ * version, file modes and lockfile. Never learn a baseline from the installed copy. */
+export const rememberedReleaseFingerprint = (home: string, path: string) => {
+  try {
+    const directory = join(home, "cache", "extension-upgrade-baselines");
+    if (!lstatSync(path).isDirectory()) return undefined;
+    const fingerprint = fingerprintUpgradeWorkingTree(path);
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      if (
+        entry.isFile() &&
+        hashPattern.test(entry.name) &&
+        readFileSync(join(directory, entry.name), "utf8") === fingerprint
+      )
+        return fingerprint;
+    }
+  } catch {
+    // An unreadable cache or working tree cannot prove the source is unchanged.
+  }
+  return undefined;
 };
 
 const readBaseline = (home: string, ref: string) => {
@@ -72,6 +94,13 @@ export const recoverExtensionUpgradeBaseline = async (ref: string, tempDir: stri
   return source.ref === ref ? source.path : undefined;
 };
 
+export class ExtensionUpgradeLocalEditsError extends ExtensionUpgradeNeedsReviewError {
+  constructor() {
+    super();
+    this.name = "ExtensionUpgradeLocalEditsError";
+  }
+}
+
 export const assertExtensionUpgradeWorkingTree = (
   path: string,
   baseline: string,
@@ -83,16 +112,17 @@ export const assertExtensionUpgradeWorkingTree = (
   } catch {
     // An unreadable or incomplete tree cannot establish a safe replacement.
   }
-  if (baseline !== current) throw new ExtensionUpgradeNeedsReviewError();
+  if (!current) throw new ExtensionUpgradeNeedsReviewError("The local extension could not be verified.");
+  if (baseline !== current) throw new ExtensionUpgradeLocalEditsError();
 };
 
 const requireExtensionUpgradeBaseline = async (
   home: string,
-  source: { path: string; ref: string | null },
+  source: NonNullable<InstallExtensionSourceInput["upgradeBase"]>,
   tempDir: string,
   signal?: AbortSignal,
 ) => {
-  let baseline = source.ref ? readBaseline(home, source.ref) : undefined;
+  let baseline = source.ref ? readBaseline(home, source.ref) : source.rememberedFingerprint;
   if (!baseline && source.ref) {
     try {
       const recovered = await recoverExtensionUpgradeBaseline(source.ref, tempDir, signal);

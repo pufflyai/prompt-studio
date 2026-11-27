@@ -62,6 +62,7 @@
       },
       "upgrade": {
         "reviewNeeded": "Update paused",
+        "chooseVersion": "Choose version",
         "waiting": "Waiting to upgrade",
         "action": "Upgrade",
         "current": "Extension is already current",

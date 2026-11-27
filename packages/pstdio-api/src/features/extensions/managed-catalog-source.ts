@@ -2,10 +2,9 @@ import { parseRegistrySourceRef } from "pstdio-extensions/distribution";
 import { parseExtensionSourceRef } from "../../services/extension-source-ref";
 import { type ExtensionCatalog, packagedExtensionCatalog, selectExtensionCatalogEntry } from "./extension-catalog";
 
-export const isManagedCatalogSource = (
-  source: { install_name: string; extension_id: string; source_kind: string; source_ref: string | null },
+export const trustedCatalogEntry = (
+  source: { install_name: string; extension_id: string },
   catalog: ExtensionCatalog,
-  registryUrl?: string,
 ) => {
   const trusted = selectExtensionCatalogEntry(packagedExtensionCatalog, source.install_name);
   const selected = selectExtensionCatalogEntry(catalog, source.install_name);
@@ -19,7 +18,17 @@ export const isManagedCatalogSource = (
     selected.origin.ref !== trusted.origin.ref ||
     source.extension_id !== (trusted.extensionId ?? `pstdio.${trusted.installName}`)
   )
-    return false;
+    return undefined;
+  return trusted;
+};
+
+export const isManagedCatalogSource = (
+  source: { install_name: string; extension_id: string; source_kind: string; source_ref: string | null },
+  catalog: ExtensionCatalog,
+  registryUrl?: string,
+) => {
+  const trusted = trustedCatalogEntry(source, catalog);
+  if (!trusted) return false;
   const registry = parseRegistrySourceRef(source.source_ref);
   // 0.48 recorded some catalog tools in project folders as local_path with their official Git ref.
   const git = parseExtensionSourceRef(source.source_ref);

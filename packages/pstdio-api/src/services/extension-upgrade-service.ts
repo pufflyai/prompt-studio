@@ -8,7 +8,6 @@ import {
   getExtensionCatalog,
   selectExtensionCatalogEntry,
 } from "../features/extensions/extension-catalog";
-import { ExtensionUpgradeNeedsReviewError } from "../features/extensions/extension-upgrade-baseline";
 import {
   type InstallExtensionSourceInput,
   installExtensionSource as installExtensionSourceDefault,
@@ -20,7 +19,7 @@ import { createExtensionMarketplacePreview } from "./extension-marketplace-previ
 import type { createExtensionService } from "./extension-service";
 import { createExtensionSourceInstaller } from "./extension-source-installer";
 import { parseExtensionSourceRef, resolveExtensionReleaseCommit } from "./extension-source-ref";
-import { findLocalProvider, type UpgradeInstance } from "./extension-upgrade-local-provider";
+import { findLocalProvider, localUpgradeFingerprint, type UpgradeInstance } from "./extension-upgrade-local-provider";
 import { createExtensionUpgradeReviewService } from "./extension-upgrade-review-service";
 import { ExtensionUpgradeUnavailableError } from "./extension-upgrade-unavailable-error";
 import { createPublishedExtensionAlternative } from "./published-extension-alternative";
@@ -328,12 +327,9 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
     if (!existing) return null;
     await deps.extensionService.assertInstalledSourceChoice(existing.installedSource.id);
     const local = await separateLocalProvider(projectId, existing);
-    if (local) {
-      throw new ExtensionUpgradeNeedsReviewError(
-        `This project is using a local copy of ${local.installedSource.display_name}. The local files were kept.`,
-      );
-    }
+    const fingerprint = await localUpgradeFingerprint(existing, local, catalog, deps.home);
     const input = await resolveUpgradeInput(projectId, existing);
+    if (fingerprint && input.upgradeBase) input.upgradeBase.rememberedFingerprint = fingerprint;
     return registerUpgrade(existing, await install(input));
   };
 
