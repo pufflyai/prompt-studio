@@ -47,6 +47,9 @@ test("stages, validates and applies a compatible workspace snapshot while retain
     };
     let switched: Parameters<ExtensionService["enableInstalledSourceForProject"]>[0] | undefined;
     const extensionService = {
+      assertInstalledSourceChoice: async (sourceId: string) => {
+        expect(sourceId).toBe(source.id);
+      },
       getProjectExtensionInstance: async () => ({ instance, installedSource: source }),
       listProjectExtensionInstances: async () => [{ instance, installedSource: source }],
       enableInstalledSourceForProject: async (
@@ -70,7 +73,7 @@ test("stages, validates and applies a compatible workspace snapshot while retain
       installExtensionSource: (input) =>
         installExtensionSource({ ...input, env: { PSTDIO_HOME: home }, skipInstall: true }),
     });
-    await expect(service.upgrade("project", instance.id)).rejects.toThrow("local copy");
+    await expect(service.upgrade("project", instance.id)).rejects.toThrow("Choose which version of Codex");
     const review = (await service.reviews.beginReview("project", instance.id))!;
     expect(review.hasOriginal).toBe(false);
     const file = (await service.reviews.readReviewFile("project", instance.id, review.id, "extension.ts"))!;
