@@ -2,6 +2,7 @@ import { type SQL, sql } from "drizzle-orm";
 import { aggregateOptions, compareAggregateGroups } from "pstdio-sync/records";
 import type { Json, StorageAggregateQuery, StorageRecordIndex } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
+import { createLookupSetIndex } from "./record-lookup-set";
 import { decodeProjectionValue, projectionKey } from "./record-projection-codec";
 import { createQueryFieldCache, queryFieldCacheSourceSql } from "./record-query-field-cache";
 import { type QuerySqlOwner, recordFieldSql } from "./record-query-sql";
@@ -18,6 +19,7 @@ export const aggregateRecordQuery = async (
   counted?: SQL,
 ) => {
   const options = aggregateOptions(index, query);
+  index = createLookupSetIndex(index, owner, query.where);
   const statistics = query.statistics
     ? { statistics: await aggregateRecordStatistics(tx, index, query, where, resolve, owner) }
     : {};

@@ -1,6 +1,7 @@
 import { type SQL, sql } from "drizzle-orm";
 import type { StorageIndexField, StorageRecordIndex } from "pstdio-sync-contracts";
 import { expressionArray, expressionComparable } from "./query-expression-values";
+import { lookupSetRecordIdSql } from "./record-lookup-set";
 
 export const recordLookupSql = (
   source: StorageRecordIndex,
@@ -42,7 +43,15 @@ export const recordLookupSql = (
       match = sql`EXISTS (SELECT 1 FROM jsonb_array_elements(${expressionArray(right)}) AS lookup_member(value) WHERE ${expressionComparable(sql`lookup_member.value`)} = ${expressionComparable(left)})`;
     return sql`${left} IS NOT NULL AND ${left} <> 'null'::jsonb AND ${right} IS NOT NULL AND ${right} <> 'null'::jsonb AND ${match}`;
   });
-  return sql`(SELECT ${read(target, lookup.field, targetAlias)} FROM records AS ${sql.identifier(targetAlias)}
+  const selectedId = lookupSetRecordIdSql(source, field, target, alias, read, scope);
+  // Keep the point fetch separate from the target's partial indexes. Empty-index
+  // statistics can otherwise favor scanning that entire prefix even with a known ID.
+  const selectedAlias = sql.identifier(`${targetAlias}_selected`);
+  const candidates = selectedId
+    ? sql`(SELECT * FROM records AS ${selectedAlias} WHERE ${selectedAlias}.owner_id = ${sql.identifier(alias)}.owner_id
+        AND ${selectedAlias}.record_id = ${selectedId} OFFSET 0)`
+    : sql`records`;
+  return sql`(SELECT ${read(target, lookup.field, targetAlias)} FROM ${candidates} AS ${sql.identifier(targetAlias)}
     WHERE ${scope(target, targetAlias)} AND ${sql.join(matches, sql` AND `)}
     ORDER BY ${sql.identifier(targetAlias)}.record_id COLLATE "C" LIMIT 1)`;
 };
