@@ -38,8 +38,7 @@ export const createKanbanRendererQuery = (input: {
           ...(state.page && { page: state.page }),
         },
         state.resource ?? resource,
-        signal,
-        state.pageParams,
+        { signal, pageParams: state.pageParams },
       );
       let wireRows: unknown[] = [];
       if (Array.isArray(value)) wireRows = value;

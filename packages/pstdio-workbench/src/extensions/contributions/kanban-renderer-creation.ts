@@ -1,6 +1,7 @@
 import type { WorkbenchExtensionKanbanRendererRecord } from "pstdio-api-contracts";
 import type { KanbanRendererCreateRequest } from "../../core/registries/renderers/kanban-renderer-registry";
 import type { CreateOperationFeedback } from "../host/workbench-create-operation";
+import type { ExecuteWorkbenchExtensionCommandInput } from "../host/workbench-extension-command";
 import type { WorkbenchExtensionKanbanRendererAdapter } from "./kanban-renderer-adapter";
 import {
   type KanbanRendererRow,
@@ -17,7 +18,12 @@ export const toCreateRowHandler = (
     params: Record<string, unknown>,
     feedback?: CreateOperationFeedback,
   ) => Promise<unknown>,
-  activateCreatedRow: ((row: KanbanRendererRow) => Promise<void> | void) | undefined,
+  activateCreatedRow:
+    | ((
+        row: KanbanRendererRow,
+        invocation: Pick<ExecuteWorkbenchExtensionCommandInput, "signal" | "isViewerCurrent">,
+      ) => Promise<void> | void)
+    | undefined,
 ) => {
   const contribution = record.createRow;
   if (!contribution) return undefined;
@@ -39,7 +45,10 @@ export const toCreateRowHandler = (
         return;
       const row = created as Partial<KanbanRendererRow>;
       if (typeof row.id !== "string" || typeof row.title !== "string") return;
-      return activateCreatedRow({ ...row, id: row.id, title: row.title, attributes: row.attributes ?? {} });
+      return activateCreatedRow(
+        { ...row, id: row.id, title: row.title, attributes: row.attributes ?? {} },
+        { signal, isViewerCurrent: submission.canOpenCreatedRow },
+      );
     };
     let opening: Promise<{ error: unknown } | undefined> | undefined;
     let attaching: Promise<void> | undefined;
