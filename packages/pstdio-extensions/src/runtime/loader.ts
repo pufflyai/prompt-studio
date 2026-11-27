@@ -3,7 +3,7 @@ import type { ExtensionDefinition, ExtensionSourceKind } from "@pstdio/sdk/exten
 import { remapPackageAssets } from "../artifacts/remap-package-assets";
 import type { ExtensionDiagnostic } from "../types/runtime";
 import { loadBackendDefinition } from "./backend-process/backend-workers";
-import { hydrateBackendDefinition } from "./backend-process/hydrate";
+import { hydrateBackendDefinition, type PrepareBackendRuntime } from "./backend-process/hydrate";
 import { createDiagnostic } from "./diagnostics";
 import { discoverExtensionPackages } from "./discovery";
 import {
@@ -51,6 +51,7 @@ export type LoadExtensionSourcesOptions = {
   preparedRevision?: PreparedExtensionRevision;
   immutableAssets?: boolean;
   definitionOnly?: boolean;
+  prepareRuntime?: (path: string, revision: PreparedExtensionRevision) => PrepareBackendRuntime | undefined;
 };
 
 let loadCounter = 0;
@@ -71,10 +72,18 @@ const formatImportError = (error: unknown, fallback: string) => {
 };
 
 // The host never imports an entry. A worker evaluates it and reports data and handler references.
-const loadDefinition = async (packagePath: string, revision: PreparedExtensionRevision, definitionOnly?: boolean) => {
+const loadDefinition = async (
+  packagePath: string,
+  revision: PreparedExtensionRevision,
+  options: {
+    definitionOnly?: boolean;
+    prepareRuntime?: (revision: PreparedExtensionRevision) => PrepareBackendRuntime | undefined;
+  },
+) => {
   loadCounter += 1;
-  const { definition: reported, acquire } = await loadBackendDefinition(packagePath, revision, definitionOnly);
-  return hydrateBackendDefinition(reported, acquire) as Record<string, unknown>;
+  const { definition: reported, acquire } = await loadBackendDefinition(packagePath, revision, options.definitionOnly);
+  const prepareRuntime = options.definitionOnly ? undefined : options.prepareRuntime?.(revision);
+  return hydrateBackendDefinition(reported, acquire, prepareRuntime) as Record<string, unknown>;
 };
 
 // Synchronous authoring API. The running host uses inspectExtensionLoadKey in its worker.
@@ -96,6 +105,7 @@ export const loadExtensionPackage = async (
     preparedRevision?: PreparedExtensionRevision;
     immutableAssets?: boolean;
     definitionOnly?: boolean;
+    prepareRuntime?: (revision: PreparedExtensionRevision) => PrepareBackendRuntime | undefined;
   } = {},
 ): Promise<LoadedExtensionSource | null> => {
   const {
@@ -139,7 +149,7 @@ export const loadExtensionPackage = async (
       priority: "requested",
     });
     retainPreparedRevision(preparedRevision);
-    const loaded = await loadDefinition(pkg.path, preparedRevision, options.definitionOnly);
+    const loaded = await loadDefinition(pkg.path, preparedRevision, options);
     definition = (
       options.immutableAssets ? loaded : remapPackageAssets(loaded, preparedRevision.packagePath, pkg.path)
     ) as ExtensionDefinition;
@@ -181,12 +191,14 @@ export const loadExtensionSources = async (options: LoadExtensionSourcesOptions 
 
   const explicitPackages = options.extensionPackages ?? [];
 
+  const { prepareRuntime } = options;
   for (const pkg of [...rootPackages, ...explicitPackages]) {
     const loaded = await loadExtensionPackage(pkg, diagnostics, {
       apiProvider: options.apiProvider,
       preparedRevision: options.preparedRevision,
       immutableAssets: options.immutableAssets,
       definitionOnly: options.definitionOnly,
+      prepareRuntime: prepareRuntime && ((revision) => prepareRuntime(pkg.path, revision)),
     });
     if (loaded) sources.push(loaded);
   }

@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { canonicalExtensionId, extensionIdentityRenames } from "pstdio-api-contracts/extension-host";
-import { readPackageManifestMetadata, withRequestedPreparation } from "pstdio-extensions";
+import { readAcceptedRevision, readPackageManifestMetadata, withRequestedPreparation } from "pstdio-extensions";
 import { resolvePstdioHome } from "pstdio-paths";
 import { traceSetupPhase } from "../../lib/setup-phase";
 import {
@@ -53,7 +53,7 @@ type InstallDefaultExtensionsDeps = {
 
 type DefaultExtensionInstallMode = "refresh" | "ensure";
 
-const needsDefaultExtensionInstall = (
+const needsDefaultExtensionInstall = async (
   entry: DefaultExtensionEntry,
   extensionsRoot: string,
   mode: DefaultExtensionInstallMode,
@@ -65,7 +65,9 @@ const needsDefaultExtensionInstall = (
   const { manifest } = readPackageManifestMetadata(targetPath);
   if (!manifest || manifest.pstdio?.scope === "repo") return true;
   if (typeof entry !== "string" && entry.skipInstall) return false;
-  return shouldInstallDependencies(targetPath);
+  if (!shouldInstallDependencies(targetPath)) return false;
+  // Prebuilt extensions run from their accepted revision, which owns its runtime dependencies.
+  return !(await readAcceptedRevision(targetPath))?.prebuiltRelease;
 };
 
 const runDefaultExtensionInstall = async (
@@ -199,8 +201,11 @@ const prepareDefaultExtensions = (deps: InstallDefaultExtensionsDeps, mode: Defa
         const extensionsRoot = join(resolvePstdioHome({ env }), "extensions");
         // Missing-only requests inspect disk after startup's queued source refresh finishes.
         // Project sync discovers installed sources and keeps their recorded Git origin.
+        const needsInstall = await Promise.all(
+          entries.map((entry) => needsDefaultExtensionInstall(entry, extensionsRoot, mode)),
+        );
         const defaultExtensions = entries
-          .filter((entry) => needsDefaultExtensionInstall(entry, extensionsRoot, mode))
+          .filter((_, index) => needsInstall[index])
           .map((entry) =>
             mode === "ensure" && typeof entry !== "string"
               ? { ...entry, force: !isInstalledUserExtension(entry, extensionsRoot) }

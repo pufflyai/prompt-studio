@@ -6,6 +6,8 @@ import type { BackendWorker } from "./supervisor";
 
 const PREPARE = Symbol.for("pstdio.backendHandler.prepare");
 
+export type PrepareBackendRuntime = (handlerPath: readonly string[]) => Promise<void> | undefined;
+
 /**
  * Starts the worker a handler runs in, if it is a worker handler and its worker is not running.
  * Callers with a short deadline, such as harness detection, wait for this before starting the clock.
@@ -20,15 +22,26 @@ export const prepareBackendHandler = async (handler: unknown) => {
  * becomes a host function that runs the handler in the worker. A runner context passed first is
  * reachable only through the process-mode surface; any other argument must be cloneable data.
  */
-export const hydrateBackendDefinition = (definition: unknown, acquire: () => Promise<BackendWorker>) => {
+export const hydrateBackendDefinition = (
+  definition: unknown,
+  acquire: () => Promise<BackendWorker>,
+  prepareRuntime?: PrepareBackendRuntime,
+) => {
   const seen = new WeakMap<object, unknown>();
-  const hydrate = (value: unknown): unknown => {
+  const hydrate = (value: unknown, path?: readonly string[]): unknown => {
     if (isBackendHandlerRef(value)) {
+      const acquireHandler =
+        path && prepareRuntime
+          ? () => {
+              const preparation = prepareRuntime(path);
+              return preparation ? preparation.then(acquire) : acquire();
+            }
+          : acquire;
       const handlerId = value[HANDLER_MARKER];
       const handler = async (first: unknown, ...rest: unknown[]) => {
         const hasContext = isHostContext(first);
         if (hasContext) first.signal?.throwIfAborted();
-        const worker = await acquire();
+        const worker = await acquireHandler();
         return hasContext
           ? worker.invoke({
               handlerId,
@@ -39,15 +52,16 @@ export const hydrateBackendDefinition = (definition: unknown, acquire: () => Pro
             })
           : worker.invoke({ handlerId, context: {}, surface: emptySurface, args: [first, ...rest] });
       };
-      return Object.assign(handler, { [PREPARE]: acquire });
+      return Object.assign(handler, { [PREPARE]: acquireHandler });
     }
     if (value === null || typeof value !== "object") return value;
     if (value instanceof Uint8Array || value instanceof Date || value instanceof RegExp) return value;
     if (seen.has(value)) return seen.get(value);
     const copy: Record<string, unknown> | unknown[] = Array.isArray(value) ? [] : {};
     seen.set(value, copy);
-    for (const [key, entry] of Object.entries(value)) (copy as Record<string, unknown>)[key] = hydrate(entry);
+    for (const [key, entry] of Object.entries(value))
+      (copy as Record<string, unknown>)[key] = hydrate(entry, path && [...path, key]);
     return copy;
   };
-  return hydrate(definition);
+  return hydrate(definition, prepareRuntime ? [] : undefined);
 };
