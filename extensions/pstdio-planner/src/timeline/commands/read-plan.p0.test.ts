@@ -427,3 +427,28 @@ test("attention includes unfinished dependents outside the selected Timeline row
   await ticketsCollection(storage).put(child.id, { ...child, archived: true });
   expect((await read()).ticketRows[0].attributes.needsAttention).toBe("no");
 });
+
+test("an empty completion selection retains review counts and has no observed completion pace", async () => {
+  const storage = createMemoryStorage();
+  const [ctx] = makeCommandArgs({
+    storage,
+    params: {},
+    overrides: {
+      settings: { all: async () => ({}) },
+      sessions: {
+        create: async () => ({ type: "session", id: "chat", title: "Chat", status: "in_progress" }),
+      } as never,
+    },
+  });
+  const ticket = await createTicketCommand.run(ctx, { title: "Done is a label", statusId: "done" });
+  await requestReviewCommand.run(ctx, {
+    ticket: ticket.id,
+    title: "Check the result",
+    instructions: "Confirm the result.",
+    request: { kind: "task" },
+  } as never);
+  const result = await readPlanCommand.run(ctx, {});
+  expect(result.pace).toBeNull();
+  expect(result.sections[0].counts).toEqual({ total: 1, done: 0, reviewNeeded: 1, blocked: 0, atRisk: 0 });
+  expect(result.ticketRows[0].attributes).toMatchObject({ reviewRequests: "requested", needsAttention: "yes" });
+});

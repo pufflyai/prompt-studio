@@ -13,7 +13,13 @@ const bindings = new WeakMap<
   }
 >();
 
-const sharedPredicates = (index: StorageRecordIndex) => {
+const sharedPredicates = (index: StorageRecordIndex, unconditional: Set<string>) => {
+  const required = new Set(
+    [...unconditional].flatMap((name) => {
+      const cases = index.fields[name]?.cases;
+      return cases?.length === 1 ? [JSON.stringify(cases[0].when)] : [];
+    }),
+  );
   const uses = new Map<string, number>();
   const visit = (predicate: StoragePredicate): boolean => {
     let complex = "exists" in predicate || "test" in predicate;
@@ -30,17 +36,24 @@ const sharedPredicates = (index: StorageRecordIndex) => {
     return complex;
   };
   for (const field of Object.values(index.fields)) for (const entry of field.cases ?? []) visit(entry.when);
-  return new Set([...uses].filter(([, count]) => count > 1).map(([key]) => key));
+  // Hoisting nested or later-case conditions could defeat short-circuit execution limits.
+  return new Set([...uses].filter(([key, count]) => count > 1 && required.has(key)).map(([key]) => key));
 };
 
 /** A statement-local index copy prevents repeated metrics from repeating correlated lookups. */
-export const createQueryFieldCache = (original: StorageRecordIndex) => {
+export const createQueryFieldCache = (original: StorageRecordIndex, selected: readonly string[]) => {
   const index = { ...original };
   const textOrder = recordQueryTextOrders.get(original);
   if (textOrder) recordQueryTextOrders.set(index, textOrder);
   const fields = new Map<string, string>();
   const predicates: PredicateCache = new Map();
-  bindings.set(index, { original, fields, predicates, shared: sharedPredicates(original) });
+  const unconditional = new Set(selected);
+  bindings.set(index, {
+    original,
+    fields,
+    predicates,
+    shared: sharedPredicates(original, unconditional),
+  });
   return { index, fields, predicates };
 };
 

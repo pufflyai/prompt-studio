@@ -90,3 +90,77 @@ test("repeated relationship conditions retain record scopes through pages and gr
     await fixture.close();
   }
 });
+
+test("shared checks preserve case and expression guards even with an unused unguarded definition", async () => {
+  const fixture = await createExtensionStorageFixture();
+  try {
+    const owner = { workbenchId: fixture.projectAId, extensionId: "guarded-predicates" };
+    const expensive = {
+      each: { field: "items" },
+      as: "item",
+      mode: "every" as const,
+      where: { op: "and" as const, args: Array.from({ length: 10 }, () => ({ literal: true })) },
+    };
+    const gate: StoragePredicate = { field: "gate", op: "eq", value: true };
+    const check: StoragePredicate = { test: expensive };
+    const condition = (when: StoragePredicate): StorageComputedField => ({
+      type: "number",
+      cases: [{ when, value: 1 }],
+      otherwise: 0,
+    });
+    const later: StorageComputedField = {
+      type: "number",
+      cases: [
+        { when: gate, value: 0 },
+        { when: check, value: 1 },
+      ],
+      otherwise: 0,
+    };
+    const guardedExpression: StorageComputedField = {
+      type: "number",
+      expression: {
+        op: "if",
+        args: [{ literal: true }, { literal: 0 }, { op: "if", args: [expensive, { literal: 1 }, { literal: 0 }] }],
+      },
+    };
+    const computed = {
+      unused: condition(check),
+      first: later,
+      second: later,
+      all: condition({ all: [{ not: gate }, check] }),
+      any: condition({ any: [gate, check] }),
+      and: condition({ test: { op: "and", args: [{ literal: false }, expensive] } }),
+      or: condition({ test: { op: "or", args: [{ literal: true }, expensive] } }),
+      expression: guardedExpression,
+      repeatedExpression: guardedExpression,
+    };
+    const fields = Object.keys(computed).filter((field) => field !== "unused");
+    const expected = { first: 0, second: 0, all: 0, any: 1, and: 0, or: 1, expression: 0, repeatedExpression: 0 };
+    for (const records of [
+      createDocumentStorageDBService(fixture.db).open({ owner }).records,
+      createMemoryStorage(owner).records,
+    ]) {
+      await records.defineIndexes([
+        {
+          name: "rows",
+          fields: { gate: { path: ["gate"], type: "boolean" }, items: { path: ["items"], type: "array" } },
+        },
+      ]);
+      await records.commit({
+        operationId: "seed",
+        edits: [{ recordId: "row", replace: { gate: true, items: Array(10001).fill("x") } }],
+      });
+      const page = await records.query({ index: "rows", computed, fields });
+      expect(page.records[0].fields).toEqual(expected);
+      const summary = await records.aggregate({
+        index: "rows",
+        computed,
+        metrics: Object.fromEntries(fields.map((field) => [field, { operation: "sum" as const, field }])),
+      });
+      expect(summary.metrics).toEqual(expected);
+      await expect(records.query({ index: "rows", computed, fields: ["unused"] })).rejects.toThrow();
+    }
+  } finally {
+    await fixture.close();
+  }
+});

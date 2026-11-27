@@ -19,7 +19,10 @@ export const recordRelatedOrderCandidatesSql = (
   owner: QuerySqlOwner | undefined,
 ) => {
   if (!owner || !index.orderBy?.length) return;
-  const cache = createQueryFieldCache(index);
+  const cache = createQueryFieldCache(
+    index,
+    index.orderBy.map(({ field }) => field),
+  );
   const order = pageOrderSql(cache.index, resolve, owner);
   if (
     ![...cache.fields.keys()].some(

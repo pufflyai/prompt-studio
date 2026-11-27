@@ -1,6 +1,7 @@
 import type { StorageComputedField, StorageExpression, StoragePredicate } from "@pstdio/sdk/extensions";
 import { ticketTagAttributeId } from "../../data/mappers";
 import type { readTicketViewPage } from "../../data/query-ticket-page";
+import { ticketHasPendingReview } from "../../data/review-query-indexes";
 import { selectedTicketComputedFields } from "../../data/ticket-computed-selection";
 import { activeTicket } from "../../data/ticket-view-state";
 import type { PlanPace } from "../contracts";
@@ -49,7 +50,9 @@ export const planQuerySummary = async (storage: Storage, view: View, selectsAllA
     complexityWeight: { type: "number" as const, expression: weight },
     completedWeight: {
       type: "number" as const,
-      expression: { op: "if" as const, args: [done, weight, { literal: 0 }] },
+      expression: view.workflow.completedStatusIds.length
+        ? { op: "if" as const, args: [done, weight, { literal: 0 }] }
+        : { literal: 0 },
     },
   };
   const metrics = {
@@ -59,9 +62,10 @@ export const planQuerySummary = async (storage: Storage, view: View, selectsAllA
   const filtered = together(view.scope.where, view.scope.search);
   const conditions = {
     done: view.conditions.done,
-    reviewNeeded: view.conditions.needsReview,
+    // Every selection here is active. With no completion statuses, all its tickets are unfinished.
+    reviewNeeded: view.workflow.completedStatusIds.length ? view.conditions.needsReview : ticketHasPendingReview,
     blocked: view.conditions.blocked,
-    atRisk: view.conditions.atRisk,
+    ...(view.metadata.deadlines.length ? { atRisk: view.conditions.atRisk } : {}),
   };
   const countFields = Object.fromEntries(
     Object.entries(conditions).map(([name, when]) => [
@@ -87,19 +91,21 @@ export const planQuerySummary = async (storage: Storage, view: View, selectsAllA
   const summaries = selectsAllActive
     ? group(filtered, true).then((summary) => [summary, summary])
     : Promise.all([group(activeTicket, false), group(filtered, true)]);
-  const firstAttempt = storage.records.aggregate({
-    index: "attempt-ticket",
-    where: {
-      exists: { index: "ticket-view", on: [{ sourceField: "ticketId", relatedField: "id" }], where: activeTicket },
-    },
-    metrics: { first: { operation: "min", field: "startedAt" } },
-  });
+  const firstAttempt = view.workflow.completedStatusIds.length
+    ? storage.records.aggregate({
+        index: "attempt-ticket",
+        where: {
+          exists: { index: "ticket-view", on: [{ sourceField: "ticketId", relatedField: "id" }], where: activeTicket },
+        },
+        metrics: { first: { operation: "min", field: "startedAt" } },
+      })
+    : undefined;
   const [[global, selected], starts] = await Promise.all([summaries, firstAttempt]);
   const completedComplexity = global.groups.reduce(
     (total, group) => total + (group.metrics?.completedComplexity ?? 0),
     0,
   );
-  const started = starts.metrics?.first;
+  const started = starts?.metrics?.first;
   const now = Date.now();
   const pace: PlanPace | null =
     completedComplexity && started != null && now > started

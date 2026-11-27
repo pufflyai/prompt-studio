@@ -53,7 +53,10 @@ export const recordPageSql = (
     const field = queryField(index, name);
     return field.lookup || field.expression || field.cases || name === index.hierarchy?.breadcrumbField;
   });
-  const cache = complex && owner ? createQueryFieldCache(index) : undefined;
+  const cache =
+    complex && owner
+      ? createQueryFieldCache(index, [...fields, ...(index.orderBy ?? []).map(({ field }) => field)])
+      : undefined;
   if (cache) index = cache.index;
   const selected = fields.flatMap((name) => [
     sqlLiteral(projectionKey(name)),
