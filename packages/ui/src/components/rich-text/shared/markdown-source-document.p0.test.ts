@@ -414,6 +414,83 @@ test("removes an adjacent formula without rewriting the surviving formula", () =
   expect(result).toBe(String.raw`Before \[y\] after.`);
 });
 
+test("keeps a remaining bracket equation inline after removing its only neighbor", () => {
+  const result = sourceRoundTrip(String.raw`\(x\)\[\$5\]`, (editor) => {
+    editor.update(
+      () => {
+        const paragraph = $getRoot().getFirstChild();
+        expect($isElementNode(paragraph)).toBe(true);
+        if ($isElementNode(paragraph)) paragraph.getChildren().find($isEquationNode)?.remove();
+      },
+      { discrete: true },
+    );
+  });
+
+  expect(markdownAst.parseMarkdown(result).children).toMatchObject([
+    { type: "paragraph", children: [{ type: "inlineMath", value: String.raw`\$5` }] },
+  ]);
+});
+
+test.each([
+  {
+    markdown: String.raw`Before $x$\(y\) after.`,
+    index: 0,
+    value: String.raw`\$6`,
+    expected: String.raw`Before \(\$6\)\(y\) after.`,
+  },
+  {
+    markdown: String.raw`Before \(x\)$$\$5$$ after.`,
+    index: 1,
+    value: "1+2",
+    expected: String.raw`Before \(x\)$$1+2$$ after.`,
+  },
+])("saves changes to adjoining formulas with the required delimiters (%o)", ({ markdown, index, value, expected }) => {
+  const result = sourceRoundTrip(markdown, (editor) => {
+    editor.update(
+      () => {
+        const paragraph = $getRoot().getFirstChild();
+        expect($isElementNode(paragraph)).toBe(true);
+        if ($isElementNode(paragraph)) paragraph.getChildren().filter($isEquationNode)[index]!.setEquation(value);
+      },
+      { discrete: true },
+    );
+  });
+
+  expect(result).toBe(expected);
+});
+
+test("keeps the remaining dollar equations distinct after removing an intervening formula", () => {
+  const result = sourceRoundTrip(String.raw`Before $x$\(y\)$z$ after.`, (editor) => {
+    editor.update(
+      () => {
+        const paragraph = $getRoot().getFirstChild();
+        expect($isElementNode(paragraph)).toBe(true);
+        if ($isElementNode(paragraph)) paragraph.getChildren().filter($isEquationNode)[1]!.remove();
+      },
+      { discrete: true },
+    );
+  });
+
+  expect(result).toBe("Before $x$ $z$ after.");
+});
+
+test("keeps dollar equations distinct when the prose between them is deleted", () => {
+  const result = sourceRoundTrip("Before $x$ and $y$ after.", (editor) => {
+    editor.update(
+      () => {
+        const separator = $getRoot()
+          .getAllTextNodes()
+          .find((text) => text.getTextContent() === " and ");
+        expect(separator).toBeDefined();
+        separator?.remove();
+      },
+      { discrete: true },
+    );
+  });
+
+  expect(result).toBe("Before $x$ $y$ after.");
+});
+
 test("edits price prose without rewriting its dollar signs", () => {
   const markdown = "Prices are $.50 and $.99. The equation is $5$.";
   const result = sourceRoundTrip(markdown, (editor) => {

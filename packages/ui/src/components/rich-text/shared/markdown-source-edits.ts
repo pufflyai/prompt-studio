@@ -1,11 +1,14 @@
 import { diffArrays, diffChars } from "diff";
 import type { Table, TableCell } from "mdast";
 import { parseMarkdownSource } from "./markdown-ast";
+import { materializeInlineMathEdit } from "./markdown-inline-source-edit";
 import { inlineMathRanges } from "./markdown-legacy-math";
 import { collectMarkdownLinkChanges } from "./markdown-source-links";
 import { buildSourceMap, mappedEnd, mappedInsertion, mappedStart, type SourceMap } from "./markdown-source-map";
 
 interface TextEdit {
+  containsMath?: boolean;
+  previousMath?: string;
   end: number;
   replacement: string;
   start: number;
@@ -48,14 +51,14 @@ const editsFromChanges = (changes: ReturnType<typeof diffChars>) => {
   return edits;
 };
 
-type MathDiffToken = string | { value: string; source: string };
+type MathDiffToken = string | { value: string; source: string; offset: number };
 
 const mathDiffTokens = (markdown: string, ranges: ReturnType<typeof inlineMathRanges>) => {
   const tokens: MathDiffToken[] = [];
   let offset = 0;
   for (const { start, end, value } of ranges) {
     for (const character of markdown.slice(offset, start)) tokens.push(character);
-    tokens.push({ value, source: markdown.slice(start, end) });
+    tokens.push({ value, source: markdown.slice(start, end), offset: start });
     offset = end;
   }
   for (const character of markdown.slice(offset)) tokens.push(character);
@@ -64,7 +67,22 @@ const mathDiffTokens = (markdown: string, ranges: ReturnType<typeof inlineMathRa
 
 const tokenSource = (token: MathDiffToken) => (typeof token === "string" ? token : token.source);
 
-const collectEdits = (baseline: string, current: string, parse: typeof parseMarkdownSource) => {
+const isWholeLine = (markdown: string, start: number, end: number) => {
+  const lineStart = markdown.lastIndexOf("\n", start - 1) + 1;
+  const lineEnd = markdown.indexOf("\n", end);
+  return (
+    /^ {0,3}$/.test(markdown.slice(lineStart, start)) &&
+    /^\s*$/.test(markdown.slice(end, lineEnd < 0 ? undefined : lineEnd))
+  );
+};
+
+const collectEdits = (
+  baseline: string,
+  current: string,
+  source: string,
+  sourceMap: SourceMap,
+  parse: typeof parseMarkdownSource,
+) => {
   const markers = /\$|\\[([]/;
   if (!markers.test(baseline) && !markers.test(current)) return editsFromChanges(diffChars(baseline, current));
 
@@ -74,9 +92,18 @@ const collectEdits = (baseline: string, current: string, parse: typeof parseMark
 
   // Keep unchanged equations whole even when adjacent equations require a different delimiter spelling.
   const original = mathDiffTokens(baseline, before);
+  const bracketOffsets = new Set(
+    before.filter(({ start }) => source.startsWith("\\[", mappedStart(sourceMap, start))).map(({ start }) => start),
+  );
+  const standaloneOffsets = new Set(
+    after.filter(({ start, end }) => isWholeLine(current, start, end)).map(({ start }) => start),
+  );
   const changes = diffArrays(original, mathDiffTokens(current, after), {
-    comparator: (left, right) =>
-      typeof left === "string" || typeof right === "string" ? left === right : left.value === right.value,
+    comparator: (left, right) => {
+      if (typeof left === "string" || typeof right === "string") return left === right;
+      // Preserving square brackets on a whole line would promote this inline equation to display math.
+      return left.value === right.value && !(bracketOffsets.has(left.offset) && standaloneOffsets.has(right.offset));
+    },
   });
   let offset = 0;
   const edits = editsFromChanges(
@@ -91,14 +118,15 @@ const collectEdits = (baseline: string, current: string, parse: typeof parseMark
     }),
   );
 
-  return edits.flatMap((edit) => {
-    if (edit.start === edit.end || !edit.replacement) return [edit];
-    const inner = editsFromChanges(diffChars(baseline.slice(edit.start, edit.end), edit.replacement));
-    return inner.map(({ start, end, replacement }) => ({
-      start: edit.start + start,
-      end: edit.start + end,
-      replacement,
-    }));
+  return edits.map((edit) => {
+    const touched = before.find(({ start, end }) => start < edit.end && end > edit.start);
+    const joinsMath = before.some(({ end }) => end === edit.start) && before.some(({ start }) => start === edit.end);
+    const containsMath =
+      touched !== undefined ||
+      joinsMath ||
+      (markers.test(edit.replacement) && inlineMathRanges(parse(edit.replacement)).length > 0);
+    const previousMath = touched?.start === edit.start && touched.end === edit.end ? touched.value : undefined;
+    return { ...edit, containsMath, previousMath };
   });
 };
 
@@ -106,7 +134,7 @@ const sourceLineEnding = (source: string) => (source.includes("\r\n") ? "\r\n" :
 
 const withSourceLineEndings = (value: string, source: string) => {
   const lineEnding = sourceLineEnding(source);
-  return lineEnding === "\n" ? value : value.replaceAll("\n", lineEnding);
+  return lineEnding === "\n" ? value : value.replace(/\r?\n/g, lineEnding);
 };
 
 const withoutPosition = (value: unknown): unknown => {
@@ -269,15 +297,15 @@ export const applyMarkdownSourceChanges = (
 
   // Lexical reports semantic Markdown but normalizes its spelling. Map those
   // semantic edits back onto the loaded source so unrelated syntax never moves.
-  const edits = collectEdits(baseline, tableChanges.normalizedCurrent, parse)
+  const edits = collectEdits(baseline, tableChanges.normalizedCurrent, source, sourceMapping, parse)
     .map((edit) => {
       const start =
         edit.start === edit.end ? mappedInsertion(sourceMapping, edit.start) : mappedStart(sourceMapping, edit.start);
-      return {
-        start,
-        end: edit.start === edit.end ? start : mappedEnd(sourceMapping, edit.end),
-        replacement: withSourceLineEndings(edit.replacement, source),
-      };
+      const end = edit.start === edit.end ? start : mappedEnd(sourceMapping, edit.end);
+      const replacement = edit.containsMath
+        ? materializeInlineMathEdit(source, { start, end, replacement: edit.replacement }, edit.previousMath, parse)
+        : edit.replacement;
+      return { start, end, replacement: withSourceLineEndings(replacement, source) };
     })
     .concat(
       linkChanges.edits.map((edit) => ({
