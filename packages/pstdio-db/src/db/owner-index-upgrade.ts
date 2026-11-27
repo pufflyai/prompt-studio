@@ -2,11 +2,7 @@ import { isDeepStrictEqual } from "node:util";
 import { and, eq, sql } from "drizzle-orm";
 import type { Json, StorageRecordIndex } from "pstdio-sync-contracts";
 import { formatDatabasePrefix } from "../services/extension-storage/record-format-key";
-import {
-  dropRecordIndexObjects,
-  installRecordIndex,
-  recordIndexName,
-} from "../services/extension-storage/record-index-lifecycle";
+import { dropRecordIndexObjects, queryDefinitionName } from "../services/extension-storage/record-index-lifecycle";
 import { recordIndexRows, saveRecordIndexRow } from "../services/extension-storage/record-index-rows";
 import { decodeProjectionValue } from "../services/extension-storage/record-projection-codec";
 import { ensureStorageOwner } from "../services/extension-storage/storage-owner-key";
@@ -27,27 +23,23 @@ const restoreIndex = async (tx: Transaction, input: Record<string, unknown>) => 
   const ownerId = await ensureStorageOwner(tx, owner);
   const definition = decodeProjectionValue(input.definition as Json) as unknown as StorageRecordIndex;
   const cached = input.database_name.startsWith(formatDatabasePrefix);
-  const coreOwnerId = definition.identity ? await ensureStorageOwner(tx, { ...owner, extensionId: "pstdio" }) : null;
-  const database_name = cached
-    ? input.database_name
-    : await recordIndexName({ ...owner, ownerId, coreOwnerId }, definition);
+  const database_name = cached ? input.database_name : await queryDefinitionName(owner, ownerId, definition);
   const [existing] = await tx
     .select()
     .from(recordIndexRows)
     .where(and(eq(recordIndexRows.owner_id, ownerId), eq(recordIndexRows.name, input.name)));
   if (existing) {
-    if (existing.database_name !== database_name || !isDeepStrictEqual(existing.definition, input.definition))
-      throw new Error("Owner index restoration conflict");
-    return;
+    if (!isDeepStrictEqual(existing.definition, input.definition)) throw new Error("Owner index restoration conflict");
+    if (existing.database_name === database_name) return;
+    if (!existing.database_name.startsWith("storage_query_")) throw new Error("Owner index restoration conflict");
+    await dropRecordIndexObjects(tx, [existing]);
   }
-  if (cached)
-    await saveRecordIndexRow(tx, {
-      owner_id: ownerId,
-      name: input.name,
-      database_name,
-      definition: input.definition as StorageRecordIndex,
-    });
-  else await installRecordIndex(tx, owner, definition);
+  await saveRecordIndexRow(tx, {
+    owner_id: ownerId,
+    name: input.name,
+    database_name,
+    definition: input.definition as StorageRecordIndex,
+  });
 };
 
 const dropReleasedIndexes = async (db: DbClient) => {

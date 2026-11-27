@@ -5,7 +5,7 @@ import { activityStorageOwner, resourceActivityIndexes } from "../activity/resou
 
 export type ExtensionStorageIndexService = Pick<ReturnType<typeof createExtensionStorageDBService>, "installIndexes">;
 
-/** Local indexes must exist before commands become visible, even after receiving a migration version. */
+/** Register query definitions before exposing commands, including after receiving a migration version. */
 export const installExtensionStorageIndexes = async (
   service: ExtensionStorageIndexService | undefined,
   projectId: string,
@@ -25,7 +25,7 @@ export const installExtensionStorageIndexes = async (
         definitions: resolveCollectionIndexes(extension.definition.storageIndexes ?? [], "project", projectId),
       })),
       ...(runtime.resourceKinds.some(({ contribution }) => Object.values(contribution.activity ?? {}).some(Boolean))
-        ? [{ owner: activityStorageOwner(projectId), definitions: resourceActivityIndexes }]
+        ? [{ owner: activityStorageOwner(projectId), definitions: resourceActivityIndexes, hostManaged: true }]
         : []),
     ],
     validate,

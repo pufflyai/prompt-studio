@@ -3,6 +3,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { migrate } from "drizzle-orm/pglite/migrator";
+import { createRecordQueries } from "../services/extension-storage/record-queries";
 import { createDb } from "./connection.pglite";
 import { prepareDocumentOwnerUpgrade } from "./document-owner-upgrade";
 import { createTextLogOwnerFixture } from "./log-owner-upgrade.fixture";
@@ -175,12 +176,14 @@ for (const interruption of ["normal", "schema", "restore"]) {
       expect(
         (await store.pglite.query(`SELECT to_regprocedure('${releasedCountIndex}_tr()') AS retired`)).rows,
       ).toEqual([{ retired: null }]);
-      const countTables = await store.pglite.query<{ database_name: string }>(
-        "SELECT entry.value->>'database_name' AS database_name FROM owners o CROSS JOIN LATERAL jsonb_each(o.record_indexes) AS entry(key,value)",
+      const declarations = await store.pglite.query<{ project_id: string; extension_id: string; name: string }>(
+        "SELECT project_id,extension_id,entry.key AS name FROM owners CROSS JOIN LATERAL jsonb_each(record_indexes) entry",
       );
-      for (const { database_name } of countTables.rows) {
-        const result = await store.pglite.query<{ n: string }>(`SELECT sum(n)::text AS n FROM ${database_name}_c`);
-        expect(Number(result.rows[0]!.n)).toBeGreaterThan(0);
+      expect(declarations.rows.length).toBeGreaterThan(0);
+      for (const row of declarations.rows) {
+        const queries = createRecordQueries(store.db, { workbenchId: row.project_id, extensionId: row.extension_id });
+        const result = await queries.aggregate({ index: row.name, groupBy: "state" });
+        expect(result.count).toBeGreaterThan(0);
       }
       for (const [i, table] of tables.entries()) {
         if (interruption === "normal" && table === "storage_document_operations") {

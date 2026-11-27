@@ -8,6 +8,7 @@ import { apiLogger } from "../../lib/logger";
 import { createProjectWork } from "../../services/project-work";
 import { createTestDocumentStorage } from "../../test-utils/create-test-document-storage";
 import { createTestExtensionProcessOwners } from "../../test-utils/create-test-extension-process-owners";
+import { createTestLocalAccount } from "../../test-utils/create-test-local-account";
 import { expectRejection } from "../../test-utils/expect-rejection";
 import { EventBus } from "../sync/event-bus";
 import { fireExtensionEvent } from "./extension-event-runtime";
@@ -29,6 +30,7 @@ const withRuntimeCatalog = <
   processOwners.push(extensionProcessOwners);
   return {
     ...deps,
+    accountService: createTestLocalAccount(),
     projectService: { ...deps.projectService, work: createProjectWork() },
     eventBus: new EventBus(),
     extensionProcessOwners,

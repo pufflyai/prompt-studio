@@ -88,29 +88,54 @@ export const pruneDocumentFiles = async (db: DbClient, projectId: string, ids: n
   });
 };
 
-/** Startup and owner/project deletion remove unreachable files in bounded batches. */
-export async function* collectDocumentFiles(db: DbClient, project?: string, batchSize = 200) {
+async function* documentFileBatches(db: DbClient, project?: string, limit = 200) {
   const files = documentFilesFor(db);
   const projects = project === undefined ? files.projects() : [project];
   for await (const projectId of projects) {
-    let batch: number[] = [];
+    let ids: number[] = [];
     for await (const id of files.documents(projectId)) {
-      batch.push(id);
-      if (batch.length === batchSize) {
-        await pruneDocumentFiles(db, projectId, batch);
-        batch = [];
-        yield;
+      ids.push(id);
+      if (ids.length === limit) {
+        yield { projectId, ids };
+        ids = [];
       }
     }
-    if (batch.length) {
-      await pruneDocumentFiles(db, projectId, batch);
-      yield;
-    }
+    if (ids.length) yield { projectId, ids };
   }
 }
 
+/** Keep the cursor between quiet periods and retry the same batch after a filesystem error. */
+export const createDeferredDocumentSweep = (db: DbClient) => {
+  const openBatches = () => documentFileBatches(db, undefined, 16);
+  let batches = openBatches();
+  let pending: { projectId: string; ids: number[] } | undefined;
+  let done = false;
+  return {
+    async run(stopped: () => boolean) {
+      while (!done && !stopped()) {
+        await Bun.sleep(0);
+        if (stopped()) return;
+        if (!pending) {
+          try {
+            const next = await batches.next();
+            if (next.done) {
+              done = true;
+              return;
+            }
+            pending = next.value;
+          } catch (error) {
+            batches = openBatches();
+            throw error;
+          }
+        }
+        await pruneDocumentFiles(db, pending.projectId, pending.ids);
+        pending = undefined;
+      }
+    },
+    close: () => batches.return(),
+  };
+};
+
 export const pruneAllDocumentFiles = async (db: DbClient, project?: string) => {
-  for await (const _ of collectDocumentFiles(db, project)) {
-    /* drain all batches */
-  }
+  for await (const { projectId, ids } of documentFileBatches(db, project)) await pruneDocumentFiles(db, projectId, ids);
 };

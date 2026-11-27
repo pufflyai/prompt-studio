@@ -142,7 +142,7 @@ test("maintenance collects new index statistics together after admission without
   };
   // Neither owner has records, like most extensions when a project's runtime reloads.
   const owners = [
-    { owner: { workbenchId: f.projectAId, extensionId: "ext.indexed" }, definitions: indexes },
+    { owner: { workbenchId: f.projectAId, extensionId: "ext.indexed" }, definitions: indexes, hostManaged: true },
     { owner: { workbenchId: f.projectAId, extensionId: "ext.plain" }, definitions: [] },
   ];
   const before = await analyzeCount();
@@ -162,6 +162,6 @@ test("maintenance collects new index statistics together after admission without
   await installRecordIndexes(f.db, [{ ...owners[0], definitions: [] }, owners[1]], () => {});
   await analyzeMissingRecordStatistics(f.db.$client);
   expect(await analyzeCount()).toBe(before + 1);
-  const remaining = await f.db.execute(sql`SELECT 1 FROM pg_indexes WHERE indexname LIKE 'storage_query_%'`);
+  const remaining = await f.db.execute(sql`SELECT 1 FROM pg_indexes WHERE indexname LIKE 'storage_host_%'`);
   expect(remaining.rows).toHaveLength(0);
 });

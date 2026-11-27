@@ -16,6 +16,7 @@ import {
 import { withCloudReplacementWitness } from "./packaged-cloud-replacement-witness";
 import { buildBinary } from "./packaged-helpers";
 import { stopProcess } from "./packaged-serve-helpers";
+import { uniqueDocument } from "./packaged-sync-document-key.fixture";
 import { packagedProjectKey } from "./packaged-sync-project-key.fixture";
 
 interface Resources {
@@ -481,7 +482,7 @@ test("a packaged device catches up after eight trimmed replacements and a reset 
   // Install an authenticated, incomplete earlier state. Copying old ciphertext under new headers is invalid.
   const current = await fixture.peer.captureSnapshot(documentId);
   const contents = await fixture.peer.inspect();
-  const tail = new Map(contents.documents).get(`~${documentId}`)!;
+  const tail = uniqueDocument(contents.documents, documentId)!;
   const through = Math.max(current.state.through, ...tail.updates.map((update) => update.sequence));
   await fixture.peer.installSnapshot(
     documentId,

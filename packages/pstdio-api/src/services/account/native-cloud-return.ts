@@ -16,6 +16,12 @@ export const createNativeCloudReturn = () => {
     connect(next: CloudReturn | undefined) {
       cloud = next;
     },
+    async prepareGrantReturn(projects: string[], returning: ReadonlySet<string>) {
+      if (!cloud) return false;
+      await cloud.release(projects.filter((id) => !returning.has(id)));
+      await cloud.release(projects);
+      return true;
+    },
     /** Signed in, it waits until the account's project list is known. */
     async settle<Login>(login: Login | null, projectsFor: (login: Login) => string[] | undefined) {
       try {

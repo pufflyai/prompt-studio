@@ -1,6 +1,5 @@
 import { basename, relative, sep } from "node:path";
 import { and, eq, inArray } from "drizzle-orm";
-import { collectDocumentFiles } from "../services/extension-storage/document-file-retention";
 import type { IndexNodeFiles } from "../services/extension-storage/index-node-files";
 import { pruneRecoveryProject } from "../services/extension-storage/recovery-file-retention";
 import { recoveryFilesFor } from "../services/extension-storage/recovery-files";
@@ -37,7 +36,6 @@ export async function* collectUnreferencedFiles(db: DbClient, nodes: IndexNodeFi
       yield;
     }
   }
-  yield* collectDocumentFiles(db, undefined, 16);
   for (const id of await nodes.projectIds()) {
     const liveProject = async (tx: Pick<DbClient, "select">) =>
       (await tx.select({ id: projects.id }).from(projects).where(eq(projects.id, id))).length !== 0;

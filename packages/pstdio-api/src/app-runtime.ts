@@ -146,6 +146,7 @@ export const createAppCloser = (input: {
   automationService: { close(): Promise<void> };
   terminalSupervisor: { dispose(): Promise<void> };
   closeDb: () => Promise<void>;
+  closeAccount: () => Promise<void>;
   closeSessionHooks: () => Promise<void>;
   stopQueueReadiness: () => Promise<void>;
   sessionQueueLifecycle: RouteDeps["sessionQueueLifecycle"];
@@ -219,6 +220,9 @@ export const createAppCloser = (input: {
         await deadRowCleanupStopped.catch(recordFailure);
         await processesStopped.catch(recordFailure);
         await stopBackendWorkers().catch(recordFailure);
+        // Final hook/worker writes still need managed-policy authority. Drain account
+        // work after those writers, while its startup reads can still use the database.
+        await traceShutdownPhase("account", input.closeAccount).catch(recordFailure);
         await traceShutdownPhase("database", () => input.closeDb()).catch(recordFailure);
       }
       const [firstFailure] = failures;
@@ -300,6 +304,7 @@ export const startAppLifecycle = async (input: {
   const close = createAppCloser({
     ...input,
     closeBackendWorkers,
+    closeAccount: () => input.deps.accountService.close(),
     // Imports stop while their session and file dependencies are still available.
     closeSessionHooks: async () => {
       const stopped = await Promise.allSettled([input.closeSessionHooks(), input.deps.sessionImports.close()]);

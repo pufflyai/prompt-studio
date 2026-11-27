@@ -6,6 +6,7 @@ import { migrateExtensionIdentities } from "../extension-identity-migration";
 import { seedDocumentHistory } from "./document-history.fixture";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
+import { defineRecordIndexes } from "./record-index-definition";
 import { installRecordIndex } from "./record-index-lifecycle";
 import { recordIndexRows as storage_record_indexes } from "./record-index-rows";
 import { ensureStorageOwner } from "./storage-owner-key";
@@ -33,7 +34,7 @@ test("reinstalling unchanged indexes after an owner rename restores the current 
       .where(eq(storage_record_indexes.name, index.name));
     await migrateExtensionIdentities(fixture.db, { extensionId: "pstdio.planner" });
     const renamed = service.open({ owner: { ...owner, extensionId: "pstdio.planner" } }).records;
-    await renamed.defineIndexes([index]);
+    await defineRecordIndexes(fixture.db, { ...owner, extensionId: "pstdio.planner" }, [index], "host-index");
     const [after] = await fixture.db
       .select()
       .from(storage_record_indexes)
@@ -95,7 +96,7 @@ test("renamed owners keep their group counts before and after reinstalling index
     expect(reference.count).toBe(1);
     const expected = { count: reference.count, groups: reference.groups };
     expect(await renamed.aggregate(query)).toMatchObject(expected);
-    await renamed.defineIndexes([index]);
+    await defineRecordIndexes(fixture.db, { ...owner, extensionId: "pstdio.planner" }, [index], "host-index");
     expect(await renamed.aggregate(query)).toMatchObject(expected);
   } finally {
     await fixture.close();

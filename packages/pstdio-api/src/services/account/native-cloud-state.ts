@@ -11,9 +11,10 @@ import type { createProjectCloudCatalog } from "./project-cloud-catalog";
 type CloudRoster = Awaited<ReturnType<typeof readManagerAccount>>;
 const denied = (error: unknown) => error instanceof ManagerRequestDenied && error.status === 401;
 
-const connectionFor = (login: ScopedDeviceLogin, workbenchId: string): RelayWorkbench => ({
+const connectionFor = (login: ScopedDeviceLogin, workbenchId: string, grantId?: string): RelayWorkbench => ({
   accountId: login.accountId,
   ...(login.userId && { userId: login.userId }),
+  ...(grantId && { grantId }),
   workbenchId,
   environmentId: login.deviceId,
   relayOrigin: login.relayOrigin,
@@ -48,7 +49,7 @@ export const createNativeCloudState = () => {
       const snapshot = await catalog.readCloud(scoped, signal);
       const ids: string[] = [];
       for (const id of snapshot.ids) {
-        if (await accept(login, connectionFor(scoped, id))) ids.push(id);
+        if (await accept(login, connectionFor(scoped, id, snapshot.grantIds?.[id]))) ids.push(id);
       }
       return { ...snapshot, ids };
     } catch (error) {
@@ -128,14 +129,14 @@ export const createNativeCloudState = () => {
           const scoped = scopeDeviceLogin(login, snapshot.accountId);
           const candidates = [];
           for (const id of snapshot.ids) {
-            const connection = connectionFor(scoped, id);
+            const connection = connectionFor(scoped, id, snapshot.grantIds?.[id]);
             if (await input.accept(login, connection)) candidates.push(id);
           }
           const withdrawn = await input.catalog.withdrawnProjectIds(scoped);
           const { local, absent } = await partitionCloudProjects(candidates, withdrawn, input.exists, input.recovering);
           return {
-            local: local.map((id) => connectionFor(scoped, id)),
-            absent: absent.map((id) => connectionFor(scoped, id)),
+            local: local.map((id) => connectionFor(scoped, id, snapshot.grantIds?.[id])),
+            absent: absent.map((id) => connectionFor(scoped, id, snapshot.grantIds?.[id])),
           };
         }),
       );

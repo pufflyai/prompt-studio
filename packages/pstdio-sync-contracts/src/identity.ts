@@ -27,8 +27,13 @@ export const dataOwnership = {
 } as const;
 
 /** Omit the team scope for legacy personal-account clients and services. */
-export const accountScopedPath = (path: string, accountId?: string) =>
-  accountId === undefined ? path : `${path}?accountId=${encodeURIComponent(identitySchema.parse(accountId))}`;
+export const accountScopedPath = (path: string, accountId?: string, grantId?: string) => {
+  if (accountId === undefined) return path;
+  const accountPath = `${path}?accountId=${encodeURIComponent(identitySchema.parse(accountId))}`;
+  return grantId === undefined
+    ? accountPath
+    : `${accountPath}&grantId=${encodeURIComponent(identitySchema.parse(grantId))}`;
+};
 
 export const teamAccountSchema = z.strictObject({
   accountId: identitySchema,

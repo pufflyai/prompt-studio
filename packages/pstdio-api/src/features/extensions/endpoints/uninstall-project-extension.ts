@@ -3,6 +3,8 @@ import type { AppRouteHandler } from "../../../types";
 import { AlwaysEnabledExtensionError } from "../always-on-extensions";
 import { ExtensionProviderInUseError, type ProjectExtensionLifecycleRouteDeps } from "../project-extension-lifecycle";
 
+import { PublicationAccessDenied } from "../publication/types";
+
 const errorSchema = z.object({ error: z.string() });
 
 export const uninstallProjectExtensionRoute = createRoute({
@@ -29,6 +31,10 @@ export const uninstallProjectExtensionRoute = createRoute({
     204: {
       description: "Extension uninstalled.",
     },
+    403: {
+      description: "This device cannot change a shared extension.",
+      content: { "application/json": { schema: errorSchema } },
+    },
     404: {
       description: "Extension instance not found for project.",
       content: { "application/json": { schema: errorSchema } },
@@ -51,6 +57,7 @@ export const uninstallProjectExtensionHandler = (
     try {
       removed = await deps.projectExtensionLifecycle.uninstall({ projectId, instanceId, deleteUserData });
     } catch (error) {
+      if (error instanceof PublicationAccessDenied) return c.json({ error: error.message }, 403);
       if (error instanceof ExtensionProviderInUseError || error instanceof AlwaysEnabledExtensionError)
         return c.json({ error: error.message }, 409);
       throw error;

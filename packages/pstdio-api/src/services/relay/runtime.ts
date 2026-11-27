@@ -25,6 +25,7 @@ import { type createWorkbenchAccess, createWorkbenchUpdates, drainOwnerStarts } 
 export type RelayWorkbench = {
   accountId: string;
   userId?: string;
+  grantId?: string;
   workbenchId: string;
   environmentId: string;
   relayOrigin: string;

@@ -4,6 +4,8 @@ import type { AppRouteHandler } from "../../../types";
 import { AlwaysEnabledExtensionError } from "../always-on-extensions";
 import type { ProjectExtensionLifecycleRouteDeps } from "../project-extension-lifecycle";
 
+import { PublicationAccessDenied } from "../publication/types";
+
 const errorSchema = z.object({ error: z.string() });
 
 export const setProjectExtensionEnabledRoute = createRoute({
@@ -27,6 +29,10 @@ export const setProjectExtensionEnabledRoute = createRoute({
       description: "Updated extension instance.",
       content: { "application/json": { schema: projectExtensionInstanceSchema } },
     },
+    403: {
+      description: "This device cannot change a shared extension.",
+      content: { "application/json": { schema: errorSchema } },
+    },
     404: {
       description: "Extension instance not found for project.",
       content: { "application/json": { schema: errorSchema } },
@@ -47,6 +53,7 @@ export const setProjectExtensionEnabledHandler = (
       if (!updated) return c.json({ error: `Extension instance not found: ${instanceId}` }, 404);
       return c.json(updated, 200);
     } catch (error) {
+      if (error instanceof PublicationAccessDenied) return c.json({ error: error.message }, 403);
       if (error instanceof AlwaysEnabledExtensionError) return c.json({ error: error.message }, 409);
       throw error;
     }

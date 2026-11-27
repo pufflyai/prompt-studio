@@ -294,7 +294,8 @@ export const openLockedDatabase = async (dbPath: string, releaseLock: () => void
         await Bun.sleep(0);
       }
     };
-    if (!deferCleanup) await collectWhileIdle(() => false);
+    const cleanup = createStorageCleanup(db, dbPath, storage.deferredOwners, deferCleanup, collectWhileIdle);
+    await cleanup.prepare();
     // Foreground writes still collect their own superseded files after commit.
     attachDocumentCollector(db, (projectId, ids) => pruneDocumentFiles(db, projectId, ids));
     if (migrated && !deferCleanup) await maintainDatabase(openedPglite, db, dbPath, fresh, onPhase, storage.changed);
@@ -308,7 +309,7 @@ export const openLockedDatabase = async (dbPath: string, releaseLock: () => void
       closed = true;
       try {
         try {
-          await cleanupFiles.return();
+          await cleanup.close().finally(() => cleanupFiles.return());
         } finally {
           await openedPglite.close();
         }
@@ -323,7 +324,7 @@ export const openLockedDatabase = async (dbPath: string, releaseLock: () => void
       db,
       path: dbPath,
       pglite: openedPglite,
-      cleanupRetiredRows: createStorageCleanup(db, dbPath, storage.deferredOwners, deferCleanup, collectWhileIdle),
+      cleanupRetiredRows: cleanup.run,
     };
   } catch (error) {
     await pglite?.close();

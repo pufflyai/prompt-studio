@@ -97,6 +97,14 @@ const writeSourceFolder = async (folder: string, hookMarker: string) => {
 
 const isDependency = (path: string) => path === "node_modules" || path.endsWith("/node_modules");
 
+const cachedFolderChunks = (home: string) =>
+  new Set(
+    Array.from(
+      new Bun.Glob("**/chunks/**/*.blob").scanSync(join(home, "storage/folder-recovery")),
+      (path) => `~${path.split(/[\\/]/).at(-1)!.slice(0, -".blob".length)}`,
+    ),
+  );
+
 const gitState = (folder: string) => ({
   head: gitOutput(folder, "rev-parse", "HEAD"),
   branches: gitOutput(folder, "for-each-ref", "--format=%(refname) %(objectname)"),
@@ -138,8 +146,6 @@ test.skipIf(process.platform === "win32")(
       // The laptop and another account's computer both capture and upload their folders.
       const project = await laptop.client.projects.create(folderProjectInput({ name: "Recovered folder" }, folder));
       const laptopDevice = await signInDevice(laptop, peer.origin);
-      // Until the laptop is off, no other device can read folder bytes from Cloud.
-      peer.failBlobReads((device) => device !== laptopDevice);
       await laptop.client.account.syncProject(project.id);
       const otherFolder = join(root, "other-project");
       await mkdir(otherFolder);
@@ -154,26 +160,30 @@ test.skipIf(process.platform === "win32")(
       phase("laptop copy captured and uploaded");
 
       // The desktop learns about the copy, then the laptop turns off before any folder byte downloads.
+      // Project metadata must remain readable while the captured folder's bytes are unavailable.
+      const folderChunks = cachedFolderChunks(laptop.home);
+      expect(folderChunks.size).toBeGreaterThan(0);
+      const attempted = new Set<string>();
+      peer.failBlobReads((device, blobId) => {
+        const blocked = device !== laptopDevice && folderChunks.has(blobId);
+        if (blocked) attempted.add(device);
+        return blocked;
+      });
       const desktopDevice = await signInDevice(desktop, peer.origin);
       await waitFor(async () => !!(await desktop.client.projects.get(project.id).catch(() => null)));
-      const attempted = new Set<string>();
-      peer.failBlobReads((device) => {
-        if (device !== laptopDevice) attempted.add(device);
-        return device !== laptopDevice;
-      });
       await waitFor(() => attempted.has(desktopDevice));
       laptopCopy = await waitForValue(() => ownCopy(laptop, project.id));
       await stopProcess(laptop.host.child);
       phase("laptop stopped before the desktop downloaded");
 
       // The download is interrupted part way, then resumes without reading finished chunks again.
-      const desktopReads = () => peer.blobReads().filter((read) => read.deviceId === desktopDevice);
-      // The copy holds over 100 chunks and the project's records need few blobs, so this is part way
-      // through the folder download.
+      const desktopReads = () =>
+        peer.blobReads().filter((read) => read.deviceId === desktopDevice && folderChunks.has(read.blobId));
+      // The copy holds over 100 chunks, so this is part way through the folder download.
       const interruptAfter = 40;
       let failedReads = 0;
-      peer.failBlobReads((device) => {
-        const fail = device === desktopDevice && desktopReads().length >= interruptAfter;
+      peer.failBlobReads((device, blobId) => {
+        const fail = device === desktopDevice && folderChunks.has(blobId) && desktopReads().length >= interruptAfter;
         if (fail) failedReads++;
         return fail;
       });
@@ -182,13 +192,7 @@ test.skipIf(process.platform === "win32")(
       expect((await listedCopy(desktop, project.id, laptopDevice))?.available ?? false).toBe(false);
       // HTTP response delivery precedes client verification and atomic retention.
       // Retry may cancel that unfinished response; only retained chunks are finished work.
-      const cache = join(desktop.home, "storage/folder-recovery");
-      const retained = new Set(
-        Array.from(
-          new Bun.Glob("**/chunks/**/*.blob").scanSync(cache),
-          (path) => `~${path.split(/[\\/]/).at(-1)!.slice(0, -".blob".length)}`,
-        ),
-      );
+      const retained = cachedFolderChunks(desktop.home);
       expect(retained.size).toBeGreaterThan(0);
       const resumedAt = desktopReads().length;
       peer.failBlobReads(() => false);

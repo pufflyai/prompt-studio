@@ -38,6 +38,20 @@ const replaceAutomation = (
   return { ...current, automations: found ? automations : [...automations, automation] };
 };
 
+// Mutation DTOs describe their own operation. Inventory owns cross-project policy metadata.
+const retainRestrictions = (extension: ProjectExtensionInstance, current?: ProjectExtensionInstance) => {
+  if (!current || current.installedExtensionId !== extension.installedExtensionId) return extension;
+  return {
+    ...extension,
+    ...(current.choiceRestriction && { choiceRestriction: current.choiceRestriction }),
+    ...(current.sourceRestriction && {
+      sourceRestriction: current.sourceRestriction,
+      canUpgrade: false,
+      hasPublishedAlternative: false,
+    }),
+  };
+};
+
 export const createProjectExtensionCache = (
   queryClient: QueryClient,
   projectId: string | undefined,
@@ -84,7 +98,9 @@ export const createProjectExtensionCache = (
           ...current,
           // Uninstall, enablement and settings have their own mutation owners.
           extensions: current.extensions.map((row) =>
-            row.id === extension.id ? { ...extension, enabled: row.enabled, config: row.config } : row,
+            row.id === extension.id
+              ? { ...retainRestrictions(extension, row), enabled: row.enabled, config: row.config }
+              : row,
           ),
         });
       refresh();
@@ -98,7 +114,13 @@ export const createProjectExtensionCache = (
       if (current)
         extensionsQuery.accept({
           ...current,
-          extensions: [...current.extensions.filter((entry) => entry.id !== extension.id), extension],
+          extensions: [
+            ...current.extensions.filter((entry) => entry.id !== extension.id),
+            retainRestrictions(
+              extension,
+              current.extensions.find((entry) => entry.id === extension.id),
+            ),
+          ],
           marketplace: current.marketplace.map((entry) =>
             entry.installName === extension.installName ? { ...entry, installed: true } : entry,
           ),

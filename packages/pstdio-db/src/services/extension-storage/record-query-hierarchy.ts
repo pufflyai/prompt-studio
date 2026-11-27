@@ -10,6 +10,7 @@ export const recordHierarchySql = (
   field: (name: string, alias: string) => SQL,
   scope: (alias: string) => SQL,
   equal: (field: string, left: SQL, right: SQL) => SQL,
+  probe: (alias: string, parent: SQL) => SQL | undefined,
 ) => {
   const hierarchy = index.hierarchy!;
   const source = sql.identifier(outer);
@@ -28,7 +29,7 @@ export const recordHierarchySql = (
         ${field(hierarchy.labelField, "hierarchy_ancestor")} AS label, ${ancestor}.record_id
       FROM records AS ${ancestor}
       WHERE lineage.parent IS NOT NULL AND lineage.parent <> 'null'::jsonb
-        AND ${scope("hierarchy_ancestor")} AND ${equal(hierarchy.idField, field(hierarchy.idField, "hierarchy_ancestor"), sql`lineage.parent`)}
+        AND ${probe("hierarchy_ancestor", sql`lineage.parent`) ?? sql`true`} AND ${scope("hierarchy_ancestor")} AND ${equal(hierarchy.idField, field(hierarchy.idField, "hierarchy_ancestor"), sql`lineage.parent`)}
       ORDER BY ${ancestor}.record_id COLLATE "C" LIMIT 1
     ) AS parent WHERE NOT (parent.record_id = ANY(lineage.visited))
   ) SELECT ${queryStringFromHex(sql`string_agg(${expressionHex(sql`lineage.label`)}, ${expressionLiteral(Buffer.from(hierarchy.separator, "utf16le").toString("hex"))} ORDER BY lineage.depth DESC) FILTER (WHERE ${expressionString(sql`lineage.label`)})`)} FROM lineage)`;

@@ -23,6 +23,7 @@ const entries = (requested.length ? requested : ["src", "scripts"])
   })
   .sort();
 if (!entries.length) throw new Error("No account authority contracts selected");
+const withObjects = entries.some((file) => /(?:team-managed-extensions|managed-package-objects)\./.test(file));
 const compose = async (...args: string[]) => {
   const child = Bun.spawn(["docker", "compose", "-f", file, "-p", project, ...args], {
     stdout: "inherit",
@@ -33,6 +34,25 @@ const compose = async (...args: string[]) => {
 };
 const config = {
   services: {
+    ...(withObjects
+      ? {
+          objects: {
+            image: "rustfs/rustfs:1.0.1",
+            environment: {
+              RUSTFS_ACCESS_KEY: "manager_fixture",
+              RUSTFS_SECRET_KEY: "manager_fixture_secret_only",
+              RUSTFS_CONSOLE_ENABLE: "false",
+            },
+            command: ["/data"],
+            healthcheck: {
+              test: ["CMD", "curl", "--fail", "http://127.0.0.1:9000/health"],
+              interval: "1s",
+              timeout: "3s",
+              retries: 30,
+            },
+          },
+        }
+      : {}),
     database: {
       image: "postgres:16-alpine",
       environment: {
@@ -54,6 +74,9 @@ const config = {
       volumes: [`${root}:/repo:ro`],
       environment: {
         MANAGER_TEST_ADMIN_URL: "postgres://fixture_admin:fixture-admin-only@database:5432/authority_admin",
+        ...(withObjects ? { MANAGER_TEST_S3_ENDPOINT: "http://objects:9000" } : {}),
+        NO_PROXY: "database,objects,127.0.0.1,localhost",
+        no_proxy: "database,objects,127.0.0.1,localhost",
       },
       command: [
         "bun",
@@ -61,7 +84,10 @@ const config = {
         ...entries.map((file) => `./${file}`),
         ...(process.env.CI_PRIORITY === "P1" ? ["--bail=1"] : []),
       ],
-      depends_on: { database: { condition: "service_healthy" } },
+      depends_on: {
+        database: { condition: "service_healthy" },
+        ...(withObjects ? { objects: { condition: "service_healthy" } } : {}),
+      },
     },
     smoke: {
       build: { context: root, dockerfile: "services/account-manager/Dockerfile.smoke" },
@@ -82,7 +108,7 @@ console.log(`Isolated manager stack: ${project}`);
 try {
   await writeFile(file, JSON.stringify(config));
   if (manifest) await appendFile(manifest, `${JSON.stringify({ project, file })}\n`);
-  await compose("up", "-d", "database");
+  await compose("up", "-d", "database", ...(withObjects ? ["objects"] : []));
   await compose("run", "--rm", "tester");
   await compose("build", "smoke");
   await compose("run", "--rm", "smoke");

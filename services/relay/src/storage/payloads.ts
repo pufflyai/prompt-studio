@@ -25,10 +25,10 @@ export const createPayloadObjects = (config: ObjectConfig) => {
   return {
     multipartPages: uploads.multipartPages,
     reserve: (key: string) => uploads.initiate(key, "application/octet-stream", shutdown.signal),
-    async put(key: string, uploadId: string, bytes: Uint8Array) {
+    async put(key: string, uploadId: string, bytes: Uint8Array, request?: AbortSignal) {
       // A multipart upload is a revocable write capability. If its completion reply
       // is lost, cleanup fences that upload before verifying the key is absent.
-      const signal = shutdown.signal;
+      const signal = request ? AbortSignal.any([request, shutdown.signal]) : shutdown.signal;
       const sha256 = new Bun.CryptoHasher("sha256").update(bytes).digest("hex");
       const asset = { sha256, byteLength: bytes.byteLength, mediaType: "application/octet-stream" };
       const body = new ReadableStream<Uint8Array>({

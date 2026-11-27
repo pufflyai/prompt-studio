@@ -5,6 +5,7 @@ import { extensionUpgradeConcurrency } from "pstdio-extensions/preparation-clien
 import { ExtensionUpgradeUnavailableError } from "../../../services/extension-upgrade-unavailable-error";
 import type { AppRouteHandler } from "../../../types";
 import { scheduleProjectWorkspaceProvisioning } from "../../workspaces/provision-coordinator";
+import { AlwaysEnabledExtensionError } from "../always-on-extensions";
 import type { ExtensionsRouteDeps } from "../deps";
 import { extensionChangesWorkspaceProvisioning } from "../extension-skill-cleanup";
 import { toProjectExtensionInstance } from "../project-extension-instance";
@@ -106,7 +107,8 @@ export const upgradeProjectExtensionHandler = (
       const message = error instanceof Error ? error.message : String(error);
       if (error instanceof Error && error.name === "ExtensionUpgradeNeedsReviewError")
         return c.json({ error: message, code: extensionUpgradeNeedsReviewCode }, 409);
-      if (error instanceof ExtensionUpgradeUnavailableError) return c.json({ error: message }, 409);
+      if (error instanceof ExtensionUpgradeUnavailableError || error instanceof AlwaysEnabledExtensionError)
+        return c.json({ error: message }, 409);
       return c.json({ error: message }, 400);
     }
   };
