@@ -82,7 +82,10 @@ const loadDefinition = async (
 ) => {
   loadCounter += 1;
   const { definition: reported, acquire } = await loadBackendDefinition(packagePath, revision, options.definitionOnly);
-  const prepareRuntime = options.definitionOnly ? undefined : options.prepareRuntime?.(revision);
+  const prepareRuntime =
+    !options.definitionOnly && isRecord(reported) && Array.isArray(reported.harnesses)
+      ? options.prepareRuntime?.(revision)
+      : undefined;
   return hydrateBackendDefinition(reported, acquire, prepareRuntime) as Record<string, unknown>;
 };
 

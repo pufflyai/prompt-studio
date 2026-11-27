@@ -60,8 +60,9 @@ const packagedHarness = async (keepInstalledCli: boolean) => {
   writeFileSync(
     join(source, "package.json"),
     JSON.stringify({
-      publisher: "pstdio",
+      publisher: "fixture",
       name: "harness-codex",
+      pstdio: { runtimeCli: "codex" },
       version: "1.0.0",
       main: "extension.ts",
       engines: { pstdio: `^${EXTENSION_API_VERSION}` },
