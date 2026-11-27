@@ -1,5 +1,6 @@
 import { isMainThread } from "node:worker_threads";
 import { finishRuntimeOperation, startRuntimeOperation } from "pstdio-diagnostics";
+import { readPreparationBackendDefinition } from "../preparation-command";
 import { readAcceptedRevision } from "../prepared-revision";
 import { createBackendWorkerEnvironment } from "../process-environment";
 import {
@@ -87,15 +88,21 @@ const readDefinition = async (revision: Revision) => {
   definitionReads += 1;
   let failed = true;
   try {
-    const worker = await startBackendWorker({
+    const options = {
       command: backendWorkerCommand(),
       env: createBackendWorkerEnvironment(),
       entryPath: revision.entryPath,
-    });
-    await worker.stop();
-    writeCachedDefinition(revision, worker.definition);
+    };
+    let definition: unknown;
+    if (!isMainThread) definition = await readPreparationBackendDefinition(options);
+    else {
+      const worker = await startBackendWorker(options);
+      await worker.stop();
+      definition = worker.definition;
+    }
+    writeCachedDefinition(revision, definition);
     failed = false;
-    return worker.definition;
+    return definition;
   } finally {
     finishRuntimeOperation(started, { failed });
   }
