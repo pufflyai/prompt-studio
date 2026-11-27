@@ -315,6 +315,23 @@ describe("Markdown source document", () => {
   });
 });
 
+test("edits a note after an escaped placeholder and preserves the placeholder source", () => {
+  const markdown = "\\[name]\n\n## Protocol\n\nOpen a fresh session.";
+
+  const result = sourceRoundTrip(markdown, (editor) => {
+    editor.update(
+      () => {
+        const texts = $getRoot().getAllTextNodes();
+        expect(texts.map((node) => node.getTextContent())).toEqual(["[name]", "Protocol", "Open a fresh session."]);
+        texts.at(-1)?.setTextContent("Open a temporary session.");
+      },
+      { discrete: true },
+    );
+  });
+
+  expect(result).toBe(markdown.replace("fresh", "temporary"));
+});
+
 test("maps edits within their block while preserving neighboring tokens and line endings", () => {
   const markdown = ["Before {{keep_one}} 😀.", "Target __emphasis__ {{keep_two}}.", "After {{keep_three}}."].join(
     "\r\n\r\n",

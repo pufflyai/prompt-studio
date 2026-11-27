@@ -106,16 +106,100 @@ const value = 1;
   });
 
   test("keeps the existing inline and block equation delimiters", () => {
-    const markdown = `Inline \\(x + y\\) equation.
+    const markdown = `Inline \\(x + y\\) equation and square brackets \\[y + z\\].
 
 \\[
 a + b = c
-\\]`;
+\\]
+
+\\[d + e = f\\]`;
     const exported = roundTrip(markdown);
 
     expect(exported).toContain("$x + y$");
+    expect(exported).toContain("$y + z$");
     expect(exported).toContain("$$\na + b = c\n$$");
+    expect(exported).toContain("$$\nd + e = f\n$$");
     expect(roundTrip(exported)).toBe(exported);
+  });
+
+  test("keeps unmatched square bracket escapes as text around valid equations", () => {
+    const markdown = `\\]
+
+\\[name] and \\[x + y\\]
+
+\\[
+
+## Protocol`;
+
+    const tree = parseMarkdown(markdown);
+    expect(tree.children).toMatchObject([
+      { type: "paragraph", children: [{ type: "text", value: "]" }] },
+      {
+        type: "paragraph",
+        children: [
+          { type: "text", value: "[name] and " },
+          { type: "inlineMath", value: "x + y" },
+        ],
+      },
+      { type: "paragraph", children: [{ type: "text", value: "[" }] },
+      { type: "heading", children: [{ type: "text", value: "Protocol" }] },
+    ]);
+  });
+
+  test("preserves legacy multiline equations inside Markdown containers", () => {
+    const markdown = String.raw`> \[
+> x + y
+> \]
+
+- With an equation:
+
+    \[
+    y + z
+    \]`;
+    const tree = parseMarkdown(markdown);
+    expect(tree.children).toMatchObject([
+      { type: "blockquote", children: [{ type: "math", value: "x + y" }] },
+      {
+        type: "list",
+        children: [{ type: "listItem", children: [{ type: "paragraph" }, { type: "math", value: "y + z" }] }],
+      },
+    ]);
+  });
+
+  test("keeps an escaped backslash before a closing bracket as text", () => {
+    const tree = parseMarkdown(String.raw`\[name\\]
+
+## Protocol`);
+    expect(tree.children).toMatchObject([
+      { type: "paragraph", children: [{ type: "text", value: "[name\\]" }] },
+      { type: "heading" },
+    ]);
+  });
+
+  test("keeps square bracket escapes in separate blockquotes as text", () => {
+    const tree = parseMarkdown(String.raw`> \[
+
+## Heading
+
+> \]
+>
+> Quoted text.`);
+    expect(tree.children).toMatchObject([
+      { type: "blockquote", children: [{ type: "paragraph", children: [{ type: "text", value: "[" }] }] },
+      { type: "heading" },
+      {
+        type: "blockquote",
+        children: [
+          { type: "paragraph", children: [{ type: "text", value: "]" }] },
+          { type: "paragraph", children: [{ type: "text", value: "Quoted text." }] },
+        ],
+      },
+    ]);
+  });
+
+  test("keeps a standalone equation with a literal backtick", () => {
+    const tree = parseMarkdown("\\[ \\text{sample `quote} \\]");
+    expect(tree.children).toMatchObject([{ type: "math", value: "\\text{sample `quote}" }]);
   });
 
   test("hides HTML comments while preserving their source markers", () => {

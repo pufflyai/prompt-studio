@@ -24,45 +24,78 @@ const serializerOptions = {
 
 const fenceStart = (line: string) => line.match(/^ {0,3}(`{3,}|~{3,})/);
 
-const normalizeLegacyInlineMath = (line: string) => {
-  let codeFenceLength: number | null = null;
-  let result = "";
-
-  for (let index = 0; index < line.length; ) {
-    if (line[index] === "`") {
-      let end = index;
-      while (line[end] === "`") end += 1;
-      const length = end - index;
-
-      if (codeFenceLength === null) codeFenceLength = length;
-      else if (codeFenceLength === length) codeFenceLength = null;
-
-      result += line.slice(index, end);
-      index = end;
-      continue;
-    }
-
-    const delimiter = line.slice(index, index + 2);
-    if (codeFenceLength === null && (delimiter === "\\(" || delimiter === "\\)")) {
-      result += "$";
-      index += 2;
-      continue;
-    }
-    if (codeFenceLength === null && (delimiter === "\\[" || delimiter === "\\]")) {
-      result += "$$";
-      index += 2;
-      continue;
-    }
-
-    result += line[index];
-    index += 1;
+const normalizeLegacyMathLine = (line: string) => {
+  // Backslash escapes inside the expression may carry literal backslashes but no second bracket delimiter.
+  const displayMath = line.match(/^( {0,3})\\\[((?:[^\\]|\\[^[\]])*)\\\][ \t]*\r?$/);
+  if (displayMath) {
+    const [, indentation, expression] = displayMath;
+    return `${indentation}$$\n${expression!.trim()}\n${indentation}$$`;
   }
 
-  return result;
+  let codeFenceLength = 0;
+  let bracketStart: number | undefined;
+  let nextIndex = 0;
+  const result: string[] = [];
+
+  for (const match of line.matchAll(/`+|\\[\\()[\]]/g)) {
+    const [token] = match;
+    result.push(line.slice(nextIndex, match.index));
+    nextIndex = match.index + token.length;
+
+    if (token.startsWith("`")) {
+      if (!codeFenceLength) codeFenceLength = token.length;
+      else if (codeFenceLength === token.length) codeFenceLength = 0;
+      result.push(token);
+      continue;
+    }
+    if (codeFenceLength) {
+      result.push(token);
+      continue;
+    }
+
+    switch (token) {
+      case "\\(":
+      case "\\)":
+        result.push("$");
+        break;
+      case "\\[":
+        bracketStart = result.length;
+        result.push(token);
+        break;
+      case "\\]": {
+        if (bracketStart === undefined) {
+          result.push(token);
+          break;
+        }
+        result[bracketStart] = "$$";
+        result.push("$$");
+        bracketStart = undefined;
+        break;
+      }
+      default:
+        result.push(token);
+    }
+  }
+
+  result.push(line.slice(nextIndex));
+  return result.join("");
+};
+
+const quotePrefix = /^(?: {0,3}>[ \t]?)+/;
+
+const legacyMathFence = (line: string) => {
+  const match = line.match(/^([ \t]*)((?:[-+*]|\d{1,9}[.)])[ \t]+)?\\(\[|\])[ \t]*\r?$/);
+  if (!match) return undefined;
+
+  const [, indent = "", listMarker = "", bracket] = match;
+  if (listMarker && bracket === "]") return undefined;
+
+  return { bracket, indentation: indent.length + listMarker.length };
 };
 
 const normalizeLegacyMath = (markdown: string) => {
   let fencedCode: { character: string; length: number } | null = null;
+  let displayMathStart: { lineIndex: number; quoteDepth: number; indentation: number } | undefined;
   const normalized: string[] = [];
 
   for (const line of markdown.split("\n")) {
@@ -78,27 +111,32 @@ const normalizeLegacyMath = (markdown: string) => {
     const openingFence = fenceStart(line)?.[1];
     if (openingFence) {
       fencedCode = { character: openingFence[0] ?? "`", length: openingFence.length };
+      displayMathStart = undefined;
       normalized.push(line);
       continue;
     }
 
-    const displayMath = line.match(/^( {0,3})\\\[\s*(.*?)\s*\\\][ \t]*$/);
-    if (displayMath) {
-      const indent = displayMath[1] ?? "";
-      normalized.push(`${indent}$$`, displayMath[2] ?? "", `${indent}$$`);
-      continue;
-    }
+    const quote = quotePrefix.exec(line)?.[0] ?? "";
+    const quoteDepth = quote.replace(/[^>]/g, "").length;
+    if (displayMathStart && quoteDepth < displayMathStart.quoteDepth) displayMathStart = undefined;
 
-    if (/^ {0,3}\\\[[ \t]*$/.test(line)) {
-      normalized.push(line.replace("\\[", () => "$$"));
-      continue;
-    }
-    if (/^ {0,3}\\\][ \t]*$/.test(line)) {
+    const fence = legacyMathFence(line.slice(quote.length));
+    if (fence?.bracket === "[") {
+      displayMathStart = { quoteDepth, indentation: fence.indentation, lineIndex: normalized.length };
+    } else if (
+      fence?.bracket === "]" &&
+      displayMathStart?.quoteDepth === quoteDepth &&
+      Math.abs(displayMathStart.indentation - fence.indentation) <= 3
+    ) {
+      // An unmatched dollar fence would make the rest of the document math.
+      const { lineIndex } = displayMathStart;
+      normalized[lineIndex] = normalized[lineIndex]!.replace("\\[", () => "$$");
       normalized.push(line.replace("\\]", () => "$$"));
+      displayMathStart = undefined;
       continue;
     }
 
-    normalized.push(normalizeLegacyInlineMath(line));
+    normalized.push(normalizeLegacyMathLine(line));
   }
 
   return normalized.join("\n");
