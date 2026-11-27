@@ -67,12 +67,32 @@ export const planQuerySummary = async (storage: Storage, view: View, selectsAllA
     blocked: view.conditions.blocked,
     ...(view.metadata.deadlines.length ? { atRisk: view.conditions.atRisk } : {}),
   };
-  const countFields = Object.fromEntries(
+  const countFields: Record<string, StorageComputedField> = Object.fromEntries(
     Object.entries(conditions).map(([name, when]) => [
       `count:${name}`,
       { type: "number", cases: [{ when, value: 1 }], otherwise: 0 } satisfies StorageComputedField,
     ]),
   );
+  // CASE keeps relationship checks behind the cheap blocker candidate test;
+  // a SQL AND condition alone lets the planner evaluate those checks first.
+  countFields["count:blocked"] = {
+    type: "number",
+    cases: [
+      {
+        when: {
+          not: {
+            any: [
+              { field: "statusId", op: "in", value: view.workflow.blockedStatusIds },
+              { test: { op: "nonblank", args: [{ field: "blockedReason" }] } },
+            ],
+          },
+        },
+        value: 0,
+      },
+      { when: conditions.blocked, value: 1 },
+    ],
+    otherwise: 0,
+  };
   const flags = selectedTicketComputedFields(view.computed, [filtered]);
   const countMetrics = Object.fromEntries(
     Object.keys(conditions).map((name) => [name, { operation: "sum" as const, field: `count:${name}` }]),
