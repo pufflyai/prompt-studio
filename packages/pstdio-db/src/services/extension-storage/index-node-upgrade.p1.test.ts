@@ -232,11 +232,14 @@ test("a retried upgrade follows file edges to descendants that still only have r
   }
 });
 
-test("files left under a renamed extension's old id by a crash move on the next start", async () => {
+test.each([
+  false,
+  true,
+])("restored files under a renamed extension move on reopen (deferCleanup=%s)", async (deferCleanup) => {
   const folder = await mkdtemp(join(tmpdir(), "index-node-rename-"));
   folders.push(folder);
   const path = join(folder, "pstdio.db");
-  const first = await createDb({ path });
+  const first = await createDb({ path, deferCleanup });
   const now = new Date().toISOString();
   const workbenchId = crypto.randomUUID();
   await first.db
@@ -248,7 +251,7 @@ test("files left under a renamed extension's old id by a crash move on the next 
   const old = { workbenchId, extensionId: "pstdio.pstdio-planner" };
   await files.write(old, "receipts", id("root"), { bytes: new Uint8Array(4), children: [] });
 
-  const reopened = await createDb({ path });
+  const reopened = await createDb({ path, deferCleanup });
   await reopened.close();
   expect(await files.list(old, "receipts")).toEqual([]);
   expect(await files.list({ workbenchId, extensionId: "pstdio.planner" }, "receipts")).toEqual([id("root")]);

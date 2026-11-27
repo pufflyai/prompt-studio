@@ -1,7 +1,7 @@
 import { inArray } from "drizzle-orm";
 import { extensionIdentityRenames } from "pstdio-api-contracts/extension-host";
 import type { StorageOwner } from "pstdio-sync";
-import { migrateExtensionIdentities } from "../services/extension-identity-migration";
+import { migrateExtensionIdentities, moveRenamedIndexNodes } from "../services/extension-identity-migration";
 import type { IndexNodeFiles } from "../services/extension-storage/index-node-files";
 import { upgradeIndexNodesToFiles } from "../services/extension-storage/index-node-upgrade";
 import { artifactProjectionRefusals, restoreArtifactProjectionAdmission } from "./artifact-projection-admission";
@@ -30,7 +30,11 @@ export const admitStorageFiles = async ({
   finishArtifactProjectionUpgrade?: () => Promise<void>;
 }) => {
   const deferredOwners: StorageOwner[] = [];
-  if (current) return { complete: true, changed: false, deferredOwners };
+  if (current) {
+    // The external receipt tree can be restored independently of pg_control.
+    await moveRenamedIndexNodes(db, extensionIdentityRenames);
+    return { complete: true, changed: false, deferredOwners };
+  }
   const owed = () => invalidateMaintenance(dbPath);
   let complete = true;
   onPhase("database_index_nodes");

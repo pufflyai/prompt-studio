@@ -4,6 +4,7 @@ import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createDb, type DbOpenPhase } from "./connection.pglite";
+import { projects } from "./schemas/projects";
 
 test("an orphan survives opening and an interrupted idle pass, then is collected after restart", async () => {
   const home = await mkdtemp(join(tmpdir(), "pstdio-idle-collection-"));
@@ -89,3 +90,46 @@ test("interrupting an idle sweep releases the database and the next pass finishe
     await rm(home, { recursive: true, force: true });
   }
 }, 30000);
+
+test("a foreground request interrupts recovery collection inside one large project", async () => {
+  const home = await mkdtemp(join(tmpdir(), "pstdio-recovery-sweep-"));
+  const path = join(home, "db");
+  const handle = await createDb({ path, deferCleanup: true });
+  try {
+    const slot = join(`${path}-recovery`, "p-61", "24");
+    await mkdir(slot, { recursive: true });
+    const files = Array.from({ length: 65 }, (_, n) => join(slot, `${n}.tmp`));
+    await Promise.all(files.map((file) => Bun.write(file, "abandoned")));
+    await handle.cleanupRetiredRows(() => files.some((file) => !existsSync(file)));
+    expect(files.filter(existsSync)).toHaveLength(49);
+    await handle.pglite.exec("SELECT 1");
+    await handle.cleanupRetiredRows(() => false);
+    expect(existsSync(slot)).toBe(false);
+  } finally {
+    await handle.close();
+    await rm(home, { recursive: true, force: true });
+  }
+}, 30_000);
+
+test("a redownload between idle index batches preserves the recreated project's files", async () => {
+  const home = await mkdtemp(join(tmpdir(), "pstdio-index-sweep-"));
+  const path = join(home, "db");
+  const handle = await createDb({ path, deferCleanup: true });
+  try {
+    const id = crypto.randomUUID();
+    const shard = join(`${path}-index-nodes`, Buffer.from(id).toString("base64url"), "owner", "logs", "ab");
+    await mkdir(shard, { recursive: true });
+    const files = Array.from({ length: 48 }, (_, n) => join(shard, String(n)));
+    await Promise.all(files.map((file) => Bun.write(file, "node")));
+    await handle.cleanupRetiredRows(() => files.some((file) => !existsSync(file)));
+    const remaining = files.filter(existsSync);
+    expect(remaining).toHaveLength(32);
+    const now = new Date().toISOString();
+    await handle.db.insert(projects).values({ id, name: "Restored", shorthand: "R", created_at: now, updated_at: now });
+    await handle.cleanupRetiredRows(() => false);
+    expect(remaining.every(existsSync)).toBe(true);
+  } finally {
+    await handle.close();
+    await rm(home, { recursive: true, force: true });
+  }
+}, 30_000);

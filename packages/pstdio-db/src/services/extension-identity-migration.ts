@@ -190,11 +190,12 @@ export const migrateExtensionIdentities = async (
  * old id by a crash after an earlier rename committed still move. A refused rename keeps its rows,
  * and therefore its files, under the old id.
  */
-const moveRenamedIndexNodes = async (db: DbClient, renames: readonly ExtensionIdentityRename[]) => {
+export const moveRenamedIndexNodes = async (db: DbClient, renames: readonly ExtensionIdentityRename[]) => {
   const files = indexNodeFilesFor(db);
+  const present = await files.extensionIds();
   for (const { from: previous, to: canonical } of renames) {
     const from = `${previous.publisher}.${previous.name}`;
-    if (!(await files.hasExtension(from))) continue;
+    if (!present.has(from)) continue;
     const remaining = await db.execute(sql`SELECT project_id FROM ${s.owners} o WHERE o.extension_id = ${from}`);
     await files.moveExtension(
       from,

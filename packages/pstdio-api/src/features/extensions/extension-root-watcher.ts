@@ -71,6 +71,19 @@ export const createExtensionRootWatcher = async (
   const registrations = new Map<string, WatchedRootRegistration>();
   const watch = input.watch ?? defaultWatch;
   let disposed = false;
+  let retry: ReturnType<typeof setTimeout> | undefined;
+  const retryAttachment = (error: unknown) => {
+    const code = (error as NodeJS.ErrnoException | null)?.code;
+    if (disposed || retry || !["EMFILE", "ENFILE", "ENOSPC", "EAGAIN", "EBUSY", "EINTR"].includes(code ?? "")) return;
+    retry = setTimeout(() => {
+      retry = undefined;
+      void refresh().catch((cause) => {
+        input.onError?.(cause);
+        retryAttachment(cause);
+      });
+    }, 1_000);
+    retry.unref();
+  };
 
   const disposeRegistration = (registration: WatchedRootRegistration) => {
     registration.queued = false;
@@ -116,6 +129,7 @@ export const createExtensionRootWatcher = async (
     if (registration && registration.watcher === failed) {
       disposeRegistration(registration);
       registrations.delete(path);
+      retryAttachment(error);
     }
     input.onError?.(error);
   };
@@ -135,6 +149,7 @@ export const createExtensionRootWatcher = async (
       input.onAttach?.(root);
     } catch (error) {
       input.onError?.(error);
+      retryAttachment(error);
     }
   };
 
@@ -163,6 +178,7 @@ export const createExtensionRootWatcher = async (
 
   const dispose = () => {
     disposed = true;
+    clearTimeout(retry);
     for (const registration of registrations.values()) disposeRegistration(registration);
     registrations.clear();
   };

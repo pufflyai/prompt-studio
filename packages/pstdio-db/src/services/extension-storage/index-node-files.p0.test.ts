@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { mkdtemp, readdir, rm, utimes, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readdir, rm, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { createIndexNodeFiles } from "./index-node-files";
@@ -108,3 +108,27 @@ test("a renamed extension's nodes merge into the new id and removed projects los
   expect(await files.list(other, "logs")).toEqual([]);
   expect(await files.list(renamed, "receipts")).toHaveLength(2);
 });
+
+test("a live handle recreates a previously collected receipt shard after redownload", async () => {
+  const { root, files } = await setup();
+  const node = { bytes: bytes(3, 7), children: [] };
+  await files.write(owner, "receipts", id("node"), node);
+  await createIndexNodeFiles(root).removeProject(owner.workbenchId);
+  await files.write(owner, "receipts", id("node"), node);
+  expect(await files.read(owner, "receipts", id("node"))).toEqual(node);
+});
+
+test.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
+  "an inaccessible unrelated index folder does not block receipt discovery",
+  async () => {
+    const { root, files } = await setup();
+    await files.write(owner, "receipts", id("visible"), { bytes: bytes(3, 7), children: [] });
+    const unavailable = join(root, Buffer.from("unavailable").toString("base64url"));
+    await mkdir(unavailable, { mode: 0o111 });
+    try {
+      expect(await files.extensionIds()).toContain(owner.extensionId);
+    } finally {
+      await chmod(unavailable, 0o700);
+    }
+  },
+);
