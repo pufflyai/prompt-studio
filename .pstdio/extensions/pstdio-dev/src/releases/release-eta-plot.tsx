@@ -1,11 +1,11 @@
-import { Text } from "@chakra-ui/react";
 import { EmptyState, psTheme } from "@pstdio/ui";
-import { defineChart, dot, lineY } from "@tanstack/charts";
+import { defineChart, dot, lineY, text } from "@tanstack/charts";
+import { decorative } from "@tanstack/charts/mark/decorative";
 import { scaleBand } from "@tanstack/charts/scales/band";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
 import { tooltip } from "@tanstack/charts/tooltip";
-import { periodChartMargin } from "../webview/period-chart";
 import { HealthChartFrame, HealthPlot, useHealthChartAppearance } from "./health-chart-style";
+import { formatDuration } from "./health-charts";
 import {
   AGENTIC_HOURS_PER_FAILURE,
   type EtaGrouping,
@@ -36,17 +36,28 @@ export const ReleaseEtaPlot = ({ runs, grouping, onChoose }: ReleaseEtaPlotProps
   const points = etaSeries(runs, grouping);
   if (!points.length) return <EmptyState title="No release ETA in this range" />;
 
-  const latest = points.at(-1)!.latest;
   const stroke = appearance.color ?? psTheme.token.var("colors.vis.categorical.4");
   const rows = points.map((point) => ({ key: point.key, hours: point.latest.hours, point }));
+  const latest = rows.at(-1)!;
+  const latestLabel = latest.hours === 0 ? "0h" : formatDuration(latest.hours * 3600);
   const hours = scaleLinear()
     .domain([0, Math.max(1, ...rows.map((row) => row.hours))])
     .nice();
   const definition = defineChart({
-    margin: periodChartMargin,
     marks: [
       lineY(rows, { x: "key", y: "hours", stroke, strokeWidth: 2 }),
       dot(rows, { x: "key", y: "hours", fill: stroke, r: 3 }),
+      decorative(
+        text([latest], {
+          x: "key",
+          y: "hours",
+          text: () => latestLabel,
+          dy: -11,
+          fill: psTheme.token.var("colors.vis.text.primary"),
+          fontSize: 12,
+          fontWeight: 600,
+        }),
+      ),
     ],
     scales: {
       x: {
@@ -93,10 +104,10 @@ export const ReleaseEtaPlot = ({ runs, grouping, onChoose }: ReleaseEtaPlotProps
 
   return (
     <HealthChartFrame>
-      <Text textStyle="label/M/medium">{formatHours(latest.hours)}</Text>
       <HealthPlot
         definition={definition}
         ariaLabel={`ETA to release by ${grouping}, UTC`}
+        ariaDescription={`Latest estimated time to fix release-blocking tests is ${latestLabel}.`}
         onFocusChange={(focused) => {
           const row = rows.find((entry) => entry.key === String(focused?.xValue));
           if (row) onChoose(row.point.latest.run.id);
