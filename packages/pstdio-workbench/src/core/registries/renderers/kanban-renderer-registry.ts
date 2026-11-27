@@ -29,7 +29,6 @@ import type { ViewToolbarAction } from "./view-toolbar-action";
 
 export interface KanbanRendererCreateRequest extends KanbanRendererCreateSubmission {
   originatingRead?: OperationInput<unknown>["originatingRead"];
-  canOpenCreatedRow?(): boolean;
 }
 
 export interface KanbanRendererQueryState {

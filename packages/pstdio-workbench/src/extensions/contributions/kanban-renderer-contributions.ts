@@ -1,4 +1,7 @@
-import type { KanbanRendererBoardColumnConfig as WireBoardColumnConfig } from "@pstdio/sdk/extensions";
+import {
+  isNavigationTarget,
+  type KanbanRendererBoardColumnConfig as WireBoardColumnConfig,
+} from "@pstdio/sdk/extensions";
 import { renderBadgeListDisplay } from "@pstdio/ui/kanban-renderer";
 import { kanbanBuiltInViews, type WorkbenchExtensionKanbanRendererRecord } from "pstdio-api-contracts";
 import { text } from "pstdio-extensions/workbench";
@@ -11,7 +14,10 @@ import { WorkbenchIcon } from "../../react";
 import type { ReactAttributeDescriptor as AttributeDescriptor } from "../../react/renderers/kanban/kanban-presentation";
 import { toWorkbenchNavigationTarget } from "../host/extension-navigation-target";
 import type { CreateOperationFeedback } from "../host/workbench-create-operation";
-import type { WorkbenchExtensionCommandContext } from "../host/workbench-extension-command";
+import type {
+  ExecuteWorkbenchExtensionCommandInput,
+  WorkbenchExtensionCommandContext,
+} from "../host/workbench-extension-command";
 import { collectionBadgeTarget } from "./collection-badge-navigation";
 import type { WorkbenchExtensionKanbanRendererAdapter } from "./kanban-renderer-adapter";
 import { toWorkbenchBoardColumnConfig } from "./kanban-renderer-board-config";
@@ -64,7 +70,10 @@ const toRowClick = (
   toActivatedRow: (row: KanbanRendererRow) => KanbanRendererRow,
 ) => {
   if (record.rowActivationHandlerId) {
-    return async (row: KanbanRendererRow) => {
+    return async (
+      row: KanbanRendererRow,
+      invocation?: Pick<ExecuteWorkbenchExtensionCommandInput, "signal" | "isViewerCurrent">,
+    ) => {
       const resource = resolveRowResource(record, row);
       await executeKanbanRendererCommand(
         context,
@@ -72,6 +81,7 @@ const toRowClick = (
         record.rowActivationHandlerId!,
         { row: toActivatedRow(row) },
         resource,
+        invocation,
       );
     };
   }
@@ -152,7 +162,7 @@ export const registerWorkbenchExtensionKanbanRenderers = (
     resource?: ResourceRef,
     feedback?: CreateOperationFeedback,
   ) =>
-    executeKanbanRendererCommand(context, record, commandId, params, resource, undefined, undefined, feedback).then(
+    executeKanbanRendererCommand(context, record, commandId, params, resource, { createFeedback: feedback }).then(
       (result) => {
         afterMutation(record);
         return result;
@@ -237,12 +247,29 @@ export const registerWorkbenchExtensionKanbanRenderers = (
           ? (move: import("@pstdio/sdk/extensions").KanbanRendererMove) =>
               mutate(record, record.moveHandlerId!, { ...move }).then(() => undefined)
           : undefined,
-        onCreateRow: toCreateRowHandler(
-          record,
-          adapter,
-          mutate,
-          record.rowActivationHandlerId ? onRowActivate : undefined,
-        ),
+        onCreateRow: toCreateRowHandler(record, adapter, mutate, async (row, invocation) => {
+          const target = row.target;
+          if (
+            isNavigationTarget(target) &&
+            target.kind === "page" &&
+            target.resource?.id === row.id &&
+            (!target.resource.projectId || target.resource.projectId === context.projectId)
+          ) {
+            await runUserAction(context.workbench, "Open command result", () =>
+              context.workbench.navigation.openTarget(
+                toWorkbenchNavigationTarget(target, {
+                  extensionId: record.extensionId,
+                  projectId: context.projectId,
+                }),
+                { projectId: context.projectId, isViewerCurrent: invocation.isViewerCurrent },
+              ),
+            );
+            return true;
+          }
+          if (!record.rowActivationHandlerId || !onRowActivate) return false;
+          await runUserAction(context.workbench, "Open command result", () => onRowActivate(row, invocation));
+          return true;
+        }),
         onColumnAction: record.columnActionHandlerId
           ? async (columnId: string, actionId: string) => {
               await mutate(record, record.columnActionHandlerId!, { columnId, actionId });

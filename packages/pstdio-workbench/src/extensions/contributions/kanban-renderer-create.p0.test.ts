@@ -1,9 +1,155 @@
 import { describe, expect, test } from "bun:test";
+import { createScopedQueryClient } from "@pstdio/sdk/extensions";
 import type { WorkbenchExtensionKanbanRendererRecord } from "pstdio-api-contracts";
 import { createWorkbench, getWorkbenchRenderers } from "../../core";
+import { getWorkbenchOperations } from "../../core/registries/mutations/operations";
 import { registerWorkbenchExtensionKanbanRenderers } from "./kanban-renderer-contributions";
 
+test.each([
+  "current",
+  "stale",
+])("opens a saved ticket before board and attachment updates (source is %s)", async (source) => {
+  const current = source === "current";
+  const queries = createScopedQueryClient({ runtimeId: "desktop", extensionId: "pstdio" });
+  const workbench = createWorkbench({ queries });
+  const operations = getWorkbenchOperations(queries);
+  const write = Promise.withResolvers<{ id: string; title: string }>();
+  const refreshStarted = Promise.withResolvers<void>();
+  const refresh = Promise.withResolvers<void>();
+  const attachment = Promise.withResolvers<void>();
+  const activation = Promise.withResolvers<unknown>();
+  const opened = Promise.withResolvers<void>();
+  const calls: string[] = [];
+  let sourceIsCurrent = true;
+  workbench.pageLocations.setProject("project");
+  workbench.commands.registerCommand(
+    { id: "record-ticket-open", label: "Open ticket" },
+    {
+      execute: () => {
+        calls.push("open");
+        opened.resolve();
+      },
+    },
+  );
+  const activationResult = {
+    outcome: {
+      ok: true,
+      status: "success",
+      navigationRequests: [
+        {
+          kind: "command",
+          target: { command: { kind: "command", id: "record-ticket-open", extensionId: "pstdio" } },
+        },
+      ],
+    },
+  };
+  const record = {
+    id: "tickets",
+    extensionId: "planner",
+    title: "Tickets",
+    queryHandlerId: "query",
+    rowActivationHandlerId: "activate",
+    createRow: { commandId: "create" },
+  } satisfies WorkbenchExtensionKanbanRendererRecord;
+  registerWorkbenchExtensionKanbanRenderers(
+    {
+      projectId: "project",
+      workbench,
+      metadata: { commands: [{ id: "create", extensionId: "planner", title: "Create ticket", mutating: true }] },
+      operations,
+      createCommandIds: new Set(["create"]),
+      executeCommand: async (id) => {
+        calls.push(id);
+        if (id === "create") return write.promise;
+        if (id === "activate") return activation.promise;
+      },
+    },
+    [record],
+    {
+      onAfterCreate: () => attachment.promise,
+    },
+  );
+  const creation = getWorkbenchRenderers(workbench).getKanbanRenderer("tickets")!.onCreateRow!({
+    columnId: "backlog",
+    values: {},
+    attributeValues: {},
+    files: [new File(["evidence"], "evidence.txt")],
+    canOpenCreatedRow: () => sourceIsCurrent,
+    originatingRead: {
+      key: "board",
+      refresh() {
+        refreshStarted.resolve();
+        return refresh.promise;
+      },
+    },
+  });
+  try {
+    expect(calls).not.toContain("activate");
+    write.resolve({ id: "saved", title: "New ticket" });
+    await refreshStarted.promise;
+    expect(calls).toEqual(["create", "activate"]);
+    sourceIsCurrent = current;
+    activation.resolve(activationResult);
+    if (current) await opened.promise;
+  } finally {
+    activation.resolve(activationResult);
+    refresh.resolve();
+    attachment.resolve();
+    await creation;
+    await workbench.dispose();
+    queries.dispose();
+  }
+  expect(calls).toEqual(current ? ["create", "activate", "open"] : ["create", "activate"]);
+});
+
 describe("registerWorkbenchExtensionKanbanRenderers create forms", () => {
+  test("settles the form and reports an opening failure after the row has saved", async () => {
+    const workbench = createWorkbench();
+    workbench.pageLocations.setProject("project");
+    let settled = 0;
+    registerWorkbenchExtensionKanbanRenderers(
+      {
+        projectId: "project",
+        workbench,
+        executeCommand: () => ({
+          id: "saved",
+          title: "Saved ticket",
+          target: {
+            kind: "page",
+            page: { kind: "page", id: "missing", extensionId: "planner" },
+            resource: { type: "ticket", id: "saved", projectId: "project" },
+          },
+        }),
+      },
+      [
+        {
+          id: "tickets",
+          title: "Tickets",
+          extensionId: "planner",
+          queryHandlerId: "query",
+          createRow: { commandId: "create" },
+        },
+      ],
+    );
+    try {
+      await getWorkbenchRenderers(workbench).getKanbanRenderer("tickets")!.onCreateRow!({
+        columnId: "backlog",
+        values: {},
+        attributeValues: {},
+        files: [],
+        onOpenSettled: () => {
+          settled++;
+        },
+      });
+      expect(settled).toBe(1);
+      expect(workbench.notifications.listNotifications()).toMatchObject([
+        { level: "error", title: "Open command result failed" },
+      ]);
+    } finally {
+      await workbench.dispose();
+    }
+  });
+
   test("creates and finishes attachments without activating when opening is declined", async () => {
     const workbench = createWorkbench();
     const calls: string[] = [];

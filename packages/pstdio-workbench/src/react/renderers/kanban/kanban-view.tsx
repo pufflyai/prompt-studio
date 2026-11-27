@@ -117,11 +117,12 @@ const createRowWithRefreshHold = (
   if (!createRow) return undefined;
   return async (submission) => {
     const release = submission.openCreatedRow === false ? undefined : holdRefresh();
+    const viewerCurrent = context.canOpenCreatedRow();
     try {
       await createRow({
         ...submission,
         originatingRead: context.originatingRead,
-        canOpenCreatedRow: context.canOpenCreatedRow(),
+        canOpenCreatedRow: () => submission.canOpenCreatedRow?.() !== false && viewerCurrent?.() !== false,
       });
     } finally {
       release?.();
@@ -218,6 +219,7 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
     if (entry.domain !== "resource.create" || !entry.intent || entry.projectId !== query.queryScope?.projectId)
       return [];
     const intent = entry.intent as BoardCreationIntent;
+    if (intent.openCreatedRow && entry.status !== "unknown") return [];
     if (intent.viewKey !== mutations.originatingRead.key || rows.some(({ id }) => id === intent.confirmedId)) return [];
     return [{ key: entry.id, columnId: intent.columnId, title: intent.title, unconfirmed: entry.status === "unknown" }];
   });

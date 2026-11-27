@@ -28,6 +28,7 @@ export interface BoardCreationIntent {
   viewKey: string;
   columnId: string;
   title: string;
+  openCreatedRow: boolean;
   confirmedId?: string;
 }
 

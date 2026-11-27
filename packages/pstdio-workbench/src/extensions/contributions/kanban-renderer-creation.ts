@@ -1,6 +1,7 @@
 import type { WorkbenchExtensionKanbanRendererRecord } from "pstdio-api-contracts";
 import type { KanbanRendererCreateRequest } from "../../core/registries/renderers/kanban-renderer-registry";
 import type { CreateOperationFeedback } from "../host/workbench-create-operation";
+import type { ExecuteWorkbenchExtensionCommandInput } from "../host/workbench-extension-command";
 import type { WorkbenchExtensionKanbanRendererAdapter } from "./kanban-renderer-adapter";
 import {
   type KanbanRendererRow,
@@ -17,7 +18,10 @@ export const toCreateRowHandler = (
     params: Record<string, unknown>,
     feedback?: CreateOperationFeedback,
   ) => Promise<unknown>,
-  activateCreatedRow: ((row: KanbanRendererRow) => Promise<void> | void) | undefined,
+  activateCreatedRow: (
+    row: KanbanRendererRow,
+    invocation: Pick<ExecuteWorkbenchExtensionCommandInput, "signal" | "isViewerCurrent">,
+  ) => Promise<boolean>,
 ) => {
   const contribution = record.createRow;
   if (!contribution) return undefined;
@@ -27,18 +31,42 @@ export const toCreateRowHandler = (
       contribution.columnParam && submission.columnId ? { [contribution.columnParam]: submission.columnId } : undefined,
       contribution.attributesParam ? { [contribution.attributesParam]: submission.attributeValues } : undefined,
     );
+    const openCreatedRow = async (created: unknown, signal?: AbortSignal) => {
+      if (
+        signal?.aborted ||
+        submission.openCreatedRow === false ||
+        submission.canOpenCreatedRow?.() === false ||
+        typeof created !== "object" ||
+        created === null
+      )
+        return;
+      const row = created as Partial<KanbanRendererRow>;
+      if (typeof row.id !== "string" || typeof row.title !== "string") return;
+      const attemptedOpen = await activateCreatedRow(
+        { ...row, id: row.id, title: row.title, attributes: row.attributes ?? {} },
+        { signal, isViewerCurrent: submission.canOpenCreatedRow },
+      );
+      if (attemptedOpen) submission.onOpenSettled?.();
+    };
+    let opening: Promise<{ error: unknown } | undefined> | undefined;
     let attaching: Promise<void> | undefined;
     let attachmentFailure: unknown;
     const onCreated = (created: unknown, signal?: AbortSignal) => {
+      // The saved row has everything needed to open it while reads and attachments finish.
+      opening ??= Promise.resolve()
+        .then(() => openCreatedRow(created, signal))
+        .then(
+          () => undefined,
+          (error: unknown) => ({ error }),
+        );
       attaching ??= Promise.resolve()
         .then(() => adapter.onAfterCreate?.({ record, created, submission, signal }))
         .catch((error: unknown) => {
           attachmentFailure = error;
         });
-      return attaching;
     };
     const settleAttachment = () => {
-      void attaching?.then(() => submission.onSettled?.(attachmentFailure));
+      if (attaching) void Promise.all([attaching, opening]).then(() => submission.onSettled?.(attachmentFailure));
     };
     const feedback = prepareKanbanCreationFeedback(submission);
     const created = await runMutation(record, contribution.commandId, params, {
@@ -52,18 +80,9 @@ export const toCreateRowHandler = (
     }).catch((error: unknown) => {
       throw attachmentFailure ?? error;
     });
-    await onCreated(created);
+    onCreated(created);
+    const [, navigationFailure] = await Promise.all([attaching, opening]);
     if (attachmentFailure !== undefined) throw attachmentFailure;
-    if (
-      submission.openCreatedRow === false ||
-      submission.canOpenCreatedRow?.() === false ||
-      !activateCreatedRow ||
-      typeof created !== "object" ||
-      created === null
-    )
-      return;
-    const row = created as Partial<KanbanRendererRow>;
-    if (typeof row.id !== "string" || typeof row.title !== "string") return;
-    await activateCreatedRow({ ...row, id: row.id, title: row.title, attributes: row.attributes ?? {} });
+    if (navigationFailure) throw navigationFailure.error;
   };
 };
