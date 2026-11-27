@@ -144,8 +144,10 @@ export const acceptRevision = (
     const verifiedInstall =
       revision.verifiedInstall ??
       (revision.contentKey && current?.contentKey === revision.contentKey ? current.verifiedInstall : undefined);
-    // Reads treat an earlier host/format as absent. Its replacement uses that same guard;
-    // a compatible revision accepted in the meantime still participates in the CAS below.
+    // Reads treat a revision this executable cannot run as absent: an earlier host/format, or a
+    // prebuilt release for another bundle host. An inherited release that still runs here stays
+    // current. Its replacement uses that same guard; a compatible revision accepted in the
+    // meantime still participates in the CAS below.
     if (!runsOnThisHost(current)) current = null;
     if (
       expectedState !== undefined &&

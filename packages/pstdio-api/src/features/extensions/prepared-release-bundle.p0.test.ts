@@ -1,7 +1,7 @@
 import { afterEach, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import {
   acceptPreparedRevision,
@@ -62,15 +62,16 @@ const releaseInstall = async () => {
     sourceSha256,
   );
   await acceptPreparedRevision(source, release);
-  return { source, release };
+  // The previous executable accepted the release under its own preparation identity.
+  const inherited = { ...release, host: "previous-executable" };
+  const accepted = join(preparedCacheRoot(), "accepted");
+  const [pointer] = readdirSync(accepted).filter((name) => name.endsWith(".json"));
+  writeFileSync(join(accepted, pointer!), JSON.stringify(inherited));
+  return { source, release, inherited };
 };
 
 test("an updated executable keeps running a release install that has no dependencies to rebuild from", async () => {
   const { source, release } = await releaseInstall();
-  // The previous executable accepted the release; the bundle host it was verified against is unchanged.
-  const accepted = join(preparedCacheRoot(), "accepted");
-  const [pointer] = readdirSync(accepted).filter((name) => name.endsWith(".json"));
-  writeFileSync(join(accepted, pointer!), JSON.stringify({ ...release, host: "previous-executable" }));
 
   const loaded = await loadExtensionSource(source, { accepted: true });
 
@@ -84,4 +85,18 @@ test("an updated executable keeps running a release install that has no dependen
   const replacement = await prepareExtensionRevision(source);
   await acceptPreparedRevision(source, replacement, { expectedState: preparedRevisionState(previous) });
   expect((await readAcceptedRevision(source))?.id).toBe(replacement.id);
+});
+
+test("an updated executable rejects an inherited release built for a different bundle host", async () => {
+  const { source, inherited } = await releaseInstall();
+  const manifestPath = join(dirname(inherited.packagePath), "release-bundle.json");
+  const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+  writeFileSync(manifestPath, JSON.stringify({ ...manifest, host: `${manifest.host}:other-bun` }));
+
+  expect(await readAcceptedRevision(source)).toBeNull();
+  const error = await acceptPreparedRevision(source, inherited).then(
+    () => undefined,
+    (cause: unknown) => cause,
+  );
+  expect(String(error)).toContain("unavailable or incompatible");
 });
