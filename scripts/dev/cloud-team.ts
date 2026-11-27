@@ -4,6 +4,7 @@ import { dirname, relative, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { assertActorReservation, assertPairReservations, kube, provision } from "./cloud-team/infra";
 import { createActorLauncher } from "./cloud-team/launch";
+import { recoverProvisioning } from "./cloud-team/operator";
 import { command, setExecutionSignal, until } from "./cloud-team/process";
 import { evidence, setup, verify } from "./cloud-team/scenario";
 import type { Pair } from "./cloud-team/types";
@@ -78,6 +79,12 @@ await save();
 console.log(`Cloud team run: ${pair.id}\nPrivate state: ${pair.directory}`);
 const down = async () => {
   setExecutionSignal();
+  try {
+    await recoverProvisioning(pair, save);
+  } catch (error) {
+    await evidence(pair, "cleanup", { passed: false, errors: [String(error)] });
+    throw error;
+  }
   await Promise.all([pair.owner, pair.member].filter((actor) => actor !== undefined).map(assertActorReservation));
   const results = await Promise.allSettled(
     [pair.owner, pair.member]

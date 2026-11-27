@@ -14,6 +14,7 @@ export interface Pair {
   namespace: string;
   name: string;
   deadline: string;
+  provisioning?: { role: "owner" | "member"; command: string };
   owner?: Actor;
   member?: Actor;
   teamId?: string;

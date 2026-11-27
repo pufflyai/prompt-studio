@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { configureActorNetwork, exec, exposeServices, findActor, kube } from "./infra";
-import { command, until } from "./process";
+import { reserve } from "./operator";
+import { until } from "./process";
 import { evidence } from "./scenario";
 import type { Pair, WorkspaceConfig } from "./types";
 
@@ -10,29 +11,13 @@ export const createActorLauncher =
   async (role: "owner" | "member") => {
     await evidence(pair, `provisioning ${role} Cloud Workspace`);
     // Acquire the companion's real claim; its bounded holder never touches the app's private source root.
-    const reserved = JSON.parse(
-      await command(
-        [
-          "pst",
-          "pocketcoder.remote-testing",
-          "run",
-          "--path",
-          pair.source,
-          "--command",
-          `exec bun -e 'await Bun.sleep(${minutes * 60_000})'`,
-          "--timeout-minutes",
-          String(minutes),
-          "--wait",
-          "false",
-          "--keep-environment",
-          "false",
-        ],
-        undefined,
-        true,
-      ),
-    );
+    const holder = `exec bun -e 'await Bun.sleep(${minutes * 60_000})' # cloud-team:${pair.id}:${role}`;
+    pair.provisioning = { role, command: holder };
+    await save();
+    const reserved = await reserve(pair, holder, minutes);
     const created = { id: reserved.environmentId };
     pair[role] = { workspaceId: created.id, runId: reserved.runId, pod: "" };
+    delete pair.provisioning;
     await save();
     const actor = await findActor(pair, created.id, reserved.runId);
     pair[role] = actor;

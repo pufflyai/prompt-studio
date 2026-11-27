@@ -27,6 +27,8 @@ runner records each workspace before copying or starting it and stops only its r
 The holder request uses the companion-owned `/workspace/repo`, so late dispatch cannot replace the live app source. Its normal project-scoped claim excludes ordinary reuse. Check that reservations still exist before accepting a result, and refuse cleanup if another run has claimed a workspace. The holder uses stopAfterRun=true. Cleanup cancels and waits for that exact run; its normal collector stops before releasing ownership. Never release then call the unguarded environment-stop command. The source/bootstrap log stays in that owned pod; sanitized results stay in private local
 evidence. No result is inferred from Kubernetes provisioning alone.
 
+The next attempt encountered a full compute pool and lost its long CLI HTTP response before a holder ID returned. The local harness therefore uses the same public host command endpoint with Bun's idle timeout disabled and its own finite 20-minute request allowance. It journals a unique holder marker before submission; an interrupted response must be recovered from that exact marker or cleanup remains explicitly uncertain and retains storage. No production server timeout or companion installation is changed. The installed companion does not expose its initial run to machine automation, so this does not add automation permissions or issue a new token.
+
 ## Limitations
 
 The companion has no nonblocking exact-run inspection command; its recent-run list is

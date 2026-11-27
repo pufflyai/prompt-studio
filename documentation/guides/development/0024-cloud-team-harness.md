@@ -21,7 +21,7 @@ receives database/object-store credentials and storage access. Cleanup removes t
 ## Prerequisites
 
 - Bun and `pst`, from a project linked to the configured Remote Testing companion.
-- `pst pocketcoder.remote-testing status` reports available.
+- `pst pocketcoder.remote-testing status` reports available. The native runtime descriptor is read from the configured `PSTDIO_HOME` (default `~/.pstdio`); explicit `PSTDIO_API_URL` and `PSTDIO_API_TOKEN` overrides must identify the same operator used by `pst`. These credentials stay on the local machine.
 - A configured `kubectl` executable or wrapper with access to that controller's namespace. The runner
   needs permission to create/delete its own Job, Services, Secret and NetworkPolicies, and exec into the two workspace
   pods. It does not change controller deployments or use the shared browser preview bridge.
@@ -51,7 +51,7 @@ The scenario checks:
 8. Owner removes member; after the 30-second access-token lifetime, future edits do not reach the
    removed member. Old downloaded data remains; the owner can still read/write.
 
-A failed assertion exits nonzero. Results and original failures are retained as `results.jsonl`.
+A failed assertion exits nonzero. Results and original failures are retained as `results.jsonl`. A unique holder marker is saved before each launch. Provisioning uses the normal public native command endpoint with a finite20-minute request allowance, allowing a cold queue to exceed Bun's default client idle timeout. If the response is lost, `down` must recover the exact holder from recent runs; otherwise it reports uncertain cleanup and retains the backend. It never retries provisioning blindly or stops a workspace inferred from creation time.
 The runner stops its own Cloud Workspaces and deletes its labelled disposable backend. `--keep`
 retains the setup on success or failure for diagnosis. Jobs and workspace runs have finite lifetimes;
 use `down` to remove Services/Secrets too. Nothing touches another run's workspace or project.
