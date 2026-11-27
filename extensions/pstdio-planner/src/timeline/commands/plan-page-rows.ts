@@ -19,7 +19,7 @@ export const planPageRows = async (
   const trackIds = new Set(track?.options.map(({ id }) => id));
   const parents = view.parents;
   const statuses = new Map(view.statuses.map((status) => [status.id, status]));
-  const today = new Intl.DateTimeFormat("en-CA").format(new Date());
+  const today = view.today;
   const steps = await planStepCounts(ctx, view, executionOffset);
   const rows: PlanRow[] = [];
   for (const [i, ticket] of view.tickets.entries())

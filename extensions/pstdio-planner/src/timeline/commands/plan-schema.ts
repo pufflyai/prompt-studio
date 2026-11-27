@@ -6,12 +6,12 @@ export const planSchemaCommand = defineCommand({
   id: "timeline.plan.schema",
   title: "Read Timeline fields",
   async run(ctx) {
-    const schema = await timelineViewSchema(ctx);
+    const [schema, savedViews] = await Promise.all([timelineViewSchema(ctx), ctx.views.list(timelineBoard)]);
     return {
       projectId: ctx.projectId,
       ticketRows: schema.rows,
       ticketAttributes: schema.attributes,
-      savedViews: await ctx.views.list(timelineBoard),
+      savedViews,
     };
   },
 });

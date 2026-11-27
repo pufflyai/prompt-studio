@@ -1,7 +1,8 @@
 import { afterEach, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { Worker } from "node:worker_threads";
 import { stopExtensionPreparation } from "pstdio-extensions";
 import { createPreparationClient } from "pstdio-extensions/preparation-client";
@@ -204,3 +205,117 @@ test("batch frontend preparation uses selected repository dependencies and refre
     process.chdir(previousCwd);
   }
 });
+
+test("cached batches follow browser replacements for imported view entries", async () => {
+  const root = mkdtempSync(join(tmpdir(), "webview-browser-entry-"));
+  roots.push(root);
+  process.env.PSTDIO_HOME = join(root, "home");
+  const source = join(root, "source");
+  mkdirSync(source);
+  writeFileSync(
+    join(source, "package.json"),
+    JSON.stringify({ name: "browser-entry", browser: { "./dependency.ts": "./browser.ts" } }),
+  );
+  writeFileSync(join(source, "main.ts"), 'export {default} from "./dependency";');
+  writeFileSync(join(source, "dependency.ts"), 'export default "DIRECT_ENTRY";');
+  const browser = join(source, "browser.ts");
+  writeFileSync(browser, 'export default "OLD_BROWSER";');
+  const input = {
+    packagePath: source,
+    entryPath: join(source, "main.ts"),
+    packageName: "browser-entry",
+    installName: "browser-entry",
+  };
+  const { prepareWebviewArtifacts } = await import("./prepared-webview");
+  const prepare = () => prepareWebviewArtifacts([input], new AbortController().signal);
+  const [before] = await prepare();
+  expect(readFileSync(join(before!.distDir, "module.js"), "utf8")).toContain("OLD_BROWSER");
+  writeFileSync(browser, 'export default "NEW_BROWSER";');
+  const [after] = await prepare();
+  expect(readFileSync(join(after!.distDir, "module.js"), "utf8")).toContain("NEW_BROWSER");
+});
+
+test("frontend inspection leaves nondeterministic macros to the actual build", async () => {
+  const root = mkdtempSync(join(tmpdir(), "webview-macro-execution-"));
+  roots.push(root);
+  process.env.PSTDIO_HOME = join(root, "home");
+  const source = join(root, "source");
+  mkdirSync(source);
+  writeFileSync(join(source, "package.json"), JSON.stringify({ name: "macro-execution" }));
+  const counter = join(root, "counter.txt");
+  writeFileSync(counter, "0");
+  writeFileSync(
+    join(source, "macro.ts"),
+    `import {readFileSync,writeFileSync} from "node:fs"; const path=${JSON.stringify(counter)}; writeFileSync(path,String(Number(readFileSync(path,"utf8"))+1)); export function value() { return Date.now(); }`,
+  );
+  const entryPath = join(source, "main.ts");
+  writeFileSync(entryPath, 'import {value} from "./macro" with {type:"macro"}; export default value();');
+  const { prepareWebviewArtifact } = await import("./prepared-webview");
+  const artifact = await prepareWebviewArtifact(
+    { packagePath: source, entryPath, packageName: "macro-execution", installName: "macro-execution" },
+    new AbortController().signal,
+  );
+  expect(readFileSync(counter, "utf8")).toBe("1");
+  expect(readFileSync(join(artifact.distDir, "module.js"), "utf8")).toContain("default");
+});
+
+for (const bindings of ["exports", "symlinks"] as const)
+  test(`cached frontends follow changed ${bindings} bindings over unchanged files`, async () => {
+    const root = mkdtempSync(join(tmpdir(), "webview-resolution-bindings-"));
+    roots.push(root);
+    process.env.PSTDIO_HOME = join(root, "home");
+    const source = join(root, "source");
+    const modules = join(source, "node_modules");
+    mkdirSync(modules, { recursive: true });
+    writeFileSync(join(source, "package.json"), JSON.stringify({ name: "resolution-bindings" }));
+    let change: () => void;
+    let imports: string;
+    if (bindings === "exports") {
+      const target = join(modules, "target");
+      mkdirSync(target);
+      const manifest = (swapped: boolean) =>
+        JSON.stringify({
+          name: "target",
+          exports: {
+            "./left": swapped ? "./right.js" : "./left.js",
+            "./right": swapped ? "./left.js" : "./right.js",
+          },
+        });
+      writeFileSync(join(target, "package.json"), manifest(false));
+      for (const name of ["left", "right"])
+        writeFileSync(join(target, `${name}.js`), `export default "${name.toUpperCase()}";`);
+      change = () => writeFileSync(join(target, "package.json"), manifest(true));
+      imports = 'import left from "target/left"; import right from "target/right";';
+    } else {
+      const targets = ["left", "right"].map((name) => {
+        const path = join(root, name);
+        mkdirSync(path);
+        writeFileSync(join(path, "package.json"), JSON.stringify({ name }));
+        writeFileSync(join(path, "index.js"), `export default "${name.toUpperCase()}";`);
+        return path;
+      });
+      const bind = (swapped: boolean) =>
+        ["left", "right"].forEach((name, i) => {
+          symlinkSync(targets[swapped ? 1 - i : i]!, join(modules, name), "junction");
+        });
+      bind(false);
+      change = () => {
+        for (const name of ["left", "right"]) unlinkSync(join(modules, name));
+        bind(true);
+      };
+      imports = 'import left from "left"; import right from "right";';
+    }
+    const entryPath = join(source, "main.ts");
+    writeFileSync(entryPath, `${imports} export default [left, right];`);
+    const { prepareWebviewArtifact } = await import("./prepared-webview");
+    const read = async () => {
+      const artifact = await prepareWebviewArtifact(
+        { packagePath: source, entryPath, packageName: "resolution-bindings", installName: "resolution-bindings" },
+        new AbortController().signal,
+      );
+      return (await import(pathToFileURL(join(artifact.distDir, "module.js")).href)).default;
+    };
+    expect(await read()).toEqual(["LEFT", "RIGHT"]);
+    change();
+    expect(await read()).toEqual(["RIGHT", "LEFT"]);
+  });

@@ -13,7 +13,6 @@ import { PlanGraph } from "./plan-graph";
 import { PlanHeader } from "./plan-header";
 import { PlanLoading, PlanLoadingBody } from "./plan-loading";
 import { useViewSections } from "./plan-state";
-import { TicketRequestsDialog } from "./ticket-requests-dialog";
 import { TimelinePresentationProvider } from "./timeline-presentation";
 import { timelineInitialState, timelineQueryData } from "./timeline-query";
 import { createTimelineStorage } from "./timeline-storage";
@@ -32,6 +31,9 @@ const PlanEditor = lazy(async () => {
   await installPrismGlobal();
   return import("./plan-editor").then((module) => ({ default: module.PlanEditor }));
 });
+const TicketRequestsDialog = lazy(() =>
+  import("./ticket-requests-dialog").then((module) => ({ default: module.TicketRequestsDialog })),
+);
 
 interface PlanRootProps {
   host: GuestHost;
@@ -223,22 +225,24 @@ function PlanContent(props: PlanContentProps) {
         <PlanLoadingBody t={t} />
       )}
       {plan && attention ? (
-        <TicketRequestsDialog
-          key={`${attention.kind}:${attention.id}`}
-          rows={attentionRows}
-          source={{
-            client,
-            scope: attention.kind === "ticket" ? { ticketId: attention.id! } : { deadlineId: attention.id },
-          }}
-          title={attentionTitle}
-          open={attention.open}
-          pendingOnly={attention.pendingOnly}
-          trigger={attention.trigger}
-          fallback={attention.fallback}
-          onClose={() => setAttention({ ...attention, open: false })}
-          onAnswer={(requestId, response) => client.commands.review({ requestId, response })}
-          onOpenChat={(requestId) => client.commands["review-requests.open"]({ requestId })}
-        />
+        <Suspense fallback={null}>
+          <TicketRequestsDialog
+            key={`${attention.kind}:${attention.id}`}
+            rows={attentionRows}
+            source={{
+              client,
+              scope: attention.kind === "ticket" ? { ticketId: attention.id! } : { deadlineId: attention.id },
+            }}
+            title={attentionTitle}
+            open={attention.open}
+            pendingOnly={attention.pendingOnly}
+            trigger={attention.trigger}
+            fallback={attention.fallback}
+            onClose={() => setAttention({ ...attention, open: false })}
+            onAnswer={(requestId, response) => client.commands.review({ requestId, response })}
+            onOpenChat={(requestId) => client.commands["review-requests.open"]({ requestId })}
+          />
+        </Suspense>
       ) : null}
       {plan && editor ? (
         <Suspense fallback={null}>

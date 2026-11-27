@@ -23,12 +23,19 @@ export const aggregateRecordQuery = async (
     ? { statistics: await aggregateRecordStatistics(tx, index, query, where, resolve, owner) }
     : {};
   const original = index;
-  const cache = options.metrics.length > 1 ? createQueryFieldCache(index) : undefined;
+  const cache =
+    options.metrics.length > 1
+      ? createQueryFieldCache(index, [
+          ...options.groupBy,
+          ...options.metrics.map(([, metric]) => metric.field),
+          ...(query.fingerprint ?? []),
+        ])
+      : undefined;
   if (cache) index = cache.index;
   const cardinality = counted ? sql`coalesce(sum(n), 0)` : sql`count(*)`;
   const source = () => {
     if (counted) return counted;
-    if (!cache?.fields.size) return sql`records WHERE ${where}`;
+    if (!cache || (!cache.fields.size && !cache.predicates.size)) return sql`records WHERE ${where}`;
     return queryFieldCacheSourceSql(cache, where, (name) => recordFieldSql(original, name, undefined, resolve, owner));
   };
   const metrics = options.metrics.length

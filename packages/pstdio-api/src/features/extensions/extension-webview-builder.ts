@@ -8,15 +8,9 @@ import { deferWebviewEquationStyles } from "./extension-webview-equation-styles"
 import { emitWebviewFonts } from "./extension-webview-fonts";
 import { runCommand } from "./install-extension-dependencies";
 
-export const extensionWebviewBuildOptions = {
-  target: "browser",
-  format: "esm",
-  splitting: true,
-  define: { "process.env.NODE_ENV": '"production"' },
-  minify: true,
-  naming: { entry: "module.[ext]", chunk: "chunk-[hash].[ext]", asset: "[name]-[hash].[ext]" },
-  outputFormat: 1,
-} satisfies Partial<Bun.BuildConfig> & { outputFormat: number };
+import { extensionWebviewBuildOptions } from "./webview-build-options";
+
+export { extensionWebviewBuildOptions } from "./webview-build-options";
 
 export type ExtensionWebviewBuildInput = {
   entryPath: string;

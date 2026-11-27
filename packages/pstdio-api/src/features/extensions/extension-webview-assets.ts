@@ -1,6 +1,5 @@
 import { existsSync, statSync } from "node:fs";
 import { extname, join, resolve, sep } from "node:path";
-import { canonicalRuntimeId } from "pstdio-extensions";
 import { readPublishedWebview } from "pstdio-extensions/prepared-cache";
 import type { createExtensionService } from "../../services/extension-service";
 import { readWebviewBuildSignature } from "./extension-webview-build-cache";
@@ -9,6 +8,7 @@ import { resolvePstdioHome } from "./install-extension-source";
 import type { ProjectExtensionRuntimeCatalog } from "./project-extension-runtime-catalog";
 
 type InstalledSourceLookup = Pick<ReturnType<typeof createExtensionService>, "getInstalledSourceById">;
+type InstalledSource = Awaited<ReturnType<InstalledSourceLookup["getInstalledSourceById"]>>;
 
 export type WebviewBuildError = {
   message: string;
@@ -18,8 +18,12 @@ export type WebviewBuildError = {
 export const findWebviewBuildError = async (
   deps: { extensionService: InstalledSourceLookup },
   input: { installedExtensionId: string; webviewId: string },
+  selectedSource?: InstalledSource,
 ): Promise<WebviewBuildError | null> => {
-  const source = await deps.extensionService.getInstalledSourceById(input.installedExtensionId);
+  const source =
+    selectedSource === undefined
+      ? await deps.extensionService.getInstalledSourceById(input.installedExtensionId)
+      : selectedSource;
   if (!source?.last_error_json || typeof source.last_error_json !== "object") return null;
 
   const record = source.last_error_json as Record<string, unknown>;
@@ -38,7 +42,7 @@ export const renderWebviewBuildErrorModule = (error: WebviewBuildError) =>
 
 export type ExtensionWebviewAssetDeps = {
   extensionService: InstalledSourceLookup;
-  extensionRuntimeCatalog: Pick<ProjectExtensionRuntimeCatalog, "getSourcesRuntime">;
+  extensionRuntimeCatalog: Pick<ProjectExtensionRuntimeCatalog, "getSourceWebview">;
   webviewCacheRoot?: string;
 };
 
@@ -74,14 +78,17 @@ const defaultWebviewCacheRoot = () => join(resolvePstdioHome({ env: process.env 
 export const resolveWebviewAssetFile = async (
   deps: ExtensionWebviewAssetDeps,
   input: { assetPath?: string; installedExtensionId: string; webviewId: string },
+  selectedSource?: InstalledSource,
 ) => {
-  const source = await deps.extensionService.getInstalledSourceById(input.installedExtensionId);
+  const source =
+    selectedSource === undefined
+      ? await deps.extensionService.getInstalledSourceById(input.installedExtensionId)
+      : selectedSource;
   if (!source) return null;
 
-  const runtime = await deps.extensionRuntimeCatalog.getSourcesRuntime([source]);
-  input = { ...input, webviewId: canonicalRuntimeId(runtime, input.webviewId) };
-  const webview = runtime.views.find((view) => view.id === input.webviewId)?.contribution.body;
-  if (!webview || webview.kind !== "webview") return null;
+  const webview = await deps.extensionRuntimeCatalog.getSourceWebview(source, input.webviewId);
+  if (!webview) return null;
+  input = { ...input, webviewId: webview.id };
 
   const classification = classifyWebviewEntry(webview.entry);
   if (classification.kind === "unsupported") return null;

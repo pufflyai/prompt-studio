@@ -320,6 +320,7 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
   return {
     get,
     getSourcesRuntime: sources.loadRuntime,
+    getSourceWebview: sources.readWebview,
     ...createProjectRuntimeActivation(get),
     invalidate,
     validateResourcePrefixes,

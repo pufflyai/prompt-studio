@@ -2,7 +2,29 @@ import { describe, expect, spyOn, test } from "bun:test";
 import { appendFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createApp, webviewAccess, webviewBasePath, writeExtension } from "./test-utils/webview-asset-app";
+import {
+  createApp,
+  webviewAccess,
+  webviewBasePath,
+  webviewScope,
+  writeExtension,
+} from "./test-utils/webview-asset-app";
+
+test("starts loading the same view revision the host initializes", async () => {
+  const revision = "build & revision";
+  const app = createApp({ cacheRoot: "/unused-cache", sourcePath: "/unused-source" });
+  const runtime = new URL(webviewAccess.runtimeUrl(webviewScope, revision), "http://localhost");
+  const response = await app.request(runtime.href);
+  const html = await response.text();
+  const preload = html.match(/<link rel="modulepreload" href="([^"]+)"/)?.[1];
+
+  expect(response.status).toBe(200);
+  expect(preload).toBeDefined();
+  const moduleUrl = webviewAccess.assetUrl(webviewScope, "module.js", revision);
+  expect(new URL(preload!, runtime).href).toBe(new URL(moduleUrl, runtime).href);
+  const proxyRuntime = new URL(`/proxy${runtime.pathname}${runtime.search}`, runtime);
+  expect(new URL(preload!, proxyRuntime).pathname).toBe(`/proxy${new URL(moduleUrl, runtime).pathname}`);
+});
 
 describe("extension webview asset routes", () => {
   test("serves the extension-owned bridge runtime script", async () => {

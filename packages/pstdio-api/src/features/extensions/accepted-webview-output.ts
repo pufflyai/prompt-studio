@@ -4,6 +4,7 @@ import { type PreparedExtensionRevision, preparedRevisionState, readAcceptedRevi
 import { releaseBundleViews } from "pstdio-extensions/distribution";
 import { readPublishedWebview } from "pstdio-extensions/prepared-cache";
 import { runExtensionPreparation } from "./extension-preparation";
+import { isWebviewPublished } from "./extension-webview-build-attempt";
 import {
   publishedWebviewModule,
   readWebviewBuildSignature,
@@ -144,8 +145,13 @@ export const createWebviewUsage = (cacheRoot: string) => {
     serveAccepted: async (row: InstalledSourceWithManifest, viewId: string | undefined, check: () => void) => {
       const firstUse = !opened.has(row.source_path);
       opened.add(row.source_path);
-      if (!(await hasAcceptedWebviews(row, cacheRoot, viewId))) return false;
-      if (firstUse && viewId) check();
+      // Repair the selected accepted publication first. A legacy serving bundle can
+      // still open while its source/dependency fingerprints are checked in the background.
+      const accepted = await hasAcceptedWebviews(row, cacheRoot, viewId);
+      if (!accepted && !(viewId && isWebviewPublished(cacheRoot, row.id, viewId))) return false;
+      // An earlier check may have finished without persisting its result. Retry that
+      // result in the background on access, including after this source's first use.
+      if (viewId && (firstUse || !accepted)) check();
       return true;
     },
     reconcile: async (rows: InstalledSourceWithManifest[], check: (id: string) => Promise<unknown>) => {

@@ -44,7 +44,7 @@ const createResolveWebview = (assets: WebviewAssets): ResolveWorkbenchExtensionW
     const scope = { installedExtensionId, webviewId: id };
     return {
       ...webview,
-      runtimeUrl: assets.urlIssuer.runtimeUrl(scope),
+      runtimeUrl: assets.urlIssuer.runtimeUrl(scope, assetRevision),
       moduleUrl: assets.urlIssuer.assetUrl(scope, "module.js", assetRevision),
       styles: [assets.urlIssuer.stylesheetUrl(scope, assetRevision)],
     } as ExtensionWebviewRecord;

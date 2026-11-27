@@ -1,4 +1,4 @@
-import type { ExtensionStorageApi, StoragePredicate } from "@pstdio/sdk/extensions";
+import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { answeredReviewRequest, pendingReviewRequest } from "./review-query-indexes";
 import { preparePlannerIndexes } from "./storage-indexes";
 
@@ -11,27 +11,28 @@ export const readReviewCounts = async (storage: ExtensionStorageApi, ids: string
     return result;
   }
   await preparePlannerIndexes(storage);
-  const selected: StoragePredicate = { field: "ticketId", op: "in", value: ids };
-  const count = (where?: StoragePredicate) =>
-    storage.records.aggregate({
-      index: "review-request-state",
-      where: where ? { all: [selected, where] } : selected,
-      groupBy: "ticketId",
-      groupLimit: 100,
-    });
-  const [total, pending, answered] = await Promise.all([
-    count(),
-    count(pendingReviewRequest),
-    count(answeredReviewRequest),
-  ]);
-  const byId = (result: typeof total) => new Map(result.groups.map((group) => [String(group.value), group.count]));
-  const totals = byId(total),
-    pendingCounts = byId(pending),
-    answeredCounts = byId(answered);
+  const result = await storage.records.aggregate({
+    index: "review-request-state",
+    where: { field: "ticketId", op: "in", value: ids },
+    groupBy: "ticketId",
+    groupLimit: 100,
+    computed: {
+      pending: { type: "number", cases: [{ when: pendingReviewRequest, value: 1 }], otherwise: 0 },
+      answered: { type: "number", cases: [{ when: answeredReviewRequest, value: 1 }], otherwise: 0 },
+    },
+    metrics: {
+      pending: { operation: "sum", field: "pending" },
+      answered: { operation: "sum", field: "answered" },
+    },
+  });
+  const groups = new Map(result.groups.map((group) => [String(group.value), group]));
   return new Map(
-    ids.map((id) => [
-      id,
-      { total: totals.get(id) ?? 0, pending: pendingCounts.get(id) ?? 0, answered: answeredCounts.get(id) ?? 0 },
-    ]),
+    ids.map((id) => {
+      const group = groups.get(id);
+      return [
+        id,
+        { total: group?.count ?? 0, pending: group?.metrics?.pending ?? 0, answered: group?.metrics?.answered ?? 0 },
+      ];
+    }),
   );
 };

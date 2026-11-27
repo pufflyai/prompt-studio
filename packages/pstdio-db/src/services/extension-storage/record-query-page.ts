@@ -5,7 +5,8 @@ import { recordIdentityPrefixSql } from "./record-identity-order";
 import { recordPrefixCandidatesSql } from "./record-prefix-candidates";
 import { projectionKey } from "./record-projection-codec";
 import { recordCandidateSourceSql, recordRelatedOrderCandidatesSql } from "./record-query-candidates";
-import { orderingPrefix, type QuerySqlOwner, recordFieldSql, sqlLiteral } from "./record-query-sql";
+import { createQueryFieldCache, queryFieldCacheSourceSql } from "./record-query-field-cache";
+import { orderingPrefix, type QuerySqlOwner, queryOwnerKey, recordFieldSql, sqlLiteral } from "./record-query-sql";
 import { hasTextOrder, orderedFieldPartsSql, orderedValuePartsSql } from "./record-text-order";
 
 export const pageOrderSql = (
@@ -39,6 +40,24 @@ export const recordPageSql = (
   owner?: QuerySqlOwner,
   predicate?: StoragePredicate,
 ) => {
+  const original = index;
+  const candidates =
+    recordPrefixCandidatesSql(index, where, limit, offset, owner) ??
+    recordCandidateSourceSql(index, predicate, where, limit, offset, resolve, owner);
+  const orderedCandidates = candidates
+    ? undefined
+    : recordRelatedOrderCandidatesSql(index, where, limit, offset, resolve, owner);
+  const sourceCandidates = candidates ?? orderedCandidates;
+  const selectedOrder = orderedCandidates ? sql`candidates.selected_order` : pageOrderSql(original, resolve, owner);
+  const complex = fields.some((name) => {
+    const field = queryField(index, name);
+    return field.lookup || field.expression || field.cases || name === index.hierarchy?.breadcrumbField;
+  });
+  const cache =
+    complex && owner
+      ? createQueryFieldCache(index, [...fields, ...(index.orderBy ?? []).map(({ field }) => field)])
+      : undefined;
+  if (cache) index = cache.index;
   const selected = fields.flatMap((name) => [
     sqlLiteral(projectionKey(name)),
     sql`coalesce(${recordFieldSql(index, name, undefined, resolve, owner)}, 'null'::jsonb)`,
@@ -46,17 +65,30 @@ export const recordPageSql = (
   const sort = (index.orderBy ?? []).map(
     (sort) => sql`coalesce(${recordFieldSql(index, sort.field, undefined, resolve, owner)}, 'null'::jsonb)`,
   );
-  const candidates =
-    recordPrefixCandidatesSql(index, where, limit, offset, owner) ??
-    recordCandidateSourceSql(index, predicate, where, limit, offset, resolve, owner) ??
-    recordRelatedOrderCandidatesSql(index, where, limit, offset, resolve, owner);
+  const order = pageOrderSql(index, resolve, owner);
+  if (cache && (cache.fields.size || cache.predicates.size) && owner) {
+    // Select the bounded page first. Materialize only its projected leaves once,
+    // so computed fields reuse related lookups instead of expanding them repeatedly.
+    const page = sql`(SELECT record_id AS selected_record_id FROM ${sourceCandidates ?? sql`records`}
+      ${sourceCandidates ? sql`` : sql`WHERE ${where}`}
+      ORDER BY ${selectedOrder} LIMIT ${limit} OFFSET ${offset}) AS selected
+      INNER JOIN records ON records.record_id = selected.selected_record_id AND records.owner_id = ${queryOwnerKey(owner)}`;
+    const source = queryFieldCacheSourceSql(
+      cache,
+      sql`true`,
+      (name) => recordFieldSql(original, name, undefined, resolve, owner),
+      page,
+    );
+    return sql`SELECT record_id, revision, jsonb_build_object(${sql.join(selected, sql`, `)}) AS fields,
+      jsonb_build_array(${sql.join(sort, sql`, `)}) AS sort_values FROM ${source} ORDER BY ${order}`;
+  }
   return sql`
     SELECT record_id, revision,
       jsonb_build_object(${sql.join(selected, sql`, `)}) AS fields,
       jsonb_build_array(${sql.join(sort, sql`, `)}) AS sort_values
-    FROM ${candidates ?? sql`records`}
-    ${candidates ? sql`` : sql`WHERE ${where}`}
-    ORDER BY ${pageOrderSql(index, resolve, owner)} LIMIT ${limit} OFFSET ${offset}`;
+    FROM ${sourceCandidates ?? sql`records`}
+    ${sourceCandidates ? sql`` : sql`WHERE ${where}`}
+    ORDER BY ${order} LIMIT ${limit} OFFSET ${offset}`;
 };
 
 export const pageAfterSql = (

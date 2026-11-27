@@ -12,7 +12,7 @@ import {
   resolveExtensionArtifactMount,
   safeArtifactPath,
 } from "./extension-artifact-assets";
-import type { AuthorizedExtensionWebviewRequest } from "./extension-webview-access";
+import { type AuthorizedExtensionWebviewRequest, withWebviewAssetRevision } from "./extension-webview-access";
 import {
   findWebviewBuildError,
   renderWebviewBuildErrorModule,
@@ -76,7 +76,9 @@ const serveAuthorizedRequest = async (c: Context<AppBindings>, deps: WebviewAsse
   if (!authorized) return notFound(c);
 
   if (authorized.kind === "runtime") {
-    return new Response(renderInlineExtensionRuntimeHtml(getExtensionRuntimeScript()), {
+    // Preload in the opaque iframe's own module map. A relative URL retains any proxy prefix.
+    const moduleUrl = withWebviewAssetRevision("./assets/module.js", c.req.query("h"));
+    return new Response(renderInlineExtensionRuntimeHtml(getExtensionRuntimeScript(), moduleUrl), {
       headers: { "content-type": "text/html; charset=utf-8" },
     });
   }
@@ -85,9 +87,15 @@ const serveAuthorizedRequest = async (c: Context<AppBindings>, deps: WebviewAsse
 
   const { installedExtensionId, webviewId } = authorized;
   await deps.ensureExtensionWebviews(installedExtensionId, webviewId);
+  // Read after publication repair, then share this request's source between the
+  // build-error check and asset resolution instead of querying it twice.
+  const source =
+    authorized.kind === "stylesheet" || authorized.assetPath === "module.js"
+      ? await deps.extensionService.getInstalledSourceById(installedExtensionId)
+      : undefined;
   // A failed replacement can leave a previous bundle on disk.
   if (authorized.kind === "stylesheet" || authorized.assetPath === "module.js") {
-    const buildError = await findWebviewBuildError(deps, { installedExtensionId, webviewId });
+    const buildError = await findWebviewBuildError(deps, { installedExtensionId, webviewId }, source);
     if (buildError) {
       if (authorized.kind === "stylesheet") return notFound(c);
       return new Response(renderWebviewBuildErrorModule(buildError), {
@@ -96,7 +104,11 @@ const serveAuthorizedRequest = async (c: Context<AppBindings>, deps: WebviewAsse
     }
   }
   if (authorized.kind === "stylesheet") {
-    const entry = await resolveWebviewAssetFile(deps, { installedExtensionId, webviewId, assetPath: "module.js" });
+    const entry = await resolveWebviewAssetFile(
+      deps,
+      { installedExtensionId, webviewId, assetPath: "module.js" },
+      source,
+    );
     if (!entry) return notFound(c);
     const distDir = dirname(entry.filePath);
     const [style] = readWebviewEntryStyles(distDir);
@@ -107,7 +119,7 @@ const serveAuthorizedRequest = async (c: Context<AppBindings>, deps: WebviewAsse
     return new Response(null, { status: 307, headers: { location, "cache-control": "no-store" } });
   }
   const { assetPath } = authorized;
-  const asset = await resolveWebviewAssetFile(deps, { assetPath, installedExtensionId, webviewId });
+  const asset = await resolveWebviewAssetFile(deps, { assetPath, installedExtensionId, webviewId }, source);
   if (!asset) return notFound(c);
 
   return new Response(Bun.file(asset.filePath), {

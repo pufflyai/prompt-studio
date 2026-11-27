@@ -1,6 +1,8 @@
 import type { StorageComputedField, StorageExpression, StoragePredicate } from "@pstdio/sdk/extensions";
 import { ticketTagAttributeId } from "../../data/mappers";
 import type { readTicketViewPage } from "../../data/query-ticket-page";
+import { ticketHasPendingReview } from "../../data/review-query-indexes";
+import { selectedTicketComputedFields } from "../../data/ticket-computed-selection";
 import { activeTicket } from "../../data/ticket-view-state";
 import type { PlanPace } from "../contracts";
 
@@ -9,24 +11,6 @@ type Storage = Parameters<typeof readTicketViewPage>[0]["storage"];
 const together = (...parts: (StoragePredicate | undefined)[]): StoragePredicate => ({
   all: parts.filter((part) => part !== undefined),
 });
-
-const selectionComputedFields = (view: View, values: unknown[]) => {
-  const selected: NonNullable<View["scope"]["computed"]> = {};
-  const visit = (value: unknown) => {
-    if (!value || typeof value !== "object") return;
-    if (Array.isArray(value)) return value.forEach(visit);
-    for (const [key, child] of Object.entries(value)) {
-      if (key === "literal") continue;
-      if (key === "field" && typeof child === "string" && view.computed[child] && !selected[child]) {
-        selected[child] = view.computed[child];
-        visit(selected[child]);
-      }
-      visit(child);
-    }
-  };
-  values.forEach(visit);
-  return selected;
-};
 
 const complexityExpression = (view: View): StorageExpression => {
   const tag =
@@ -66,7 +50,9 @@ export const planQuerySummary = async (storage: Storage, view: View, selectsAllA
     complexityWeight: { type: "number" as const, expression: weight },
     completedWeight: {
       type: "number" as const,
-      expression: { op: "if" as const, args: [done, weight, { literal: 0 }] },
+      expression: view.workflow.completedStatusIds.length
+        ? { op: "if" as const, args: [done, weight, { literal: 0 }] }
+        : { literal: 0 },
     },
   };
   const metrics = {
@@ -76,9 +62,10 @@ export const planQuerySummary = async (storage: Storage, view: View, selectsAllA
   const filtered = together(view.scope.where, view.scope.search);
   const conditions = {
     done: view.conditions.done,
-    reviewNeeded: view.conditions.needsReview,
+    // Every selection here is active. With no completion statuses, all its tickets are unfinished.
+    reviewNeeded: view.workflow.completedStatusIds.length ? view.conditions.needsReview : ticketHasPendingReview,
     blocked: view.conditions.blocked,
-    atRisk: view.conditions.atRisk,
+    ...(view.metadata.deadlines.length ? { atRisk: view.conditions.atRisk } : {}),
   };
   const countFields = Object.fromEntries(
     Object.entries(conditions).map(([name, when]) => [
@@ -86,7 +73,7 @@ export const planQuerySummary = async (storage: Storage, view: View, selectsAllA
       { type: "number", cases: [{ when, value: 1 }], otherwise: 0 } satisfies StorageComputedField,
     ]),
   );
-  const flags = selectionComputedFields(view, [filtered]);
+  const flags = selectedTicketComputedFields(view.computed, [filtered]);
   const countMetrics = Object.fromEntries(
     Object.keys(conditions).map((name) => [name, { operation: "sum" as const, field: `count:${name}` }]),
   );
@@ -101,21 +88,24 @@ export const planQuerySummary = async (storage: Storage, view: View, selectsAllA
       metrics: { ...metrics, ...(selected ? countMetrics : { done: countMetrics.done }) },
     });
   // An unfiltered Timeline shares one scan for selected and global totals.
-  const [global, selected] = selectsAllActive
-    ? await group(filtered, true).then((summary) => [summary, summary])
-    : await Promise.all([group(activeTicket, false), group(filtered, true)]);
-  const starts = await storage.records.aggregate({
-    index: "attempt-ticket",
-    where: {
-      exists: { index: "ticket-view", on: [{ sourceField: "ticketId", relatedField: "id" }], where: activeTicket },
-    },
-    metrics: { first: { operation: "min", field: "startedAt" } },
-  });
+  const summaries = selectsAllActive
+    ? group(filtered, true).then((summary) => [summary, summary])
+    : Promise.all([group(activeTicket, false), group(filtered, true)]);
+  const firstAttempt = view.workflow.completedStatusIds.length
+    ? storage.records.aggregate({
+        index: "attempt-ticket",
+        where: {
+          exists: { index: "ticket-view", on: [{ sourceField: "ticketId", relatedField: "id" }], where: activeTicket },
+        },
+        metrics: { first: { operation: "min", field: "startedAt" } },
+      })
+    : undefined;
+  const [[global, selected], starts] = await Promise.all([summaries, firstAttempt]);
   const completedComplexity = global.groups.reduce(
     (total, group) => total + (group.metrics?.completedComplexity ?? 0),
     0,
   );
-  const started = starts.metrics?.first;
+  const started = starts?.metrics?.first;
   const now = Date.now();
   const pace: PlanPace | null =
     completedComplexity && started != null && now > started

@@ -244,7 +244,8 @@ describe("inspectManagedWebviewBuildInputs", () => {
       const entryPath = join(packagePath, "src", "main.ts");
       mkdirSync(join(packagePath, "src"), { recursive: true });
       writeFileSync(join(packagePath, "package.json"), JSON.stringify({ name: "test-extension" }));
-      writeFileSync(entryPath, "export const value = 1;");
+      writeFileSync(entryPath, 'export const value = () => import("./details");');
+      writeFileSync(join(packagePath, "src", "details.ts"), "export const value = 1;");
       return {
         entryPath,
         installName: "test-extension",

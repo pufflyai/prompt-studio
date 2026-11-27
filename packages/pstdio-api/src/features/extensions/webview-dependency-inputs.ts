@@ -8,6 +8,8 @@ import {
   hashRevisionSource,
 } from "pstdio-extensions/revision-dependencies";
 
+import { hashNativeWebviewInputs, hashNativeWebviewInputsAsync } from "./webview-native-inputs";
+
 const lockfiles = new Set([
   "bun.lock",
   "bun.lockb",
@@ -38,10 +40,16 @@ const hashInputs = (
   return hash.digest("hex");
 };
 export const hashWebviewDependencyInputs = (packagePath: string, entryPaths: string[]) => {
+  try {
+    return hashNativeWebviewInputs(packagePath, entryPaths);
+  } catch {}
   const packages = collectRevisionDependencies(packagePath, { entryPaths, target: "browser" });
   return hashInputs(packagePath, packages, hashRevisionDependencies(packages, packagePath));
 };
-export const hashWebviewDependencyInputsAsync = async (packagePath: string, entryPaths: string[]) => {
+export const hashWebviewDependencyInputsAsync = async (packagePath: string, entryPaths: string[], batch = false) => {
+  try {
+    return await hashNativeWebviewInputsAsync(packagePath, entryPaths, batch);
+  } catch {}
   const packages = collectRevisionDependencies(packagePath, { entryPaths, target: "browser" });
   return hashInputs(packagePath, packages, await hashRevisionDependenciesAsync(packages, packagePath));
 };

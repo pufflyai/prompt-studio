@@ -341,6 +341,7 @@ export const collectRevisionDependencies = (
   }
   return Object.assign(packages, { readSource });
 };
+export { inspectCompilerConfiguration } from "./revision-compiler-inputs";
 export {
   copyRevisionDependencies,
   hashRevisionDependencies,

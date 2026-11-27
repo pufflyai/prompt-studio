@@ -34,7 +34,7 @@ export interface ExtensionWebviewAccess {
   assetUrl: (scope: ExtensionWebviewScope, assetPath: string, revision?: string | null) => string;
   authorize: (request: Request) => AuthorizedExtensionWebviewRequest | null;
   redactPath: (path: string) => string;
-  runtimeUrl: (scope: ExtensionWebviewScope) => string;
+  runtimeUrl: (scope: ExtensionWebviewScope, revision?: string | null) => string;
   stylesheetUrl: (scope: ExtensionWebviewScope, revision?: string | null) => string;
 }
 
@@ -55,6 +55,9 @@ const capabilityMatches = (candidate: string, expected: string) => {
 
 const encodeAssetPath = (assetPath: string) =>
   assetPath.replace(/^\/+/, "").split("/").map(encodeURIComponent).join("/");
+
+export const withWebviewAssetRevision = (path: string, revision?: string | null) =>
+  revision ? `${path}?h=${encodeURIComponent(revision)}` : path;
 
 export const createExtensionWebviewAccess = (input: CreateExtensionWebviewAccessInput = {}): ExtensionWebviewAccess => {
   const signingKey = Buffer.from(input.signingKey ?? randomBytes(32));
@@ -154,16 +157,11 @@ export const createExtensionWebviewAccess = (input: CreateExtensionWebviewAccess
       const grantPath = `${expiresAt.toString()}/${encodeURIComponent(request.projectId)}/${encodeURIComponent(request.mountId)}`;
       return `${EXTENSION_WEBVIEW_PATH_PREFIX}${capability}/${scopePath(scope)}/artifacts/${grantPath}/${encodeAssetPath(request.artifactPath)}`;
     },
-    assetUrl: (scope, assetPath, revision) => {
-      const url = `${basePath(scope)}/assets/${encodeAssetPath(assetPath)}`;
-      return revision ? `${url}?h=${encodeURIComponent(revision)}` : url;
-    },
+    assetUrl: (scope, assetPath, revision) =>
+      withWebviewAssetRevision(`${basePath(scope)}/assets/${encodeAssetPath(assetPath)}`, revision),
     authorize,
     redactPath: (path) => path.replaceAll(CAPABILITY_PATH, "/v1/extensions/webviews/[Redacted]"),
-    runtimeUrl: (scope) => `${basePath(scope)}/runtime`,
-    stylesheetUrl: (scope, revision) => {
-      const url = `${basePath(scope)}/stylesheet`;
-      return revision ? `${url}?h=${encodeURIComponent(revision)}` : url;
-    },
+    runtimeUrl: (scope, revision) => withWebviewAssetRevision(`${basePath(scope)}/runtime`, revision),
+    stylesheetUrl: (scope, revision) => withWebviewAssetRevision(`${basePath(scope)}/stylesheet`, revision),
   };
 };

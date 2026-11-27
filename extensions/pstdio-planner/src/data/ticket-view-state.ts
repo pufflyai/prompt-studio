@@ -12,20 +12,23 @@ import { independentBlocker } from "./ticket-independent-blocker";
 import type { WorkflowStatusSelections } from "./workflow-statuses";
 
 export const activeTicket: StoragePredicate = { field: "archived", op: "ne", value: true };
-export const activeMilestoneValue = (values: Record<string, JsonValue>, fallback: JsonValue): StorageExpression => ({
-  op: "if",
-  args: [
-    {
-      op: "or",
-      args: [
-        { op: "eq", args: [{ field: "archived" }, { literal: true }] },
-        { op: "missing", args: [{ get: { literal: values }, key: { field: "deadlineId" } }] },
-      ],
-    },
-    { literal: fallback },
-    { get: { literal: values }, key: { field: "deadlineId" } },
-  ],
-});
+export const activeMilestoneValue = (values: Record<string, JsonValue>, fallback: JsonValue): StorageExpression => {
+  if (!Object.keys(values).length) return { literal: fallback };
+  return {
+    op: "if",
+    args: [
+      {
+        op: "or",
+        args: [
+          { op: "eq", args: [{ field: "archived" }, { literal: true }] },
+          { op: "missing", args: [{ get: { literal: values }, key: { field: "deadlineId" } }] },
+        ],
+      },
+      { literal: fallback },
+      { get: { literal: values }, key: { field: "deadlineId" } },
+    ],
+  };
+};
 
 export const ticketViewState = async (
   storage: ExtensionStorageApi,
@@ -103,6 +106,25 @@ export const ticketViewState = async (
       },
     ],
   };
+  const ranks = Object.fromEntries(metadata.deadlines.map(({ id }, rank) => [id, rank]));
+  const rank = (up = 0): StorageExpression => {
+    if (!metadata.deadlines.length) return { literal: 0 };
+    const found: StorageExpression = { get: { literal: ranks }, key: { field: "deadlineId", up } };
+    return { op: "if", args: [{ op: "missing", args: [found] }, { literal: metadata.deadlines.length }, found] };
+  };
+  const laterPosition: StorageExpression = {
+    op: "or",
+    args: [
+      { op: "gt", args: [{ field: "planPosition" }, { field: "planPosition", up: 1 }] },
+      {
+        op: "and",
+        args: [
+          { op: "missing", args: [{ field: "planPosition" }] },
+          { op: "not", args: [{ op: "missing", args: [{ field: "planPosition", up: 1 }] }] },
+        ],
+      },
+    ],
+  };
   const computed: NonNullable<StorageRecordQuery["computed"]> = {
     archiveState: {
       type: "string",
@@ -163,28 +185,7 @@ export const ticketViewState = async (
       ],
       otherwise: "",
     },
-    deadlineRank: {
-      type: "number",
-      expression: {
-        op: "if",
-        args: [
-          {
-            op: "missing",
-            args: [
-              {
-                get: { literal: Object.fromEntries(metadata.deadlines.map(({ id }, index) => [id, index])) },
-                key: { field: "deadlineId" },
-              },
-            ],
-          },
-          { literal: metadata.deadlines.length },
-          {
-            get: { literal: Object.fromEntries(metadata.deadlines.map(({ id }, index) => [id, index])) },
-            key: { field: "deadlineId" },
-          },
-        ],
-      },
-    },
+    deadlineRank: { type: "number", expression: rank() },
   };
   computed.milestoneDate = { type: "string", expression: activeMilestoneValue(dates, null) };
   computed.independentBlockedReason = {
@@ -193,10 +194,10 @@ export const ticketViewState = async (
     otherwise: false,
   };
   computed.hasUnmetDependency = { type: "boolean", cases: [{ when: waiting, value: true }], otherwise: false };
-  const ranks = Object.fromEntries(metadata.deadlines.map(({ id }, rank) => [id, rank]));
-  const rank = (up = 0): StorageExpression => {
-    const found: StorageExpression = { get: { literal: ranks }, key: { field: "deadlineId", up } };
-    return { op: "if", args: [{ op: "missing", args: [found] }, { literal: metadata.deadlines.length }, found] };
+  computed.hasUnfinishedDependent = {
+    type: "boolean",
+    cases: [{ when: relatedUnfinished(true), value: true }],
+    otherwise: false,
   };
   computed.hasLaterDependency = {
     type: "boolean",
@@ -210,31 +211,15 @@ export const ticketViewState = async (
               all: [
                 unfinished,
                 {
-                  test: {
-                    op: "or",
-                    args: [
-                      { op: "gt", args: [rank(), rank(1)] },
-                      {
-                        op: "and",
+                  test: metadata.deadlines.length
+                    ? {
+                        op: "or",
                         args: [
-                          { op: "eq", args: [rank(), rank(1)] },
-                          {
-                            op: "or",
-                            args: [
-                              { op: "gt", args: [{ field: "planPosition" }, { field: "planPosition", up: 1 }] },
-                              {
-                                op: "and",
-                                args: [
-                                  { op: "missing", args: [{ field: "planPosition" }] },
-                                  { op: "not", args: [{ op: "missing", args: [{ field: "planPosition", up: 1 }] }] },
-                                ],
-                              },
-                            ],
-                          },
+                          { op: "gt", args: [rank(), rank(1)] },
+                          { op: "and", args: [{ op: "eq", args: [rank(), rank(1)] }, laterPosition] },
                         ],
-                      },
-                    ],
-                  },
+                      }
+                    : laterPosition,
                 },
               ],
             },
@@ -257,5 +242,5 @@ export const ticketViewState = async (
       return [name, { field: `flag:${name}`, op: "eq", value: true } satisfies StoragePredicate];
     }),
   ) as Record<keyof typeof conditions, StoragePredicate>;
-  return { computed, metadata, conditions, predicates: { ...predicates, unfinished, waiting } };
+  return { computed, metadata, today, conditions, predicates: { ...predicates, unfinished, waiting } };
 };

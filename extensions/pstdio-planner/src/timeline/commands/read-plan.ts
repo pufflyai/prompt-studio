@@ -6,7 +6,7 @@ import { ensureDefaultTags } from "../../data/seed";
 import { timelineBoard } from "../../data/ticket-board";
 import { ticketSummaryFields } from "../../data/ticket-query-summary";
 import { activeTicket } from "../../data/ticket-view-state";
-import { readWorkflowStatuses, usableWorkflowStatuses } from "../../data/workflow-statuses";
+import { readCompletedStatusIds } from "../../data/workflow-statuses";
 import { daysBetween } from "../model/days";
 import type { MilestoneDisplay } from "../model/milestone-visibility";
 import { summarizeSection } from "../model/section-summary";
@@ -15,6 +15,7 @@ import { planPlacements } from "./placement-store";
 import { planPageRows } from "./plan-page-rows";
 import { planQuerySummary } from "./plan-query-summary";
 import { planReadWindow } from "./plan-read-window";
+import { planTicketRows } from "./plan-ticket-rows";
 import { readTrack } from "./track-commands";
 
 export interface PlanDisplay extends MilestoneDisplay {
@@ -31,11 +32,11 @@ export const readPlanCommand = defineCommand({
     page: params.json<KanbanRendererQueryParams["page"]>(),
     display: params.json<PlanDisplay>(),
     ticketId: params.text(),
+    includeSavedViews: params.boolean(),
   },
   async run(ctx, input) {
     await ensureTicketStorage(ctx);
-    const workflow = usableWorkflowStatuses(await readWorkflowStatuses(ctx));
-    await ensureDefaultTags(ctx.storage);
+    const [completedStatusIds] = await Promise.all([readCompletedStatusIds(ctx), ensureDefaultTags(ctx.storage)]);
     const display = input.display;
     const hidden = Boolean(
       display?.collapsedMilestones?.length ||
@@ -47,7 +48,7 @@ export const readPlanCommand = defineCommand({
     const selected = input.ticketId ? await planPlacements(ctx.storage).get(input.ticketId) : undefined;
     const initializedRevision = await initializePlanPlacements(
       ctx,
-      workflow.completedStatusIds,
+      completedStatusIds,
       selected ? 0 : initializationCount,
     );
     // Keep the active-prefix proof and the displayed page on the same snapshot.
@@ -132,7 +133,7 @@ export const readPlanCommand = defineCommand({
         "milestone",
         "milestoneDate",
         "milestoneState",
-        "needsAttention",
+        "hasUnfinishedDependent",
         "reviewRequests",
         "blockedReason",
         "independentBlockedReason",
@@ -145,11 +146,11 @@ export const readPlanCommand = defineCommand({
     });
     if (view.tickets.some(({ id }) => typeof view.projections.get(id)?.planPosition !== "string"))
       throw new Error("Timeline execution order is stale; restart the query with a numeric offset");
-    const page = await planPageRows(ctx, view, executionOffset);
-    // Selection outside the visible window needs only its row and section.
-    const summary = input.ticketId
-      ? undefined
-      : await planQuerySummary(ctx.storage, view, executionOffset !== undefined);
+    const [page, summary] = await Promise.all([
+      planPageRows(ctx, view, executionOffset),
+      // Selection outside the visible window needs only its row and section.
+      input.ticketId ? undefined : planQuerySummary(ctx.storage, view, executionOffset !== undefined),
+    ]);
     const deadlines = [...view.metadata.deadlines, null].filter(
       (deadline) => !input.ticketId || page.rows.some((row) => row.deadlineId === (deadline?.id ?? null)),
     );
@@ -176,8 +177,11 @@ export const readPlanCommand = defineCommand({
           : { ...summarizeSection(section, view.tags, null), globalCounts: undefined };
       }),
       projectId: ctx.projectId,
-      savedViews: input.ticketId ? { views: [], defaultViewId: null } : await ctx.views.list(timelineBoard),
-      ticketRows: view.result.rows,
+      savedViews:
+        input.ticketId || input.includeSavedViews === false
+          ? { views: [], defaultViewId: null }
+          : await ctx.views.list(timelineBoard),
+      ticketRows: planTicketRows(view, page.rows),
       ticketAttributes: view.result.attributes,
       page: view.result.page,
     };

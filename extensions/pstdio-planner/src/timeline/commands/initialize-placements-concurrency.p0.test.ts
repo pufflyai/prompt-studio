@@ -5,7 +5,7 @@ import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { makeCommandContext } from "../../commands/command-context.fixture";
 import { putTicket } from "../../data/ticket-context.fixture";
 import { initializePlanPlacements } from "./initialize-placements";
-import { readPlanMetadata } from "./placement-store";
+import { planPlacements, readPlanMetadata } from "./placement-store";
 import { readPlanCommand } from "./read-plan";
 
 const fixture = async (count: number) => {
@@ -42,6 +42,86 @@ const readOrder = async (ctx: CommandContext, count: number) => {
   }
   return ordered;
 };
+
+test("a short first execution batch proves completion without recounting every placement", async () => {
+  const { ctx } = await fixture(1);
+  const aggregate = ctx.storage.records.aggregate;
+  let recounts = 0;
+  ctx.storage.records.aggregate = (request) => {
+    if (request.index === "timeline-placement-order") recounts++;
+    return aggregate(request);
+  };
+
+  const revision = await initializePlanPlacements(ctx, ["done"], 50);
+  expect(revision).toBeDefined();
+  expect(await readOrder(ctx, 1)).toEqual(["0"]);
+  // The subsequent displayed-page read has its own initial prefix check.
+  expect(recounts).toBe(2);
+});
+
+test("work arriving after a short placement batch still joins the durable execution order", async () => {
+  const { ctx } = await fixture(1);
+  const commit = ctx.storage.records.commit;
+  let arrived = false;
+  ctx.storage.records.commit = async (request) => {
+    const result = await commit(request);
+    if (!arrived && request.edits.some((edit) => JSON.stringify(edit).includes("timeline.placements"))) {
+      arrived = true;
+      await putTicket(ctx.storage, {
+        id: "arriving",
+        shorthand: "T-2",
+        title: "Arriving ticket",
+        content: "",
+        archived: false,
+        statusId: "ready",
+        position: ctx.storage.positions.between(),
+        createdAt: "before",
+        updatedAt: "after",
+      });
+    }
+    return result;
+  };
+
+  await initializePlanPlacements(ctx, ["done"], 50);
+  expect(arrived).toBe(true);
+  expect(await planPlacements(ctx.storage).get("arriving")).toBeDefined();
+  expect(await readOrder(ctx, 2)).toEqual(["0", "arriving"]);
+});
+
+test("work arriving after the completion proof invalidates the first displayed page", async () => {
+  const { ctx } = await fixture(1);
+  const query = ctx.storage.records.query;
+  let arrived = false;
+  ctx.storage.records.query = async (request) => {
+    const result = await query(request);
+    if (
+      !arrived &&
+      request.index === "ticket-view" &&
+      request.limit !== 0 &&
+      JSON.stringify(request.where ?? null).includes("timeline-placements") &&
+      !result.records.length
+    ) {
+      arrived = true;
+      await putTicket(ctx.storage, {
+        id: "arriving-after-proof",
+        shorthand: "T-2",
+        title: "Arriving ticket",
+        content: "",
+        archived: false,
+        statusId: "ready",
+        position: ctx.storage.positions.between(),
+        createdAt: "before",
+        updatedAt: "after",
+      });
+    }
+    return result;
+  };
+
+  await expect(readPlanCommand.run(ctx, { page: { limit: 1, offset: 0, fields: ["id"], search: "" } })).rejects.toThrow(
+    "stale",
+  );
+  expect(arrived).toBe(true);
+});
 
 test("a bounded Timeline initializer and a full initializer preserve execution order across batches", async () => {
   const { ctx, peer, ids } = await fixture(203);

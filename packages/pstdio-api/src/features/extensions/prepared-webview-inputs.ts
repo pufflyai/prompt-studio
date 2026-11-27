@@ -20,6 +20,7 @@ export const inspectPreparedWebviewInputs = async (
   sourceRoot: string,
   signal?: AbortSignal,
   selections = inputs.map((input) => inspectManagedWebviewBuildInputs(input, "")),
+  batch = true,
 ) => {
   const shells = new Map<string, string>();
   const sources = inputs.map((input, index) => {
@@ -45,7 +46,7 @@ export const inspectPreparedWebviewInputs = async (
     groups.set(source.packagePath, entries);
   }
   const inspected = await Promise.allSettled(
-    [...groups].map(([path, entries]) => inspectWebviewDependencyInputs(path, entries, signal)),
+    [...groups].map(([path, entries]) => inspectWebviewDependencyInputs(path, entries, signal, batch)),
   );
   signal?.throwIfAborted();
   const digests = inspected.map((result) => {
@@ -75,7 +76,7 @@ export const inspectSinglePreparedWebviewInputs = async (input: Input, signal?: 
     const root = join(resolvePstdioHome(), "cache", "prepared-webviews", `inspection-${crypto.randomUUID()}`);
     const stage = trackPreparationStage([root]);
     try {
-      return (await inspectPreparedWebviewInputs([input], root, signal, [selected])).signatures[0]!;
+      return (await inspectPreparedWebviewInputs([input], root, signal, [selected], false)).signatures[0]!;
     } finally {
       rmSync(root, { recursive: true, force: true });
       stage.release();

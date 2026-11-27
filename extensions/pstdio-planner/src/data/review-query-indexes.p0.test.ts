@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
+import { readReviewCounts } from "./review-query-counts";
 import { ticketHasPendingReview } from "./review-query-indexes";
 import { preparePlannerIndexes } from "./storage-indexes";
 
@@ -52,6 +53,12 @@ test("review attention uses canonical outcome keys and validates responses befor
   expect(page.records.map((record) => record.fields.id)).toEqual(["ticket-9"]);
   expect(page.cursor).toBeNull();
   expect((await storage.records.aggregate({ index: "ticket-records", where: ticketHasPendingReview })).count).toBe(1);
+  const ids = Array.from({ length: 102 }, (_, i) => `ticket-${i}`);
+  const counts = await readReviewCounts(storage, ids);
+  expect(counts.get("ticket-0")).toEqual({ total: 1, pending: 0, answered: 1 });
+  expect(counts.get("ticket-9")).toEqual({ total: 1, pending: 1, answered: 0 });
+  expect(counts.get("ticket-101")).toEqual({ total: 0, pending: 0, answered: 0 });
   await outcomes.put("request-9", { kind: "cancelled", reason: "No longer needed", at: "now", by: actor });
   expect((await storage.records.aggregate({ index: "ticket-records", where: ticketHasPendingReview })).count).toBe(0);
+  expect((await readReviewCounts(storage, ids)).get("ticket-9")).toEqual({ total: 1, pending: 0, answered: 0 });
 });
