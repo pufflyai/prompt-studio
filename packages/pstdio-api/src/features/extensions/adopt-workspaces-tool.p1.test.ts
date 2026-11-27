@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, expect, test } from "bun:test";
+import { afterEach, beforeEach, expect, test } from "bun:test";
 import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -16,7 +16,9 @@ import { packExtension } from "./publication/package";
 let root: string;
 let handle: Awaited<ReturnType<typeof createTestApp>>;
 let previous: { home?: string; defaults?: string };
-beforeAll(async () => {
+beforeEach(async () => {
+  // The runtime watches these install folders. Give each test its own home so
+  // fixture writes cannot race a watcher from a previous test.
   root = await mkdtemp(join(tmpdir(), "combined-workspaces-"));
   previous = { home: process.env.PSTDIO_HOME, defaults: process.env.PSTDIO_DEFAULT_EXTENSIONS };
   process.env.PSTDIO_HOME = join(root, "home");
@@ -24,20 +26,23 @@ beforeAll(async () => {
   await mkdir(join(process.env.PSTDIO_HOME, "extensions"), { recursive: true });
   handle = await createTestApp({ databasePath: ":memory:", storageRoot: join(root, "storage") });
 });
-afterAll(async () => {
-  await handle.close();
-  for (const [key, value] of [
-    ["PSTDIO_HOME", previous.home],
-    ["PSTDIO_DEFAULT_EXTENSIONS", previous.defaults],
-  ])
-    if (value === undefined) delete process.env[key!];
-    else process.env[key!] = value;
-  await rm(root, { recursive: true, force: true });
+afterEach(async () => {
+  try {
+    await handle.close();
+  } finally {
+    for (const [key, value] of [
+      ["PSTDIO_HOME", previous.home],
+      ["PSTDIO_DEFAULT_EXTENSIONS", previous.defaults],
+    ])
+      if (value === undefined) delete process.env[key!];
+      else process.env[key!] = value;
+    await rm(root, { recursive: true, force: true });
+  }
 });
 
 const source = async (name: string, installName = name) => {
   const path = join(process.env.PSTDIO_HOME!, "extensions", installName);
-  await mkdir(path, { recursive: true });
+  await mkdir(path);
   const manifest = {
     name,
     publisher: "pstdio",
