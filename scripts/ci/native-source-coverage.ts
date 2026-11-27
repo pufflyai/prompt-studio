@@ -2,7 +2,13 @@ import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { priorityFromFile, testRunner } from "./test-discovery";
 
-export const nativeSourceGroups = ["process-security", "filesystem-storage-1", "filesystem-storage-2"] as const;
+export const nativeSourceGroups = [
+  "process-security",
+  "filesystem-storage-1",
+  "filesystem-storage-2",
+  "filesystem-storage-3",
+] as const;
+const filesystemStorageShards = nativeSourceGroups.filter((group) => group.startsWith("filesystem-storage-")).length;
 export const windowsSourceContract = (file: string, root = resolve(import.meta.dir, "../..")) => {
   if (file.startsWith("packages/e2e/") || file.startsWith("scripts/")) return;
   // The Relay container supervisor uses POSIX process signals and executable scripts.
@@ -34,10 +40,12 @@ export const windowsSourceContract = (file: string, root = resolve(import.meta.d
 };
 
 export const selectWindowsSourceContracts = (files: string[], group: string) => {
-  const shard = /^filesystem-storage-([12])$/.exec(group);
+  const shard = /^filesystem-storage-(\d+)$/.exec(group);
   const selected = files.filter(
     (file) => windowsSourceContract(file)?.group === (shard ? "filesystem-storage" : group),
   );
-  // Mixed filesystem contracts run one file at a time; alternate the sorted files across two Windows jobs.
-  return shard ? selected.sort().filter((_, index) => index % 2 === Number(shard[1]) - 1) : selected;
+  // Mixed filesystem contracts run one file at a time; deal the sorted files across the Windows jobs.
+  return shard
+    ? selected.sort().filter((_, index) => index % filesystemStorageShards === Number(shard[1]) - 1)
+    : selected;
 };

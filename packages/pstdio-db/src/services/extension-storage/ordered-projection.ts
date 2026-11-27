@@ -16,7 +16,7 @@ import { decodeProjectionValue } from "./record-projection-codec";
 import { writeProjectedRecords } from "./record-projection-rows";
 import { refreshResourceQueryValues } from "./resource-query-values";
 import { createRetainedPages } from "./retained-pages";
-import { removeRetainedRecords } from "./retained-records";
+import { hasRetainedRecords, removeRetainedRecords } from "./retained-records";
 
 export { orderedBody, orderedProjection } from "pstdio-sync/records";
 
@@ -72,8 +72,11 @@ export const publishOrderedProjection = async (
   );
   const projected = await writeProjectedRecords(tx, owner, materialized, facets);
   const retained = previous.filter((row) => row.retained).map((row) => row.recordId);
-  const pages = createRetainedPages(tx, owner, "tombstones");
-  for (const { recordId } of records) if (!before.has(recordId) && (await pages.has(recordId))) retained.push(recordId);
+  const missing = records.filter(({ recordId }) => !before.has(recordId));
+  if (missing.length && (await hasRetainedRecords(tx, owner))) {
+    const pages = createRetainedPages(tx, owner, "tombstones");
+    for (const { recordId } of missing) if (await pages.has(recordId)) retained.push(recordId);
+  }
   if (retained.length) await removeRetainedRecords(tx, owner, retained);
   noteRecordPublication(
     tx,

@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
-import type { HarnessExit, JsonPatch } from "pstdio-api-contracts";
+import { applyConversationPatch, type HarnessExit, type JsonPatch, type SessionMessage } from "pstdio-api-contracts";
 import type { RuntimeHarnessRecord } from "pstdio-extensions";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import { folderProjectInput } from "../../../test-utils/folder-project-input";
@@ -122,22 +122,22 @@ const message = (id: string, role: "user" | "assistant", text: string) => ({
   parts: [{ type: "text" as const, text }],
 });
 
-const createDelayedResumeRecord = (): RuntimeHarnessRecord => {
-  const persistedMessages = [
-    message("m1", "user", "FIRST"),
-    message("m2", "assistant", "FIRST DONE"),
-    {
-      id: "usage-1",
-      role: "system" as const,
-      parts: [{ type: "token_usage" as const, inputTokens: 10, outputTokens: 2 }],
-    },
-  ];
+const firstRunMessages: SessionMessage[] = [
+  message("m1", "user", "FIRST"),
+  message("m2", "assistant", "FIRST DONE"),
+  { id: "usage-1", role: "system", parts: [{ type: "token_usage", inputTokens: 10, outputTokens: 2 }] },
+];
+const followUpMessages = [message("m3", "user", "SECOND"), message("m4", "assistant", "SECOND DONE")];
 
-  return createTestHarnessRecord("fake", {
+const createDelayedResumeRecord = (input: {
+  readyForFollowUp: Promise<void>;
+  done: Promise<HarnessExit>;
+}): RuntimeHarnessRecord =>
+  createTestHarnessRecord("fake", {
     provider: {
-      start: (_ctx, input) => {
-        persistedMessages.forEach((value, index) => {
-          input.events.push({ op: "add", path: `/messages/${index}`, value });
+      start: (_ctx, startInput) => {
+        firstRunMessages.forEach((value, index) => {
+          startInput.events.push({ op: "add", path: `/messages/${index}`, value });
         });
         return {
           agentSessionId: `delayed-${crypto.randomUUID()}`,
@@ -145,35 +145,22 @@ const createDelayedResumeRecord = (): RuntimeHarnessRecord => {
           stop: () => {},
         };
       },
-      resume: (_ctx, input) => {
-        setTimeout(() => {
-          input.events.push({
-            op: "add",
-            path: `/messages/${input.messageOffset ?? 0}`,
-            value: message("m3", "user", "SECOND"),
+      resume: (_ctx, resumeInput) => {
+        void input.readyForFollowUp.then(() => {
+          followUpMessages.forEach((value, index) => {
+            resumeInput.events.push({
+              op: "add",
+              path: `/messages/${(resumeInput.messageOffset ?? 0) + index}`,
+              value,
+            });
           });
-        }, 50);
-        setTimeout(() => {
-          input.events.push({
-            op: "add",
-            path: `/messages/${(input.messageOffset ?? 0) + 1}`,
-            value: message("m4", "assistant", "SECOND DONE"),
-          });
-        }, 100);
-
-        return {
-          agentSessionId: input.agentSessionId,
-          done: new Promise<HarnessExit>((resolve) => {
-            setTimeout(() => resolve({ status: "completed" }), 150);
-          }),
-          stop: () => {},
-        };
+        });
+        return { agentSessionId: resumeInput.agentSessionId, done: input.done, stop: () => {} };
       },
       // Transcript normalization omits the persisted token-usage message.
-      getMessages: () => persistedMessages.slice(0, 2),
+      getMessages: () => firstRunMessages.slice(0, 2),
     },
   });
-};
 
 const getPatchTextParts = (patch: JsonPatch) => {
   if (!Array.isArray(patch.value)) return [];
@@ -258,11 +245,16 @@ describe("session stream follow-up resume continuity", () => {
 
   test("uses the complete baseline offset when live replay is initially empty", async () => {
     const delayedRoot = mkdtempSync(join(tmpdir(), "pstdio-api-stream-delayed-offset-"));
+    const readyForFollowUp = Promise.withResolvers<void>();
+    const exit = Promise.withResolvers<HarnessExit>();
     const delayedApp = await createTestApp({
       databasePath: ":memory:",
       storageRoot: join(delayedRoot, "storage"),
-      harnessRegistry: createTestHarnessRegistry([createDelayedResumeRecord()]),
+      harnessRegistry: createTestHarnessRegistry([
+        createDelayedResumeRecord({ readyForFollowUp: readyForFollowUp.promise, done: exit.promise }),
+      ]),
     });
+    let sse: ReturnType<typeof createSSEReader> | undefined;
 
     try {
       const projectRes = await delayedApp.app.request("/v1/projects", {
@@ -292,28 +284,43 @@ describe("session stream follow-up resume continuity", () => {
       });
       expect(followUpRes.status).toBe(200);
 
-      const streamRes = await openSessionStream(delayedApp.app, session.id);
-      const sse = createSSEReader(streamRes);
+      sse = createSSEReader(await openSessionStream(delayedApp.app, session.id));
       const initial = await sse.readUntil(
-        (event) => event.event === "patch" && getPatchTextParts(event.data as JsonPatch).includes("FIRST DONE"),
+        (event) => event.event === "patch" && (event.data as JsonPatch).path === "/approval_requests",
       );
       const snapshot = initial.find((event) => event.event === "patch")?.data as JsonPatch;
-      expect(snapshot.path).toBe("/messages");
+      expect(snapshot).toEqual({ op: "replace", path: "/messages", value: firstRunMessages });
+      expect(initial.at(-1)?.data).toEqual({ op: "replace", path: "/approval_requests", value: [] });
 
-      const resumed = await sse.readUntil(
-        (event) =>
-          event.event === "patch" &&
-          (event.data as JsonPatch).path === "/messages/4" &&
-          ((event.data as JsonPatch).value as { parts?: Array<{ text?: string }> }).parts?.[0]?.text === "SECOND DONE",
-      );
-      const patches = resumed.filter((event) => event.event === "patch").map((event) => event.data as JsonPatch);
+      // The follow-up's output starts only after the client holds the initial snapshot.
+      readyForFollowUp.resolve();
+      const expected = [...firstRunMessages, ...followUpMessages];
+      const states: SessionMessage[][] = [];
+      let conversation = firstRunMessages;
+      await sse.readUntil((event) => {
+        if (event.event !== "patch") return false;
+        conversation = applyConversationPatch([...conversation], event.data as JsonPatch);
+        states.push(conversation);
+        return conversation.length >= expected.length;
+      });
 
-      expect(patches.map((patch) => patch.path)).toEqual(["/approval_requests", "/messages/3", "/messages/4"]);
-      expect(patches[0]).toEqual({ op: "replace", path: "/approval_requests", value: [] });
-      sse.close();
+      // A stream that is still sending when output arrives coalesces it into one current
+      // `/messages` snapshot instead of indexed patches. Either form must extend the
+      // complete baseline, so the follow-up lands after the token-usage message.
+      for (const state of states) {
+        expect(state.length).toBeGreaterThanOrEqual(firstRunMessages.length);
+        expect(state).toEqual(expected.slice(0, state.length));
+      }
+      expect(conversation).toEqual(expected);
     } finally {
-      await delayedApp.close();
-      rmSync(delayedRoot, { recursive: true, force: true });
+      readyForFollowUp.resolve();
+      exit.resolve({ status: "completed" });
+      try {
+        await sse?.close();
+      } finally {
+        await delayedApp.close();
+        rmSync(delayedRoot, { recursive: true, force: true });
+      }
     }
   });
 });

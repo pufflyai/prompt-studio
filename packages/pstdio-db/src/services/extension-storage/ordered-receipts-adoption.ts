@@ -58,18 +58,24 @@ const queueLocalRecords = async (
   local: OrderedRecord[],
 ) => {
   const ids: string[] = [];
-  for (const record of local) {
-    const remote = (await journal.canonical([record.recordId])).get(record.recordId);
-    const operation = await prepareOrderedLocalAdoption(record, remote);
-    if (operation) {
-      if (replacedTextHistory(record, operation)) await fenceOrderedNativeText(tx, owner, operation, record);
-      const projected = await projectBoundedOrderedOperation(
-        remote ? new Map([[remote.recordId, remote]]) : new Map(),
-        operation,
-      );
-      await rememberOrderedAdoptionText(tx, owner, operation, record, projected[0]);
-      await journal.queue(operation, await fingerprint(operation as unknown as Json));
-      ids.push(record.recordId);
+  // Each local record has one identity. Queue its edits in order while reading
+  // the checkpoint rows together inside the same locked owner transaction.
+  for (let offset = 0; offset < local.length; offset += 100) {
+    const page = local.slice(offset, offset + 100);
+    const canonical = await journal.canonical(page.map((record) => record.recordId));
+    for (const record of page) {
+      const remote = canonical.get(record.recordId);
+      const operation = await prepareOrderedLocalAdoption(record, remote);
+      if (operation) {
+        if (replacedTextHistory(record, operation)) await fenceOrderedNativeText(tx, owner, operation, record);
+        const projected = await projectBoundedOrderedOperation(
+          remote ? new Map([[remote.recordId, remote]]) : new Map(),
+          operation,
+        );
+        await rememberOrderedAdoptionText(tx, owner, operation, record, projected[0]);
+        await journal.queue(operation, await fingerprint(operation as unknown as Json));
+        ids.push(record.recordId);
+      }
     }
   }
   return ids;

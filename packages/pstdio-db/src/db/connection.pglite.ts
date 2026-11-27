@@ -120,6 +120,7 @@ export type DbOpenPhase =
   | "database_locked"
   | "database_engine_loaded"
   | "database_image_restored"
+  | "database_released_upgrade"
   | "database_opened"
   | "database_migrated"
   | "database_index_nodes";
@@ -167,6 +168,7 @@ export const createDb = async (options?: {
     pglite = await openPglite(dbPath, pgliteOpts, onImageRestored);
     await pglite.waitReady;
     const releasedJournal = await hasReleasedJournal(pglite);
+    if (releasedJournal && !fresh && dbPath !== ":memory:") onPhase("database_released_upgrade");
     if (releasedJournal && !fresh && dbPath !== ":memory:" && !fs.existsSync(batchBackup(dbPath))) {
       const source = pglite;
       let staged = false;
