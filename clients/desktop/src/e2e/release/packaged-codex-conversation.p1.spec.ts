@@ -52,7 +52,7 @@ test("sends a message and a follow-up in the same packaged Codex conversation", 
       await editor.fill(message);
       await expect(send).toHaveAttribute("aria-label", "Send message");
       await expect(send).toBeEnabled({ timeout: 20_000 });
-      await send.click();
+      await editor.press("Enter");
       await expect(page.getByRole("log").getByText(message, { exact: true })).toBeVisible({ timeout: 20_000 });
       await expect(send).toHaveAttribute("aria-label", "Stop Response", { timeout: 20_000 });
       await expect(alert).toHaveCount(0);
