@@ -32,7 +32,6 @@ export const captureBackendDefinitionCommand = async (
     });
     // Preserve Buffer and other v8 clone types across the extra worker-thread hop.
     const value = serialize(worker.definition);
-    await worker.stop();
     return { exitCode: 0, stdout: "", stderr: "", definition: { ok: true, value } as BackendDefinitionResult };
   } catch (error) {
     const serialized = serializeBackendError(error);
@@ -43,6 +42,7 @@ export const captureBackendDefinitionCommand = async (
       definition: { ok: false, error: serialized } as BackendDefinitionResult,
     };
   } finally {
-    if (!worker) await stopStarting?.();
+    if (worker) await worker.stop();
+    else await stopStarting?.();
   }
 };
