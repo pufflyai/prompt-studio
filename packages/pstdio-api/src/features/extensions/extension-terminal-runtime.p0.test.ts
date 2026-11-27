@@ -151,7 +151,7 @@ describe("terminal supervisor", () => {
     }
   });
 
-  test("opens a session, echoes input, and exits cleanly", async () => {
+  test("delivers shell output before reporting a clean exit", async () => {
     const { logger, records } = createRecordingLogger();
     const supervisor = createTerminalSupervisor({ logger });
     const handle = supervisor.api.openSession({ command: shellCommand(), cols: 80, rows: 24 });
@@ -162,9 +162,9 @@ describe("terminal supervisor", () => {
     })();
 
     await waitForInitialOutput(events);
-    handle.write(line("echo hi-marker"));
-    await Bun.sleep(25);
-    handle.write(line("exit"));
+    // Only real command output contains the full marker. The shell exits immediately after writing it.
+    const command = process.platform === "win32" ? "echo hi-^marker & exit 0" : "printf '%s-%s\\n' hi marker; exit 0";
+    handle.write(line(command));
     await consumed;
 
     expect(decode(events)).toContain("hi-marker");

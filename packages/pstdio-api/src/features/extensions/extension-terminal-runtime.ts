@@ -76,6 +76,7 @@ const resolveWorkingDirectory = (cwd: TerminalSessionRequest["cwd"]) => {
 };
 
 const TITLE_POLL_INTERVAL_MS = 1000;
+const TERMINAL_OUTPUT_DRAIN_TIMEOUT_MS = 1_000;
 
 /** How long a session may take to honour its stop signal before the host force-kills it. */
 const KILL_ESCALATION_MS = 500;
@@ -114,6 +115,7 @@ export const createTerminalSupervisor = (input: { logger: ExtensionLoggerApi }) 
       const env = createTerminalEnv(request.env);
       const id = crypto.randomUUID();
       const queue = createEventQueue();
+      const terminalOutputEnded = Promise.withResolvers<void>();
       const shellState = createTerminalShellState(id);
       const shell = prepareTerminalShell(command, env, id);
 
@@ -130,6 +132,7 @@ export const createTerminalSupervisor = (input: { logger: ExtensionLoggerApi }) 
                 const output = shellState.onData(chunk);
                 if (output.length > 0) queue.push({ kind: "data", chunk: output });
               },
+              exit: () => terminalOutputEnded.resolve(),
             },
             windowsHide: true,
           });
@@ -166,11 +169,15 @@ export const createTerminalSupervisor = (input: { logger: ExtensionLoggerApi }) 
       };
       titlePoll = setTimeout(pollTitle, TITLE_POLL_INTERVAL_MS);
 
-      void child.exited.then((code) => {
+      void child.exited.then(async (code) => {
         closed = true;
         clearTimeout(titlePoll);
         sessions.delete(id);
         shell.dispose();
+        // ConPTY can deliver its final output after the shell exits. Bound the wait in case a
+        // descendant keeps the console open, then publish the process exit as the final event.
+        if (process.platform === "win32")
+          await exitedWithin(terminalOutputEnded.promise, TERMINAL_OUTPUT_DRAIN_TIMEOUT_MS);
         logger.info("terminal session exited", { id, code });
         queue.push({ kind: "exit", code, signal: terminalExitSignal(child.signalCode) });
         queue.close();
