@@ -101,16 +101,17 @@ export const planQuerySummary = async (storage: Storage, view: View, selectsAllA
       metrics: { ...metrics, ...(selected ? countMetrics : { done: countMetrics.done }) },
     });
   // An unfiltered Timeline shares one scan for selected and global totals.
-  const [global, selected] = selectsAllActive
-    ? await group(filtered, true).then((summary) => [summary, summary])
-    : await Promise.all([group(activeTicket, false), group(filtered, true)]);
-  const starts = await storage.records.aggregate({
+  const summaries = selectsAllActive
+    ? group(filtered, true).then((summary) => [summary, summary])
+    : Promise.all([group(activeTicket, false), group(filtered, true)]);
+  const firstAttempt = storage.records.aggregate({
     index: "attempt-ticket",
     where: {
       exists: { index: "ticket-view", on: [{ sourceField: "ticketId", relatedField: "id" }], where: activeTicket },
     },
     metrics: { first: { operation: "min", field: "startedAt" } },
   });
+  const [[global, selected], starts] = await Promise.all([summaries, firstAttempt]);
   const completedComplexity = global.groups.reduce(
     (total, group) => total + (group.metrics?.completedComplexity ?? 0),
     0,
