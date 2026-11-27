@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { AsyncLocalStorage } from "node:async_hooks";
 import { nativeSubmissionIndex, saveNativeSubmission, updateNativeSubmission } from "./native-submission";
 import { watchConversation } from "./watch";
 import { createWatchObservationFixture } from "./watch-observation.test-fixture";
@@ -143,6 +144,47 @@ test("a native input committed after the final session event still restores its 
   } finally {
     f.controller.abort();
     await watching;
+  }
+});
+
+test("session change notifications refresh the conversation outside the host callback", async () => {
+  const f = createWatchObservationFixture();
+  const callback = new AsyncLocalStorage<boolean>();
+  const writing = Promise.withResolvers<void>();
+  const releaseWrite = Promise.withResolvers<void>();
+  const refreshed = Promise.withResolvers<string>();
+  const write = f.ctx.stream.write;
+  f.ctx.stream.write = async (frame) => {
+    writing.resolve();
+    await releaseWrite.promise;
+    return write(frame);
+  };
+  let readsInCallback = 0;
+  f.state.readExecution = async () => {
+    if (callback.getStore()) readsInCallback++;
+    return { kind: "local", available: true };
+  };
+  f.state.wrote = (frame) => {
+    if ("snapshot" in frame && (frame.snapshot.values?.harness as { model?: string })?.model === "B")
+      refreshed.resolve("B");
+  };
+  const watching = watchConversation(f.ctx, { type: "session", id: "s" });
+  const ended = watching.then(
+    () => "Conversation watcher ended",
+    (error: Error) => error.message,
+  );
+  try {
+    await writing.promise;
+    f.session.lastSelectedModel = "B";
+    callback.run(true, () => f.change("session"));
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    releaseWrite.resolve();
+    expect(await Promise.race([refreshed.promise, ended])).toBe("B");
+    expect(readsInCallback).toBe(0);
+  } finally {
+    releaseWrite.resolve();
+    f.controller.abort();
+    await ended;
   }
 });
 

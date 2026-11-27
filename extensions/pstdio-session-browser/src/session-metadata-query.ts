@@ -55,6 +55,16 @@ export const createSessionMetadataQuery = (
   });
   return {
     query,
+    observe(wake: () => void) {
+      // Host notifications only wake the watch loop. Automatic reads would inherit
+      // the notification callback's scope and could outlive it.
+      const stopInvalidation = query.subscribeInvalidation(wake);
+      const release = query.subscribe(() => {}, { automatic: false });
+      return () => {
+        stopInvalidation();
+        release();
+      };
+    },
     accepted(
       result: NonNullable<ReturnType<typeof query.getSnapshot>["data"]>,
       queued: NonNullable<typeof previous>["queued"],

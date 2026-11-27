@@ -288,7 +288,7 @@ export const watchConversation = async (
       await recoverNativeInputs(ctx, id, session, restore, emittedRecovery, draftClientId);
   };
   try {
-    stopMetadata = metadata.query.subscribe(changed);
+    stopMetadata = metadata.observe(changed);
     let accepted: ReturnType<typeof metadata.query.getSnapshot>["data"];
     while (!ctx.signal.aborted) {
       const waiting = wake.promise;

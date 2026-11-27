@@ -2,6 +2,7 @@ import { appendFileSync } from "node:fs";
 import { createInterface } from "node:readline";
 
 const log = process.env.PSTDIO_CODEX_PEER_LOG!;
+const completesTurns = process.env.PSTDIO_CODEX_PEER_COMPLETE_TURNS === "1";
 const emit = (message: unknown) => process.stdout.write(`${JSON.stringify(message)}\n`);
 const threads = new Map<string, { id: string; turns: Array<{ id: string; status: string; items: unknown[] }> }>();
 const goals = new Map<string, { status: string }>();
@@ -17,7 +18,12 @@ for await (const line of createInterface({ input: process.stdin })) {
   const params = message.params;
   let result: unknown = {};
   let startedTurn = false;
-  if (message.method === "model/list") result = { data: [], nextCursor: null };
+  if (message.method === "model/list")
+    result = {
+      data: completesTurns ? [{ id: "fixture", displayName: "Fixture model", isDefault: true }] : [],
+      nextCursor: null,
+    };
+  if (message.method === "account/read") result = { account: null, requiresOpenaiAuth: false };
   if (message.method === "thread/start") {
     const id = `thread-${++sequence}`;
     threads.set(id, { id, turns: [] });
@@ -77,7 +83,12 @@ for await (const line of createInterface({ input: process.stdin })) {
   if (message.method === "turn/start") {
     const turn = threads.get(params.threadId)!.turns.at(-1)!;
     if (startedTurn) emit({ method: "turn/started", params: { threadId: params.threadId, turn } });
-    const item = { id: "answer", type: "agentMessage", text: params.input[0].text };
+    const prompt = params.input[0].text;
+    const item = {
+      id: completesTurns ? `answer-${turn.id}` : "answer",
+      type: "agentMessage",
+      text: completesTurns ? `Codex replied to "${prompt}"` : prompt,
+    };
     turn.items.push(item);
     emit({
       method: "item/completed",
@@ -87,6 +98,10 @@ for await (const line of createInterface({ input: process.stdin })) {
         item,
       },
     });
+    if (completesTurns) {
+      turn.status = "completed";
+      emit({ method: "turn/completed", params: { threadId: params.threadId, turn } });
+    }
   }
   if (message.method === "turn/interrupt") {
     const turn = threads.get(params.threadId)!.turns.find((turn) => turn.id === params.turnId)!;
