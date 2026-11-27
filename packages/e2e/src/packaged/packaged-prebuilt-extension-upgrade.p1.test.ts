@@ -70,22 +70,29 @@ test("activates a prebuilt package through the same packaged upgrade API as a so
     expect(await unavailable.json()).toMatchObject({ error: expect.any(String) });
     const installed = await post(`${project}/install`, { source: { kind: "catalog", name: "pstdio.notes" } });
     expect(installed.status).toBe(201);
-    const { extension, source: installedSource } = (await installed.json()) as InstallExtensionResponse;
+    const { extension } = (await installed.json()) as InstallExtensionResponse;
     const measure = async (version: string, prebuilt: boolean) => {
       await publish(version, prebuilt);
       const started = performance.now();
       const upgraded = await post(`${project}/${extension.id}/upgrade`);
       expect(upgraded.status).toBe(200);
-      expect(((await upgraded.json()) as UpgradeProjectExtensionResponse).extension.version).toBe(version);
+      const { extension: upgradedExtension } = (await upgraded.json()) as UpgradeProjectExtensionResponse;
+      expect(upgradedExtension.version).toBe(version);
       const command = await post(`${project}/commands/pstdio.notes.command.version/execute`, {});
       expect(command.status).toBe(200);
       expect(await command.json()).toMatchObject({ outcome: { ok: true, value: version } });
-      return Math.round(performance.now() - started);
+      return { durationMs: Math.round(performance.now() - started), sourcePath: upgradedExtension.sourcePath };
     };
-    const sourceMs = await measure("0.45.2", false);
-    const bundleMs = await measure("0.45.3", true);
-    await expectAcceptedPrebuiltRevision(home, installedSource.targetPath);
-    console.log(JSON.stringify({ case: "packaged-upgrade-to-first-command", sourceMs, bundleMs }));
+    const sourceUpgrade = await measure("0.45.2", false);
+    const bundleUpgrade = await measure("0.45.3", true);
+    await expectAcceptedPrebuiltRevision(home, bundleUpgrade.sourcePath);
+    console.log(
+      JSON.stringify({
+        case: "packaged-upgrade-to-first-command",
+        sourceMs: sourceUpgrade.durationMs,
+        bundleMs: bundleUpgrade.durationMs,
+      }),
+    );
   } finally {
     if (host) await stopProcess(host.child);
     await registry.close();
