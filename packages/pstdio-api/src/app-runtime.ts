@@ -22,7 +22,8 @@ import type { createSessionService } from "./services/session-service";
 import { runStartupTasks } from "./startup";
 
 const EXTENSION_SCHEDULE_WATERMARK_FILE = "extension-schedule-watermarks.json";
-const HARNESS_SHUTDOWN_GRACE_MS = 5_000;
+// Leave time to stop backend workers before the outer fatal shutdown deadline.
+const HARNESS_SHUTDOWN_GRACE_MS = 1_000;
 
 export { closeBeforeFatalExit } from "./fatal-close";
 
