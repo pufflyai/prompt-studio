@@ -77,9 +77,7 @@ export const readSessionHistorySources = async (sessionId: string, deps: History
     checkpointError: null,
     nativeError: null,
   };
-  const harness = await getSessionHarness(deps.harnessRegistry, session);
-  let workspace: Awaited<ReturnType<typeof resolveSessionWorkspaceContext>>;
-  await Promise.all([
+  const [, nativeContext] = await Promise.all([
     (async () => {
       if (!session.session_file_id) return;
       try {
@@ -90,9 +88,11 @@ export const readSessionHistorySources = async (sessionId: string, deps: History
       }
     })(),
     (async () => {
-      if (!session.agent_session_id || !harness?.supportsHistory) return;
+      if (!session.agent_session_id) return;
       try {
-        workspace = deps.workspaceSessionService
+        const harness = await getSessionHarness(deps.harnessRegistry, session);
+        if (!harness?.supportsHistory) return;
+        const workspace = deps.workspaceSessionService
           ? await resolveSessionWorkspaceContext(deps.workspaceSessionService, sessionId, harness.cwdRequirement)
           : undefined;
         sources.native = (
@@ -101,12 +101,13 @@ export const readSessionHistorySources = async (sessionId: string, deps: History
             { projectId: session.project_id ?? undefined },
           )
         ).map(normalizeMessageResults);
+        return { harness, workspace };
       } catch {
         sources.nativeError = "native_unavailable";
       }
     })(),
   ]);
-  return { sources, session, harness, workspace };
+  return { sources, session, nativeContext };
 };
 
 const committedReplyForRecovery = (
@@ -137,12 +138,13 @@ export const loadSessionHistory = async (
   retained?: readonly SessionMessage[],
   committedReply?: (reply: ReturnType<typeof latestReply>) => void,
 ) => {
-  const { sources, session, harness, workspace } = await readSessionHistorySources(sessionId, deps);
+  const { sources, session, nativeContext } = await readSessionHistorySources(sessionId, deps);
   if (committedReply) committedReply(committedReplyForRecovery(sources, session));
   const known = retained ? retained.map(normalizeMessageResults) : sources.checkpoint;
   if (!known) return sources.native ?? [];
-  if (!sources.native) return known;
-  const result = await harness!.recoverMessages(
+  if (!sources.native || !nativeContext) return known;
+  const { harness, workspace } = nativeContext;
+  const result = await harness.recoverMessages(
     { ...projectToolResultRecovery(known, sources.native), cwd: session.cwd ?? undefined, workspace },
     { projectId: session.project_id ?? undefined },
   );

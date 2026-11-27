@@ -9,6 +9,48 @@ import {
   prepareResourceActionsDashboard,
 } from "./helpers/resource-actions";
 
+// Critical risk: losing access to a harness must leave the saved transcript visible.
+test("a saved session opens after its harness is disabled", async ({ page, request }) => {
+  const project = await createResourceActionsProject(request);
+  try {
+    const created = await request.post("/v1/sessions", {
+      data: {
+        project_id: project.id,
+        title: "Saved session",
+        prompt: "Keep this transcript",
+        agent: "pstdio.workbench-fixture.harness.fake",
+      },
+    });
+    expect(created.ok()).toBe(true);
+    const { id } = await created.json();
+    const sessionPath = `/v1/sessions/${id}`;
+    await expect.poll(async () => (await (await request.get(sessionPath)).json()).status).toBe("completed");
+    await expect
+      .poll(
+        async () => (await (await request.get(`${sessionPath}/conversation/sources`)).json()).checkpoint?.length ?? 0,
+      )
+      .toBeGreaterThanOrEqual(2);
+    const catalog = await (await request.get(`/v1/projects/${project.id}/extensions`)).json();
+    const harness = catalog.extensions.find(
+      (extension: { installName: string }) => extension.installName === "workbench-fixture",
+    );
+    expect(harness).toBeTruthy();
+    const disabled = await request.patch(`/v1/projects/${project.id}/extensions/${harness.id}`, {
+      data: { enabled: false },
+    });
+    expect(disabled.ok()).toBe(true);
+    expect((await request.get(`${sessionPath}/harness-commands`)).status()).toBe(400);
+
+    await prepareResourceActionsDashboard(page, project.id);
+    const resource = encodeURIComponent(`pstdio://extension-resource/session/${id}`);
+    await page.goto(`/projects/${project.id}/extensions/pstdio.session-browser/conversation?resource=${resource}`);
+    await expect(page.getByRole("log").getByText('Fake Agent: completed "Keep this transcript"')).toBeVisible();
+    await expect(page.getByText("Conversation action failed")).toHaveCount(0);
+  } finally {
+    await request.delete(`/v1/projects/${project.id}`);
+  }
+});
+
 // Critical risk: disabling a presentation provider must release its observers,
 // preserve unsent work and leave execution, workspaces and Settings usable.
 test("Sessions can be disabled and restored without losing drafts or stopping its agent", async ({ page, request }) => {

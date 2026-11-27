@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import type { ExtensionSessionsApi } from "@pstdio/sdk/extensions";
+import type { ExtensionSessionsApi, SessionMessage } from "@pstdio/sdk/extensions";
 import { nativeSubmissionIndex } from "./native-submission";
 
 type SessionDetails = Awaited<ReturnType<ExtensionSessionsApi["getConversation"]>>["session"];
@@ -85,6 +85,25 @@ test("online remote owners keep controls and unavailable history becomes read on
   expect(await readSnapshot(fixture(false, true), resource)).toMatchObject({
     readOnly: false,
     nativeHarnessAccount: { controlId: "harness", remote: false },
+  });
+});
+
+test.each([
+  "Codex app-server connection closed.",
+  "Claude Code CLI is unavailable.",
+])("a saved session still shows its messages when command discovery reports %s", async (error) => {
+  const ctx = fixture(false, true);
+  const messages: SessionMessage[] = [{ id: "saved", role: "user", parts: [{ type: "text", text: "Saved message" }] }];
+  ctx.sessions.getConversation = async () => ({
+    session: { ...session, status: "completed" },
+    messages,
+  });
+  ctx.sessions.getHarnessCommands = async () => {
+    throw new Error(error);
+  };
+  expect(await readSnapshot(ctx, { type: "session", id: "s" })).toMatchObject({
+    messages,
+    harness: { commands: [], modes: [] },
   });
 });
 
