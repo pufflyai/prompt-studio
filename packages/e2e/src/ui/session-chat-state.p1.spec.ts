@@ -1,4 +1,6 @@
 import { Buffer } from "node:buffer";
+import { writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import { openSessionsInOneSidePanelTab } from "../helpers/session-side-panel";
 import { expect, type Request, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
@@ -33,26 +35,38 @@ test("keeps the unsent draft after editing a queued follow-up", async ({ page, r
   const side = page.locator('[data-workbench-region="side"]');
   const editor = side.getByTestId("content-editable").last();
   const send = side.getByTestId("send-message-button").last();
-  await request.patch(`${apiBase}/v1/sessions/${session.id}/status`, { data: { status: "in_progress" } });
-  await expect(
-    header.getByRole("tab", { name: session.title, exact: true }).locator('[aria-label="Session status: in_progress"]'),
-  ).toBeVisible();
+  const sessionUrl = `${apiBase}/v1/sessions/${session.id}`;
+  const details = await request.get(sessionUrl);
+  await expect(details).toBeOK();
+  const { cwd } = (await details.json()) as { cwd: string };
+  try {
+    // Hold a real run so the conversation stream stays active during the queue edit.
+    const resumed = await request.post(`${sessionUrl}/follow-up`, {
+      data: { prompt: "Keep working while I edit __fake_hold__" },
+    });
+    await expect(resumed).toBeOK();
+    await expect(
+      header.getByRole("tab", { name: session.title, exact: true }).locator('[aria-label="Session status: in_progress"]'),
+    ).toBeVisible();
 
-  await editor.fill("Queued note");
-  await expect(send).toHaveAttribute("aria-label", "Queue message");
-  await send.click();
-  const edit = side.getByRole("button", { name: "Edit queued message: Queued note", exact: true });
-  await expect(edit).toBeVisible();
-  await expect(editor).toHaveAttribute("contenteditable", "true");
-  await editor.fill("Half-written note");
-  await edit.click();
-  await expect(editor).toHaveText("Queued note");
-  await expect(side.getByRole("button", { name: "Edit saved draft", exact: true })).toHaveText("Half-written note");
-  await editor.fill("Queued note, edited");
-  await side.getByRole("button", { name: "Update", exact: true }).click();
+    await editor.fill("Queued note");
+    await expect(send).toHaveAttribute("aria-label", "Queue message");
+    await send.click();
+    const edit = side.getByRole("button", { name: "Edit queued message: Queued note", exact: true });
+    await expect(edit).toBeVisible();
+    await expect(editor).toHaveAttribute("contenteditable", "true");
+    await editor.fill("Half-written note");
+    await edit.click();
+    await expect(editor).toHaveText("Queued note");
+    await expect(side.getByRole("button", { name: "Edit saved draft", exact: true })).toHaveText("Half-written note");
+    await editor.fill("Queued note, edited");
+    await side.getByRole("button", { name: "Update", exact: true }).click();
 
-  await expect(side.getByText("Queued note, edited", { exact: true })).toBeVisible();
-  await expect(editor).toHaveText("Half-written note");
+    await expect(side.getByText("Queued note, edited", { exact: true })).toBeVisible();
+    await expect(editor).toHaveText("Half-written note");
+  } finally {
+    await writeFile(join(cwd, ".fake-hold-release"), "");
+  }
 });
 
 test("keeps a tab on the session picked while its new session was still starting", async ({ page, request }) => {
