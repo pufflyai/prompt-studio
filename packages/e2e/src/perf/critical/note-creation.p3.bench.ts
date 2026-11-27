@@ -2,7 +2,7 @@ import { strict as assert } from "node:assert";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { chromium, expect, type Page } from "@playwright/test";
+import { chromium, expect, type Locator } from "@playwright/test";
 import { noteCreationFixture, runScenario } from "pstdio-benchmarks/writer";
 import { folderProjectInput } from "../../helpers/folder-project";
 import { PROVISIONED_CHROMIUM } from "../../packaged/packaged-chromium";
@@ -36,10 +36,10 @@ const seedNotes = async (project: string) => {
   return documents;
 };
 
-const prepareClickTiming = async (page: Page) => {
-  await page.evaluate(
-    ({ editorSelector, typedText }) => {
-      document.addEventListener(
+const prepareClickTiming = async (button: Locator) => {
+  await button.evaluate(
+    (element, { editorSelector, typedText }) => {
+      element.addEventListener(
         "click",
         () => {
           performance.mark("notes-create-click");
@@ -118,13 +118,13 @@ await runScenario("B9", async (capture) => {
           new URL(response.url()).pathname.endsWith("/pstdio.notes.command.notes.create/execute"),
         );
         void createResponse.catch(() => {});
-        await prepareClickTiming(page);
+        await prepareClickTiming(create);
         await create.click();
         await page.waitForFunction((selector) => {
           const editor = document.activeElement;
           return editor?.matches(selector) && editor.getBoundingClientRect().height > 0 && editor.textContent === "";
         }, editorSelector);
-        await page.keyboard.insertText(noteCreationFixture.typedText);
+        await page.keyboard.type(noteCreationFixture.typedText);
         const elapsed = await page.waitForFunction(
           () => performance.getEntriesByName("notes-click-to-type", "measure")[0]?.duration,
         );

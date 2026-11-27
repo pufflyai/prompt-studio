@@ -3,7 +3,6 @@ import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import ts from "typescript";
-import { catalogRevision } from "./scenarios";
 
 // Hash executable workload source, not formatting/comments. Product implementation repairs
 // outside these owners keep the same workload series. Harness repairs can retain revision 1.
@@ -54,7 +53,7 @@ export const readContract = (root: string) => {
     digest: string;
     authorization: string;
   };
-  if (lock.revision !== catalogRevision || lock.digest !== catalogDigest(root))
+  if (lock.revision !== 1 || lock.digest !== catalogDigest(root))
     throw new Error(
       "Frozen workload source changed; update the authorized contract in a benchmark-labeled PR for human review and merge",
     );

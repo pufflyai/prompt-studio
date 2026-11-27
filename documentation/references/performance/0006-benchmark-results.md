@@ -1,16 +1,16 @@
 # Benchmark results
 
-The [benchmark catalog](../../../packages/benchmarks/src/catalog/scenarios.ts) is at revision 2. It contains critical release scenarios B1–B8 and the on-demand Notes benchmark B9. See [workload guidance](../../guides/development/0016-writing-benchmarks.md) and the [migration ledger](0009-frozen-workload-ledger.md). Results from the retired benchmark families use different workloads.
+The [benchmark catalog](../../../packages/benchmarks/src/catalog/scenarios.ts), revision 1, contains critical release scenarios B1–B8 and the on-demand Notes benchmark B9. See [workload guidance](../../guides/development/0016-writing-benchmarks.md) and the [migration ledger](0009-frozen-workload-ledger.md). Results from the retired benchmark families use different workloads.
 
 ## Execution and ownership
 
-[suites.ts](../../../packages/benchmarks/src/suites.ts) maps each scenario to one program on Linux x64, Apple Silicon Mac and Windows x64. All eight run on all three hosts in nightly and stable validation; Intel Mac is excluded. The [Benchmarks workflow](../../../.github/workflows/benchmarks.yml) can collect one first attempt per selected commit/scenario/platform. Nightly and stable release validation use the same registered programs; desktop release consumers retain actual signed artifacts. Source-built comparisons cannot certify published artifacts.
+[suites.ts](../../../packages/benchmarks/src/suites.ts) maps each scenario to one program. Nightly and stable validation run B1–B8 on Linux x64, Apple Silicon Mac and Windows x64. B9 runs on demand on Apple Silicon Mac. The [Benchmarks workflow](../../../.github/workflows/benchmarks.yml) can collect one first attempt per selected commit/scenario/platform. Desktop release consumers retain actual signed artifacts. Source-built comparisons cannot certify published artifacts.
 
 PR and queue run only catalog verification. Editing a benchmark does not schedule its measurements in the ten-minute gate. Temporary profiling stays outside discovery and these workflows. CI never repeats a scenario to obtain a passing result.
 
 ## Raw evidence
 
-`test-results/production-performance/B1.jsonl` through `B8.jsonl` contain started, observation, metric and finished/failed records. Each has source SHA, catalog digest/revision, scenario version and fixture fingerprint, actual platform/CPU/cores/RAM and B5 native-memory meaning, cache and throttle, sample and plan/run/execution identity. Artifact hashes and owned process details are observations. The manifest declares exact metric IDs and units.
+`test-results/production-performance/<scenario>.jsonl` contains started, observation, metric and finished/failed records. Each has source SHA, catalog digest/revision, scenario version and fixture fingerprint, actual platform/CPU/cores/RAM and B5 native-memory meaning, cache and throttle, sample and plan/run/execution identity. Artifact hashes and owned process details are observations. The manifest declares exact metric IDs and units.
 
 A consumer checks identity again after transport. Missing, duplicate, extra, nonfinite, stale, dirty-source or incomplete measurements fail. Unresolved limits cannot read as green. Qualification does not require a separate 10-core/32 GiB M5 run; actual host identity remains mandatory. Raw budget outcomes are retained before failure. A baseline capture is labelled unqualified even if all observed values happen to be low.
 
@@ -20,7 +20,7 @@ The comparison runner also writes `<sha>-<platform>.json`, with `format: 2`, com
 
 Units are `ms`, `bytes`, `share`, `percent` and `count`. Missing measurements never become zero. B5 version 2 records native memory average/peak, resident peak and JS heap separately. Native memory means macOS physical footprint, Linux resident set or Windows private committed bytes, identified by `memoryMetric`; their numeric values are not interchangeable. The user-approved strict native-average limits are <2.5GB on Linux, <2GB on macOS and <3GB on Windows. Version 1 physical-only B5 results remain history. Lower values alone do not establish correctness or responsiveness.
 
-Comparisons require equal scenario/workload version and fixture fingerprint, catalog digest, platform/host class, RAM/cores, cache, throttle, units and approved limit. Product code changes may share a workload series; semantic workload changes start a newly authorized version. Old format-1 results remain historical and must not be silently compared to format 2.
+The raw evidence must match its source catalog digest. Comparisons require equal scenario/workload version and fixture fingerprint, platform/host class, RAM/cores, cache, throttle, units and approved limit. Product code changes may share a workload series. Semantic workload changes start a newly authorized version. Format-1 results remain historical.
 
 ## Review and qualification
 

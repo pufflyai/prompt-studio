@@ -1,6 +1,6 @@
 # Frozen critical workload benchmarks
 
-PS-233 authorizes the eight critical release scenarios. PS-309 adds the on-demand Notes benchmark. The executable owners are [suites.ts](../../../packages/benchmarks/src/suites.ts), [scenario manifest revision 2](../../../packages/benchmarks/src/catalog/scenarios.ts) and [catalog lock](../../../packages/benchmarks/catalog.lock.json). See the [disposition and qualification ledger](../../references/performance/0009-frozen-workload-ledger.md).
+PS-233 authorizes the eight critical release scenarios. PS-309 adds the on-demand Notes benchmark. The executable owners are [suites.ts](../../../packages/benchmarks/src/suites.ts), the [scenario manifest](../../../packages/benchmarks/src/catalog/scenarios.ts) and [catalog lock](../../../packages/benchmarks/catalog.lock.json). See the [disposition and qualification ledger](../../references/performance/0009-frozen-workload-ledger.md).
 
 ## Human authorization
 

@@ -109,6 +109,6 @@ export const verifyBenchmarkCoverage = async (root: string, suites: BenchmarkSui
       errors.push(`${scenario.file}: expected exactly one ${scenario.id} case`);
   }
   if (errors.length) throw new Error(`Benchmark coverage failed:\n${errors.join("\n")}`);
-  const { digest, revision } = readContract(root);
-  console.log(`Frozen catalog revision ${revision}: ${digest}`);
+  const { digest } = readContract(root);
+  console.log(`Frozen catalog revision 1: ${digest}`);
 };

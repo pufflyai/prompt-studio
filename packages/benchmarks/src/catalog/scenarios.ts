@@ -2,7 +2,7 @@
 const primary = ["linux-x64", "darwin-arm64", "win32-x64"];
 const metric = (id: string, unit: "ms" | "bytes" | "share" | "count", kind = "supporting") => ({ id, unit, kind });
 const elapsed = (id: string) => metric(id, "ms", "pending-guard");
-export const catalogRevision = 2;
+export const catalogRevision = 1;
 export const conversationFixture = {
   version: 1,
   messages: 100,
