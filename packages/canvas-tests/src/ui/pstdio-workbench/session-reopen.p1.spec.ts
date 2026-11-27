@@ -55,7 +55,9 @@ test("preserves reading position when hidden during a keyboard scroll", async ({
         element.removeEventListener("scroll", hideWhileScrolling);
         const bounds = element.getBoundingClientRect();
         const row = [...element.querySelectorAll("p")].find(
-          (paragraph) => paragraph.getBoundingClientRect().bottom > bounds.top + bounds.height / 3,
+          (paragraph) =>
+            /^Response \d+\./.test(paragraph.textContent ?? "") &&
+            paragraph.getBoundingClientRect().bottom > bounds.top + bounds.height / 3,
         );
         setTimeout(() => (button as HTMLButtonElement).click());
         resolve(row?.textContent?.match(/^Response \d+\./)?.[0] ?? "");

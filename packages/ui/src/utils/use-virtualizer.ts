@@ -1,9 +1,9 @@
 import {
   measureElement as measureRenderedElement,
-  observeElementOffset,
   useVirtualizer as useTanStackVirtualizer,
 } from "@tanstack/react-virtual";
 import { useLayoutEffect, useState } from "react";
+import { observeLaidOutOffset } from "./observe-laid-out-offset";
 
 type VirtualizerOptions<TScrollElement extends Element, TItemElement extends Element> = Omit<
   Parameters<typeof useTanStackVirtualizer<TScrollElement, TItemElement>>[0],
@@ -31,32 +31,7 @@ export const useVirtualizer = <TScrollElement extends Element, TItemElement exte
       const index = instance.indexFromElement(element);
       return instance.itemSizeCache.get(instance.options.getItemKey(index)) ?? instance.options.estimateSize(index);
     },
-    // A scroll queued before the scroll element was hidden is delivered with no layout and offset 0.
-    // Keep the last visible offset, or the list renders and measures its first rows while hidden
-    // and drops the reader's anchor when it is shown again.
-    observeElementOffset: (instance, onChange) => {
-      const element = instance.scrollElement;
-      const hasLayout = () => element?.getClientRects().length !== 0;
-      const stop = observeElementOffset(instance, (offset, isScrolling) => {
-        if (hasLayout()) onChange(offset, isScrolling);
-      });
-      if (!element) return stop;
-      // Showing an element fires no scroll event, and restoring the same offset fires none either.
-      // Resync the offset dropped while hidden and end the scroll that hiding interrupted.
-      let visible = hasLayout();
-      const layout = new ResizeObserver(() => {
-        const shown = !visible && hasLayout();
-        visible = hasLayout();
-        if (!shown) return;
-        const { horizontal, isRtl } = instance.options;
-        onChange(horizontal ? element.scrollLeft * (isRtl ? -1 : 1) : element.scrollTop, false);
-      });
-      layout.observe(element);
-      return () => {
-        stop?.();
-        layout.disconnect();
-      };
-    },
+    observeElementOffset: observeLaidOutOffset,
     // Rows measure through ref callbacks during React commits. Let React batch their updates.
     useFlushSync: false,
   });
