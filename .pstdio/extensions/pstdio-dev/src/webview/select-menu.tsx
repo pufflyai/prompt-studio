@@ -1,4 +1,4 @@
-import { Button, Menu, Portal } from "@chakra-ui/react";
+import { Button, type ButtonProps, Menu, Portal } from "@chakra-ui/react";
 import { ChevronDown } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -8,16 +8,17 @@ interface SelectMenuProps {
   value: string;
   options: { value: string; label: string }[];
   onValueChange: (value: string) => void;
+  triggerProps?: Pick<ButtonProps, "size" | "variant">;
 }
 
 // A compact dropdown, like the collection view's display controls.
 export const SelectMenu = (props: SelectMenuProps) => {
-  const { label, icon, value, options, onValueChange } = props;
+  const { label, icon, value, options, onValueChange, triggerProps } = props;
   const current = options.find((option) => option.value === value)?.label ?? value;
   return (
     <Menu.Root>
       <Menu.Trigger asChild>
-        <Button size="xs" variant="ghost" aria-label={`${label}: ${current}`}>
+        <Button size="xs" variant="ghost" {...triggerProps} aria-label={`${label}: ${current}`}>
           {icon}
           {current}
           <ChevronDown />

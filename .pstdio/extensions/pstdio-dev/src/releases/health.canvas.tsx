@@ -149,6 +149,6 @@ const ReleaseHealthPreview = ({ compact }: { compact: boolean }) => {
 export const ReleaseHealth = {
   args: { compact: false },
   controls: { compact: { type: "boolean", label: "Compact width" } },
-  description: "Resize the ETA widget in edit mode to check the last point’s label and chart at short heights.",
+  description: "Compare the header in view and edit modes, then resize the ETA chart to check its last-point label.",
   render: ReleaseHealthPreview,
 };
