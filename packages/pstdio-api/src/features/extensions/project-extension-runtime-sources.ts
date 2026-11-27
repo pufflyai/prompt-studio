@@ -11,6 +11,7 @@ import {
 } from "pstdio-extensions";
 import { hashExtensionSourceAsync } from "./extension-preparation";
 import type { EnabledExtensionSource } from "./project-extension-runtime-snapshot";
+import { createSourceWebviewReader } from "./source-webview-entries";
 
 /** The fields a source needs to be imported, so an unpersisted candidate can be loaded too. */
 export type LoadableExtensionSource = Pick<EnabledExtensionSource["installedSource"], "source_kind" | "source_path"> &
@@ -138,6 +139,7 @@ export const createExtensionSourceCache = (input: { loadSources?: typeof loadExt
   };
 
   return {
+    readWebview: createSourceWebviewReader(load),
     inspectCandidate,
     load,
     // Reads installed sources whatever their enabled state. The host-wide harness registry reads

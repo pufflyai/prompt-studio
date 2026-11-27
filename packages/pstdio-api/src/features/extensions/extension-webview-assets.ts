@@ -1,6 +1,5 @@
 import { existsSync, statSync } from "node:fs";
 import { extname, join, resolve, sep } from "node:path";
-import { canonicalRuntimeId } from "pstdio-extensions";
 import { readPublishedWebview } from "pstdio-extensions/prepared-cache";
 import type { createExtensionService } from "../../services/extension-service";
 import { readWebviewBuildSignature } from "./extension-webview-build-cache";
@@ -43,7 +42,7 @@ export const renderWebviewBuildErrorModule = (error: WebviewBuildError) =>
 
 export type ExtensionWebviewAssetDeps = {
   extensionService: InstalledSourceLookup;
-  extensionRuntimeCatalog: Pick<ProjectExtensionRuntimeCatalog, "getSourcesRuntime">;
+  extensionRuntimeCatalog: Pick<ProjectExtensionRuntimeCatalog, "getSourceWebview">;
   webviewCacheRoot?: string;
 };
 
@@ -87,10 +86,9 @@ export const resolveWebviewAssetFile = async (
       : selectedSource;
   if (!source) return null;
 
-  const runtime = await deps.extensionRuntimeCatalog.getSourcesRuntime([source]);
-  input = { ...input, webviewId: canonicalRuntimeId(runtime, input.webviewId) };
-  const webview = runtime.views.find((view) => view.id === input.webviewId)?.contribution.body;
-  if (!webview || webview.kind !== "webview") return null;
+  const webview = await deps.extensionRuntimeCatalog.getSourceWebview(source, input.webviewId);
+  if (!webview) return null;
+  input = { ...input, webviewId: webview.id };
 
   const classification = classifyWebviewEntry(webview.entry);
   if (classification.kind === "unsupported") return null;
