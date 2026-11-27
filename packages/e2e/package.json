@@ -9,6 +9,7 @@
     "test:packaged": "bun run test:packaged:cli && bun run test:packaged:browser",
     "test:packaged:cli": "bun src/packaged/run-packaged-cli-tests.ts",
     "test:packaged:browser": "playwright test --config playwright.packaged.config.ts",
+    "test:packaged:harnesses": "bun src/packaged/packaged-harness-smoke.ts",
     "prepare:isolated-paged-collections": "bun src/packaged/prepare-isolated-paged-collections.ts",
     "validate:isolated-paged-collections": "bun src/packaged/validate-isolated-paged-collections.ts",
     "test:ui": "bun run src/scripts/run-playwright.ts",
