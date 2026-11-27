@@ -54,7 +54,6 @@ export const checkCloudProjectUpgrade = async (
   };
   try {
     let a = await start("a", baseline, "baseline");
-    let b = await start("b", baseline, "baseline");
     const seed = await seedUpgradeProject(upgradeApi(a.host.descriptor), { home: a.home, evidence, profile: "active" });
     const commands = (device: typeof a) => planner(upgradeApi(device.host.descriptor), seed.id);
     const content = async (device: typeof a, ticket = seed.firstTicket) =>
@@ -70,6 +69,9 @@ export const checkCloudProjectUpgrade = async (
         timeout: PACKAGED_TEST_TIMEOUT,
       })
       .toBe(true);
+    // Released hosts provision their default tools on first launch. Finish the first
+    // device's project setup before the second cold install competes for the runner.
+    let b = await start("b", baseline, "baseline");
     await signInDevice(b, peer.origin);
     await expect
       .poll(async () => (await b.client.projects.query()).items.some((p) => p.id === seed.id), {
