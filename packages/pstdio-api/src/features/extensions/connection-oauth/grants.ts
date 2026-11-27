@@ -53,6 +53,12 @@ export const createOAuthGrants = (deps: ExtensionConnectionServiceDeps, mutate: 
   const now = deps.now ?? Date.now;
   const owner = deps.oauthOwner ?? (async () => "local");
   const credentials = deps.connectionsDBService.credentials;
+  const requireOwner = async (expected?: string) => {
+    const principal = await owner();
+    if (expected !== undefined && expected !== principal)
+      throw new ConnectionInputError("The host account changed. Reopen extension settings.");
+    return principal;
+  };
   const targetFor = async (input: ConnectionKey) => {
     const contribution = await deps.getContribution(input);
     if (!contribution) throw new ConnectionInputError("This OAuth connection is unavailable.");
@@ -108,7 +114,7 @@ export const createOAuthGrants = (deps: ExtensionConnectionServiceDeps, mutate: 
   const consent = createOAuthConsent({
     fetchFn,
     now,
-    resolve: owned,
+    resolve: (input, expected) => owned(input, () => requireOwner(expected)),
     assertCurrent,
     save: (flow, provider, tokens, assertFlow) =>
       mutate(async () => {
@@ -120,6 +126,7 @@ export const createOAuthGrants = (deps: ExtensionConnectionServiceDeps, mutate: 
           { provider, tokens, binding: flow.target.binding, grantId: crypto.randomUUID() },
           previous?.row.secret_ref,
         );
+        deps.onOAuthGrantChanged?.(flow.input);
       }),
   });
 
@@ -144,8 +151,8 @@ export const createOAuthGrants = (deps: ExtensionConnectionServiceDeps, mutate: 
     };
   };
 
-  const disconnect = async (input: ConnectionKey) => {
-    const principal = await owner();
+  const disconnect = async (input: ConnectionKey, expected?: string) => {
+    const principal = await requireOwner(expected);
     const key = ownedKey(input, principal);
     const saved = await mutate(async () => {
       await assertOwner(principal);
@@ -154,6 +161,7 @@ export const createOAuthGrants = (deps: ExtensionConnectionServiceDeps, mutate: 
       if (!saved) return null;
       await credentials.remove(key);
       await deleteSecret(deps, saved.row.secret_ref, "disconnect_oauth_grant");
+      deps.onOAuthGrantChanged?.(input);
       return saved.grant;
     });
     if (saved?.provider && saved.tokens) await revokeTokens(fetchFn, saved.provider, saved.tokens);
@@ -161,19 +169,20 @@ export const createOAuthGrants = (deps: ExtensionConnectionServiceDeps, mutate: 
 
   const refreshing = new Map<string, Promise<void>>();
 
-  const invalidate = async (scope: OAuthGrantScope, ref: string) =>
+  const invalidate = async (input: ConnectionKey, scope: OAuthGrantScope, ref: string) =>
     mutate(async () => {
       const current = await load(scope.key);
       if (current?.row.secret_ref !== ref || !current.grant?.tokens) return;
       const { binding, grantId } = current.grant;
       await save(scope.key, current.row.provider, { binding, grantId }, ref);
+      deps.onOAuthGrantChanged?.(input);
     });
 
   const refresh = async (input: ConnectionKey, scope: OAuthGrantScope, ref: string, grant: Grant) => {
     // A waiter can finish reading the previous secret after an earlier refresh has settled.
     // Reusing that refresh token could cause a provider to revoke the entire rotated grant.
     if ((await credentials.get(scope.key))?.secret_ref !== ref) return;
-    if (!grant.provider || !grant.tokens?.refreshToken) return invalidate(scope, ref);
+    if (!grant.provider || !grant.tokens?.refreshToken) return invalidate(input, scope, ref);
     const { provider, tokens, binding, grantId } = grant;
     const updated = await exchangeTokens(
       fetchFn,
@@ -185,7 +194,7 @@ export const createOAuthGrants = (deps: ExtensionConnectionServiceDeps, mutate: 
       tokens.scopes,
       now,
     );
-    if (!updated) return invalidate(scope, ref);
+    if (!updated) return invalidate(input, scope, ref);
     updated.refreshToken ??= tokens.refreshToken;
     const stored = await mutate(async () => {
       const current = await credentials.get(scope.key);
@@ -238,7 +247,7 @@ export const createOAuthGrants = (deps: ExtensionConnectionServiceDeps, mutate: 
       secrets,
       ref,
       reject: async () => {
-        await invalidate(scope, ref);
+        await invalidate(input, scope, ref);
         throw new ReconnectRequired();
       },
     };

@@ -52,7 +52,7 @@ const localRemovalError = (error: unknown) => {
   return parsed.success ? new LocalRemovalConflictError(parsed.data.error, parsed.data.details) : error;
 };
 
-const expectedIdentityQuery = (expected?: AccountReadIdentity | null) => {
+export const expectedIdentityQuery = (expected?: AccountReadIdentity | null) => {
   if (expected === undefined) return "";
   const query = new URLSearchParams(
     expected === null ? { local: "true" } : { accountId: expected.accountId, managerOrigin: expected.managerOrigin },

@@ -68,6 +68,17 @@ export const productionAppDependencies: AppDependencies = {
   installExtensionSource,
 };
 
+const publishOAuthGrantChange = (
+  eventBus: WireExtensionServicesInput["eventBus"],
+  { projectId, extensionId }: { projectId: string; extensionId: string },
+) =>
+  eventBus.emit("extension_events", "set", {
+    id: crypto.randomUUID(),
+    projectId,
+    extensionId,
+    eventId: "pstdio.host.event.connection-oauth.changed",
+  });
+
 export const wireAppExtensionServices = async (input: WireExtensionServicesInput) => {
   let installCatalog: ReturnType<typeof createCatalogInstaller>;
   const extensionInstallations = createExtensionInstallations({
@@ -122,6 +133,7 @@ export const wireAppExtensionServices = async (input: WireExtensionServicesInput
   const extensionConnectionService = createExtensionConnectionService({
     connectionsDBService: input.extensionConnectionsDBService,
     secretStore: input.dependencies.connectionSecretStore ?? createFileConnectionSecretStore(input.storageRoot),
+    onOAuthGrantChanged: (key) => publishOAuthGrantChange(input.eventBus, key),
     oauthOwner: async () => {
       const { login, signInRequired } = await input.accountService.status();
       if (signInRequired) throw new Error("Sign in to Prompt Studio to use this connection.");

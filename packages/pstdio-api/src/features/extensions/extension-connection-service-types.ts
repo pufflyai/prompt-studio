@@ -29,6 +29,7 @@ export type ExtensionConnectionServiceDeps = {
   onCleanupError?: (error: unknown, context: ConnectionCleanupContext) => void;
   fetch?: typeof fetch;
   oauthOwner?: () => Promise<string>;
+  onOAuthGrantChanged?: (input: ConnectionKey) => void;
   now?: () => number;
   onRequestComplete?: (audit: ConnectionRequestAudit) => void | Promise<void>;
 };

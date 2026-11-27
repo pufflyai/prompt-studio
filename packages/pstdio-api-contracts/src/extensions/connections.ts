@@ -6,7 +6,7 @@ export const workbenchExtensionConnectionRecordSchema = z.object({
   localId: z.string(),
   extensionId: z.string(),
   label: localizableStringSchema,
-  authType: z.enum(["bearer", "header"]),
+  authType: z.enum(["bearer", "header", "oauth"]),
   supportsCheck: z.boolean(),
   scope: z.enum(["project", "global"]).optional(),
 });

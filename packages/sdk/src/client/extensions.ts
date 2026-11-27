@@ -22,6 +22,7 @@ import type {
 } from "pstdio-api-contracts";
 import type { ExtensionOAuthStatus } from "pstdio-api-contracts/extension-kernel";
 import type { CommandStream } from "../extensions/command-stream";
+import { type AccountReadIdentity, expectedIdentityQuery } from "./account";
 import { createExtensionControlsClient } from "./extension-controls";
 import { createExtensionManagementClient } from "./extension-management";
 import { type CommandStreamClientEvent, openExtensionCommandStream, streamExtensionCommand } from "./extension-stream";
@@ -71,9 +72,15 @@ export type ExtensionClient = ReturnType<typeof createExtensionControlsClient> &
       projectId: string,
       extensionId: string,
       connectionId: string,
+      expected?: AccountReadIdentity | null,
     ): Promise<StartExtensionOAuthResponse>;
     connectionOAuthStatus(projectId: string, extensionId: string, connectionId: string): Promise<ExtensionOAuthStatus>;
-    disconnectConnectionOAuth(projectId: string, extensionId: string, connectionId: string): Promise<void>;
+    disconnectConnectionOAuth(
+      projectId: string,
+      extensionId: string,
+      connectionId: string,
+      expected?: AccountReadIdentity | null,
+    ): Promise<void>;
     checkConnection(projectId: string, extensionId: string, connectionId: string): Promise<ExtensionConnectionRecord>;
     deleteConnection(
       projectId: string,
@@ -122,12 +129,12 @@ export const createExtensionClient = (
       `/v1/projects/${projectId}/extension-connections/${encodeURIComponent(extensionId)}/${encodeURIComponent(connectionId)}`,
       { method: "PUT", body },
     ),
-  startConnectionOAuth: (projectId, extensionId, connectionId) =>
-    request(oauthPath(projectId, extensionId, connectionId), { method: "POST" }),
+  startConnectionOAuth: (projectId, extensionId, connectionId, expected) =>
+    request(oauthPath(projectId, extensionId, connectionId) + expectedIdentityQuery(expected), { method: "POST" }),
   connectionOAuthStatus: (projectId, extensionId, connectionId) =>
     request(oauthPath(projectId, extensionId, connectionId)),
-  disconnectConnectionOAuth: (projectId, extensionId, connectionId) =>
-    request(oauthPath(projectId, extensionId, connectionId), { method: "DELETE" }),
+  disconnectConnectionOAuth: (projectId, extensionId, connectionId, expected) =>
+    request(oauthPath(projectId, extensionId, connectionId) + expectedIdentityQuery(expected), { method: "DELETE" }),
   checkConnection: (projectId, extensionId, connectionId) =>
     request(
       `/v1/projects/${projectId}/extension-connections/${encodeURIComponent(extensionId)}/${encodeURIComponent(connectionId)}/check`,

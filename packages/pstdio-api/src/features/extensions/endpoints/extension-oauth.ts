@@ -1,6 +1,7 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import { extensionOAuthStatusSchema, startExtensionOAuthResponseSchema } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
+import { expectedProjectAccountQuery, readExpectedAccount } from "../../account/read-identity";
 import { OAUTH_CALLBACK_PATH } from "../connection-oauth/consent";
 import { oauthUrl } from "../connection-oauth/provider";
 import type { ExtensionsRouteDeps } from "../deps";
@@ -17,7 +18,7 @@ export const startExtensionOAuthRoute = createRoute({
   method: "post",
   path: location,
   tags: ["Extensions"],
-  request: { params: target },
+  request: { params: target, query: expectedProjectAccountQuery },
   responses: {
     200: {
       description: "Provider sign-in URL for the current host principal.",
@@ -45,7 +46,7 @@ export const disconnectExtensionOAuthRoute = createRoute({
   method: "delete",
   path: location,
   tags: ["Extensions"],
-  request: { params: target },
+  request: { params: target, query: expectedProjectAccountQuery },
   responses: { 204: { description: "The local OAuth grant was disconnected." }, 400: error },
 });
 
@@ -64,6 +65,12 @@ export const extensionOAuthCallbackRoute = createRoute({
 const safeError = (error: unknown) =>
   error instanceof ConnectionInputError ? error.message : "The OAuth connection operation could not be completed.";
 
+const expectedPrincipal = (query: z.infer<typeof expectedProjectAccountQuery>) => {
+  if (query.local) return "local";
+  const expected = readExpectedAccount(query);
+  return expected && JSON.stringify([expected.managerOrigin, expected.accountId]);
+};
+
 const redirectUriFor = (requestUrl: string) => new URL(OAUTH_CALLBACK_PATH, oauthUrl(requestUrl)).href;
 
 export const startExtensionOAuthHandler =
@@ -72,7 +79,11 @@ export const startExtensionOAuthHandler =
     c.header("cache-control", "no-store");
     try {
       return c.json(
-        await deps.extensionConnectionService.oauth.start(c.req.valid("param"), redirectUriFor(c.req.url)),
+        await deps.extensionConnectionService.oauth.start(
+          c.req.valid("param"),
+          redirectUriFor(c.req.url),
+          expectedPrincipal(c.req.valid("query")),
+        ),
         200,
       );
     } catch (error) {
@@ -95,7 +106,10 @@ export const disconnectExtensionOAuthHandler =
   (deps: ExtensionsRouteDeps): AppRouteHandler<typeof disconnectExtensionOAuthRoute> =>
   async (c) => {
     try {
-      await deps.extensionConnectionService.oauth.disconnect(c.req.valid("param"));
+      await deps.extensionConnectionService.oauth.disconnect(
+        c.req.valid("param"),
+        expectedPrincipal(c.req.valid("query")),
+      );
       return c.body(null, 204);
     } catch (error) {
       return c.json({ error: safeError(error) }, 400);
