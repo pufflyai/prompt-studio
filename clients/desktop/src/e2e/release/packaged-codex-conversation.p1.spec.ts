@@ -54,7 +54,7 @@ test("sends a message and a follow-up in the same packaged Codex conversation", 
       await expect(send).toBeEnabled({ timeout: 20_000 });
       await send.click();
       await expect(page.getByRole("log").getByText(message, { exact: true })).toBeVisible({ timeout: 20_000 });
-      await expect(send).toHaveAttribute("aria-label", "Queue message");
+      await expect(send).toHaveAttribute("aria-label", "Stop Response", { timeout: 20_000 });
       await expect(alert).toHaveCount(0);
       // The reply must arrive after the UI has observed the running conversation.
       writeFileSync(join(replies, String(turn)), "");

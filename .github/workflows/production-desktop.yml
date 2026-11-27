@@ -123,6 +123,10 @@ jobs:
         run: bun scripts/test.ts --performance-family desktop --prebuilt
       - name: "[phase:test] Test the declared shared or native packaged contract"
         if: inputs.kind == 'functional'
+        env:
+          # The release desktop job owns the critical workflows on the archived app.
+          # The unpublished nightly Windows build is created here.
+          CI_EXCLUDE_RELEASE_DESKTOP_WORKFLOWS: ${{ inputs.channel != 'nightly' || matrix.platform != 'win32' }}
         run: bun scripts/test.ts --artifact packaged-desktop --prebuilt --out test-results/ci/desktop-contract-plan.json
       - name: Download the immutable candidate identity
         uses: ./__test-tmp__/workflow-actions/.github/actions/download-artifact-by-id

@@ -78,6 +78,8 @@ if (performanceFamily) {
     const artifact = value("--artifact");
     if (artifact && !["compiled-cli", "packaged-desktop", "source"].includes(artifact))
       throw new Error("Unknown test artifact");
+    const omitReleaseDesktopWorkflows =
+      artifact === "packaged-desktop" && process.env.CI_EXCLUDE_RELEASE_DESKTOP_WORKFLOWS === "true";
     const priorities = (value("--priority") ?? inferred).toUpperCase().split(",");
     if (priorities.some((p) => !testPriorities.includes(p as "P0"))) throw new Error("Choose p0, p1, p2 or p3");
     let selected = selectLocalTests(
@@ -86,6 +88,7 @@ if (performanceFamily) {
     ).filter(
       (test) =>
         (!requested.length || requested.some((path) => test === path || test.startsWith(`${path}/`))) &&
+        !(omitReleaseDesktopWorkflows && test.startsWith("clients/desktop/src/e2e/release/")) &&
         priorities.includes(priorityFromFile(test)!) &&
         (artifact !== "compiled-cli" ||
           (test.startsWith("packages/e2e/src/packaged/") && /\.test\.tsx?$/.test(test))) &&
