@@ -39,15 +39,38 @@ test("preserves reading position when hidden during a keyboard scroll", async ({
   const viewport = preview.getByRole("log").locator(':scope > [data-scope="scroll-area"] > [data-part="viewport"]');
   await expect(latest).toBeInViewport();
 
-  // Hide before Page Up's smooth scroll ends. Chrome delivers its queued scroll event to the hidden viewport.
+  const hide = await preview.getByRole("button", { name: "Hide panel", exact: true }).elementHandle();
+
+  // Hide between two steps of Page Up's smooth scroll, after the reader has left the tail. The click
+  // runs in its own task, as a user's click does, so the next step still scrolls the laid-out viewport
+  // and its scroll event reaches the hidden one. A click inside the scroll event would hide the
+  // viewport before that step.
+  await viewport.evaluate((element, button) => {
+    const view = element.ownerDocument.defaultView as Window & { readingRow?: Promise<string> };
+    view.readingRow = new Promise((resolve) => {
+      let steps = 0;
+      const hideWhileScrolling = () => {
+        if (!element.ownerDocument.querySelector('[aria-label="Scroll to latest message"]')) return;
+        if (++steps < 2) return;
+        element.removeEventListener("scroll", hideWhileScrolling);
+        const bounds = element.getBoundingClientRect();
+        const row = [...element.querySelectorAll("p")].find(
+          (paragraph) => paragraph.getBoundingClientRect().bottom > bounds.top + bounds.height / 3,
+        );
+        setTimeout(() => (button as HTMLButtonElement).click());
+        resolve(row?.textContent?.match(/^Response \d+\./)?.[0] ?? "");
+      };
+      element.addEventListener("scroll", hideWhileScrolling);
+    });
+  }, hide);
   await viewport.press("PageUp");
-  await expect(jump).toBeVisible();
-  await viewport.evaluate((element) => {
-    const hide = [...element.ownerDocument.querySelectorAll("button")].find((b) => b.textContent === "Hide panel");
-    hide?.click();
-  });
+  const readingRow = await viewport.evaluate(
+    (element) => (element.ownerDocument.defaultView as Window & { readingRow?: Promise<string> }).readingRow ?? "",
+  );
+  expect(readingRow).toMatch(/^Response \d+\.$/);
   await expect(viewport).toBeHidden();
   await preview.getByRole("button", { name: "Show panel", exact: true }).click();
+  await expect(preview.getByText(new RegExp(`^${readingRow.replace(".", "\\.")}`))).toBeInViewport();
   await expect(jump).toBeVisible();
   await expect(latest).not.toBeInViewport();
 });
