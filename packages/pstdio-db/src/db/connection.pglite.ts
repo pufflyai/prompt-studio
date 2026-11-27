@@ -125,7 +125,11 @@ export type DbOpenPhase =
   | "database_migrated"
   | "database_index_nodes";
 
-const createDatabaseCloser = (db: { close(): Promise<void> }, cleanup: () => Promise<void>, releaseLock: () => void) => {
+const createDatabaseCloser = (
+  db: { close(): Promise<void> },
+  cleanup: () => Promise<void>,
+  releaseLock: () => void,
+) => {
   let closed = false;
   return async () => {
     if (closed) return;
