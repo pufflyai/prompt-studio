@@ -138,7 +138,9 @@ try {
   // Recording overhead never enters the timing files or statistics.
   for (const workload of ["small", "planner"])
     for (const label of ["A", "B"]) await sample(workload, "recording", label, true);
-  if (failures.length) throw new Error("Comparison or recording incomplete; preserve failures and raw artifacts");
+  await Bun.write(join(output, "final-outcome.json"), JSON.stringify({ summary, failures }, null, 2));
+  if (failures.length || Object.values(summary).some((result) => !result.complete))
+    throw new Error("Comparison or recording incomplete; preserve failures and raw artifacts");
 } finally {
   rmSync(temporary, { recursive: true, force: true });
 }
