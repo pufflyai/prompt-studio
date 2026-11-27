@@ -50,7 +50,7 @@ export const getExtensionArtifactImageUrl = (
   path: string,
   webviewId: string,
 ) => getApiClient().extensions.artifacts.imageUrl(projectId, instanceId, mountId, path, webviewId);
-export interface DroppedExtensionFolder {
+interface DroppedExtensionFolder {
   name: string;
   force?: boolean;
   /** Each file's name is its path relative to the folder root. */

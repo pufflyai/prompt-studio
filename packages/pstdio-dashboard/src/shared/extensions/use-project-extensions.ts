@@ -3,7 +3,7 @@ import type { ScopedQuery } from "@pstdio/sdk/extensions";
 import { useScopedQuery } from "@pstdio/sdk/extensions/react";
 import type { ExtensionUpgradeReviewResolution } from "pstdio-api-contracts";
 import { useEffect, useSyncExternalStore } from "react";
-import { addLocalExtensionFolder, type DroppedExtensionFolder } from "./api";
+import { addLocalExtensionFolder } from "./api";
 import { getAutomationPreferences } from "./automation-preferences";
 import {
   type ExtensionSettingTarget,
@@ -12,6 +12,7 @@ import {
 } from "./extension-setting-operations";
 import { publishExtensionCommandEvent } from "./extension-webview-broadcast";
 import { getProjectExtensionQueries } from "./project-extension-queries";
+import { readDroppedFolder } from "./read-dropped-folder";
 import { trackExtensionSourceChange, useExtensionMutation } from "./use-extension-mutation";
 import { surfaceWebviewCommandOutcome } from "./webview-command-outcome";
 
@@ -66,7 +67,11 @@ export const useInstallMarketplaceExtension = (projectId: string | undefined) =>
   });
 export const useAddLocalExtensionFolder = (projectId: string | undefined) =>
   useExtensionMutation(projectId, "add-folder", {
-    run: (folder: DroppedExtensionFolder, { api, projectId }) => addLocalExtensionFolder(projectId, folder, api),
+    run: async ({ directory, force }: { directory: FileSystemDirectoryEntry; force: boolean }, target) => {
+      const folder = await readDroppedFolder(directory);
+      target.assertCurrent();
+      return addLocalExtensionFolder(target.projectId, { ...folder, force }, target.api);
+    },
     accept: (result, _value, cache) => cache.storeExtension(result.extension),
   });
 export const useSetProjectExtensionEnabled = (projectId: string | undefined) =>

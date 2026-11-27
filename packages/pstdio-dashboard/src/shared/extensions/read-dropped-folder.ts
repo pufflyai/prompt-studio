@@ -31,7 +31,7 @@ const collectFiles = async (directory: FileSystemDirectoryEntry, prefix: string)
   return files;
 };
 
-/** Reads a dropped directory. Each returned file is named by its path relative to the directory. */
+/** Reads fresh file references with names relative to the dropped directory. */
 export const readDroppedFolder = async (directory: FileSystemDirectoryEntry) => ({
   name: directory.name,
   files: await collectFiles(directory, ""),

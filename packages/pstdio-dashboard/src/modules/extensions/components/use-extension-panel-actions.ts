@@ -3,7 +3,6 @@ import { PstdioApiError } from "@pstdio/sdk/client";
 import { createExtensionUpgradePool, extensionUpgradeNeedsReviewCode } from "pstdio-api-contracts/extension-host";
 import { useTranslation } from "react-i18next";
 import { dashboardCommandIds } from "@/shared/app/commands";
-import type { DroppedExtensionFolder } from "@/shared/extensions/api";
 import {
   useAddLocalExtensionFolder,
   useInstallMarketplaceExtension,
@@ -107,24 +106,24 @@ export const useExtensionPanelActions = (projectId: string | undefined, capacity
       },
     );
   };
-  const handleDrop = async (folder: DroppedExtensionFolder) => {
+  const handleDrop = async (directory: FileSystemDirectoryEntry, force = false) => {
     await feedback.run(
       "$folder",
       {
-        running: t("projectSettings.extensionsPanel.dropZone.uploading", { name: folder.name }),
+        running: t("projectSettings.extensionsPanel.dropZone.uploading", { name: directory.name }),
         failed: t("projectSettings.extensionsPanel.dropZone.failed"),
       },
       async () => {
         try {
-          return await addFolder.mutateAsync(folder);
+          return await addFolder.mutateAsync({ directory, force });
         } catch (error) {
-          if (error instanceof PstdioApiError && error.code === "extension_already_installed" && !folder.force) {
-            feedback.setReplacement({ name: folder.name, retry: () => handleDrop({ ...folder, force: true }) });
+          if (error instanceof PstdioApiError && error.code === "extension_already_installed" && !force) {
+            feedback.setReplacement({ name: directory.name, retry: () => handleDrop(directory, true) });
           }
           throw error;
         }
       },
-      { installedId: (result) => result.extension.id, draft: { folder: folder.name, force: folder.force === true } },
+      { installedId: (result) => result.extension.id, draft: { folder: directory.name, force } },
     );
   };
   return {

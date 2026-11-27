@@ -41,8 +41,12 @@ const useUpgradeReviewTarget = (
 ) => {
   const [reviewTarget, setReviewTarget] = useState<ReviewTarget | null>(null);
   const retryOrReview = (id: string, upgrade = false) => {
+    if (!projectId) return;
     const extension = extensions?.find((entry) => entry.id === id);
-    if (!projectId || !extension) return;
+    if (!extension) {
+      if (!upgrade) actions.retry(id);
+      return;
+    }
     if (!extension.hasPublishedAlternative && !actions.actions[id]?.needsReview)
       return upgrade ? void actions.handleUpgrade(extension) : actions.retry(id);
     const load = getApiClient()

@@ -3,13 +3,11 @@ import { FolderPlus } from "lucide-react";
 import { type DragEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useActionError } from "@/shared/components/use-action-error";
-import type { DroppedExtensionFolder } from "@/shared/extensions/api";
-import { readDroppedFolder } from "./read-dropped-folder";
 
 export interface ExtensionFolderDropZoneProps {
   /** Status text for the folder copy while it is running. */
   addingLabel?: string;
-  onDropFolder: (folder: DroppedExtensionFolder) => void;
+  onDropFolder: (directory: FileSystemDirectoryEntry) => void;
 }
 
 const carriesFiles = (event: DragEvent) => event.dataTransfer.types.includes("Files");
@@ -34,27 +32,20 @@ export const ExtensionFolderDropZone = (props: ExtensionFolderDropZoneProps) => 
     setDragging(false);
   };
 
-  const handleDrop = async (event: DragEvent) => {
+  const handleDrop = (event: DragEvent) => {
     event.preventDefault();
     setDragging(false);
     if (adding) return;
     clearError();
 
-    // The browser only exposes dropped entries while the drop event runs, so take it before any await.
+    // Capture the directory during the drop event so Retry can read it again after edits.
     const entry = event.dataTransfer.items[0]?.webkitGetAsEntry();
     if (!entry?.isDirectory) {
       showError({ title: t("projectSettings.extensionsPanel.dropZone.notFolder") });
       return;
     }
 
-    try {
-      onDropFolder(await readDroppedFolder(entry as FileSystemDirectoryEntry));
-    } catch (error) {
-      showError({
-        title: t("projectSettings.extensionsPanel.dropZone.failed"),
-        description: error instanceof Error ? error.message : undefined,
-      });
-    }
+    onDropFolder(entry as FileSystemDirectoryEntry);
   };
 
   return (
@@ -69,7 +60,7 @@ export const ExtensionFolderDropZone = (props: ExtensionFolderDropZoneProps) => 
       onDragEnter={handleDragOver}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
-      onDrop={(event) => void handleDrop(event)}
+      onDrop={handleDrop}
       data-testid="extension-folder-drop-zone"
     >
       {errorNotice}
