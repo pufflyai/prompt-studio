@@ -71,6 +71,8 @@ export interface BackendWorkerOptions {
   entryPath: string;
   watchdog?: WatchdogOptions;
   drainDeadlineMs?: number;
+  /** The host records startup ownership before the child may load extension code. */
+  onStarting?: (stop: () => Promise<void>) => void;
 }
 
 type WorkerJob = ReturnType<typeof createWindowsProcessJob>;
@@ -336,8 +338,7 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
   const stop = async (graceful: boolean) => {
     fail(new BackendUnavailableError("The extension backend was stopped."));
     try {
-      await stopTree(graceful);
-      await exited;
+      await stopTree(graceful).then(() => exited);
     } finally {
       await Promise.all(scopeCleanups);
     }
@@ -358,6 +359,7 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
     LOAD_DEADLINE_MS,
   );
   try {
+    options.onStarting?.(() => stop(false));
     await ready.promise;
     if (!send({ v: BACKEND_PROTOCOL_VERSION, type: "load", entryPath: options.entryPath }))
       throw stopped ?? new BackendUnavailableError("The extension backend could not be reached.");

@@ -1,8 +1,14 @@
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { deserialize } from "node:v8";
 import { parentPort, type Worker } from "node:worker_threads";
 import { createWindowsProcessJob } from "pstdio-paths/windows-process-job";
+import {
+  type BackendDefinitionCommandInput,
+  type BackendDefinitionResult,
+  captureBackendDefinitionCommand,
+} from "./preparation-backend-command";
 import {
   BUNDLE_START,
   type BundleCommandInput,
@@ -28,6 +34,7 @@ interface CommandResult {
   stderr: string;
   outcome?: BundleOutcome;
   timedOut?: boolean;
+  definition?: BackendDefinitionResult;
 }
 const commandError = (error: unknown) => ({
   exitCode: 1,
@@ -35,7 +42,12 @@ const commandError = (error: unknown) => ({
   stderr: error instanceof Error ? error.message : String(error),
 });
 type CommandMessage =
-  | { kind: "command"; id: string; input: CommandInput | BundleCommandInput; build: boolean }
+  | {
+      kind: "command";
+      id: string;
+      input: CommandInput | BundleCommandInput | BackendDefinitionCommandInput;
+      build: boolean;
+    }
   | { kind: "command-cancel"; id: string };
 
 const stopChild = async (child: Bun.Subprocess) => {
@@ -179,9 +191,20 @@ export const ownPreparationCommands = (
           children.set(message.id, owned.stop);
           return owned;
         };
-        const result = await ("deadlineMs" in message.input
-          ? captureBundleCommand(message.input, spawn)
-          : captureCommand(message.input, spawn));
+        const capture = () => {
+          if ("backendDefinition" in message.input)
+            return captureBackendDefinitionCommand(
+              message.input,
+              (stop) => children.set(message.id, stop),
+              () => {
+                if (stopped) throw new Error("Extension worker retired.");
+                controller.signal.throwIfAborted();
+              },
+            );
+          if ("deadlineMs" in message.input) return captureBundleCommand(message.input, spawn);
+          return captureCommand(message.input, spawn);
+        };
+        const result = await capture();
         if (!stopped) worker.postMessage({ kind: "command-result", id: message.id, result });
       } catch (error) {
         if (!stopped)
@@ -209,7 +232,7 @@ export const ownPreparationCommands = (
   };
 };
 const requestPreparationCommand = (
-  input: CommandInput | BundleCommandInput,
+  input: CommandInput | BundleCommandInput | BackendDefinitionCommandInput,
   build: boolean,
   signal?: AbortSignal,
 ): Promise<CommandResult> => {
@@ -232,6 +255,16 @@ const requestPreparationCommand = (
 
 export const runPreparationCommand = (input: CommandInput, signal?: AbortSignal) =>
   requestPreparationCommand(input, isPreparationBuildCommand(), signal);
+
+export const readPreparationBackendDefinition = async (
+  input: Omit<BackendDefinitionCommandInput, "backendDefinition">,
+) => {
+  const result = await requestPreparationCommand({ ...input, backendDefinition: true }, false);
+  const { BackendUnavailableError, deserializeBackendError } = await import("./backend-process/protocol");
+  if (!result.definition) throw new BackendUnavailableError(result.stderr || "Extension definition inspection failed.");
+  if (!result.definition.ok) throw deserializeBackendError(result.definition.error);
+  return deserialize(result.definition.value);
+};
 
 // Revision bundling already occupies its preparation worker slot.
 export const runPreparationBundle = (input: BundleCommandInput): Promise<CommandResult> =>
