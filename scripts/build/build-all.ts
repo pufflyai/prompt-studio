@@ -1,7 +1,7 @@
 import { chmodSync, copyFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { $ } from "bun";
-import { resolveBuildTargets } from "./build-targets";
+import { nativeMacBytecodeFlags, resolveBuildTargets } from "./build-targets";
 import { loadEmbedConfig, resolveEmbedFiles } from "./embed-manifest";
 import { buildPackageArtifacts } from "./package-artifacts";
 import { bundleExtensionSources } from "./bundle-extension-sources";
@@ -79,7 +79,7 @@ for (const { target, pkg, bin } of buildTargets) {
     chmodSync(outfile, 0o755);
   } else {
     console.log(`\nCompiling for ${target}...`);
-    await $`bun build ${CLI_ENTRY} ${PREPARATION_ENTRIES} --compile --splitting --root . --external playwright-core --external "chromium-bidi/*" --target=${target} --asset-naming [dir]/[name].[ext] ${defines} ${recoveryWorkerDefine(target)} --outfile ${outfile}`;
+    await $`bun build ${CLI_ENTRY} ${PREPARATION_ENTRIES} --compile --splitting ${nativeMacBytecodeFlags(target)} --root . --external playwright-core --external "chromium-bidi/*" --target=${target} --asset-naming [dir]/[name].[ext] ${defines} ${recoveryWorkerDefine(target)} --outfile ${outfile}`;
   }
   assertCoreBinarySize(outfile);
   console.log(`  → ${relative(".", outfile)}`);

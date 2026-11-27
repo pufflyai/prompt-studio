@@ -1,6 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { $ } from "bun";
+import { nativeMacBytecodeFlags } from "./build-targets";
 import { loadEmbedConfig, resolveEmbedFiles } from "./embed-manifest";
 import { bundleExtensionSources } from "./bundle-extension-sources";
 import { assertCoreBinarySize } from "./core-binary-size";
@@ -64,7 +65,7 @@ const extensionReleaseRef = process.env.PSTDIO_EXTENSION_RELEASE_REF?.trim();
 const defines = extensionReleaseRef ? ["--define", `PSTDIO_BUILD_EXTENSION_RELEASE_REF=${JSON.stringify(extensionReleaseRef)}`] : [];
 
 console.log(`\nCompiling for ${target}...`);
-await $`bun build ${CLI_ENTRY} ${PREPARATION_ENTRIES} --compile --splitting --root . --external playwright-core --external "chromium-bidi/*" --target=${target} --asset-naming [dir]/[name].[ext] ${defines} ${recoveryWorkerDefine(target)} --outfile ${outfile}`;
+await $`bun build ${CLI_ENTRY} ${PREPARATION_ENTRIES} --compile --splitting ${nativeMacBytecodeFlags(target)} --root . --external playwright-core --external "chromium-bidi/*" --target=${target} --asset-naming [dir]/[name].[ext] ${defines} ${recoveryWorkerDefine(target)} --outfile ${outfile}`;
 assertCoreBinarySize(outfile);
 
 // 4. Verify the binary works
