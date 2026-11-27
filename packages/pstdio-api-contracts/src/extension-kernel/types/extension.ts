@@ -251,6 +251,39 @@ export interface ExtensionConnectionContribution extends ContributionDefinition<
   supportsStreaming?: boolean;
 }
 
+export interface RestOAuthConnectionAuth {
+  type: "oauth";
+  baseUrl: string;
+  authorizationEndpoint: string;
+  issuer?: string;
+  tokenEndpoint: string;
+  revocationEndpoint?: string;
+  clientId: string;
+  scopes?: readonly string[];
+}
+
+export interface RestOAuthExtensionConnection extends Omit<ExtensionConnectionContribution, "scope" | "auth"> {
+  scope?: "project";
+  auth: RestOAuthConnectionAuth;
+}
+
+export interface McpExtensionConnection extends ContributionDefinition<"connection"> {
+  label: Localizable<string>;
+  transport: "mcp";
+  scope?: "project";
+  auth: {
+    type: "oauth";
+    resourceUrl: string;
+    /** Declare an exact trusted origin when the authorization server is separate from the MCP server. */
+    authorizationServerOrigin?: string;
+    scopes?: readonly string[];
+  };
+  allowedTools: readonly string[];
+}
+
+export type HttpExtensionConnection = ExtensionConnectionContribution | RestOAuthExtensionConnection;
+export type DeclaredExtensionConnection = HttpExtensionConnection | McpExtensionConnection;
+
 export interface LocalExtensionSource {
   name: string;
   path: string;
@@ -336,7 +369,7 @@ export interface AssetContributions {
 
 /** Provider contributions: harnesses, workspace types. */
 export interface ProviderContributions {
-  connections?: readonly ExtensionConnectionContribution[];
+  connections?: readonly DeclaredExtensionConnection[];
   workspaceTypes?: readonly WorkspaceTypeProvider[];
   harnesses?: readonly HarnessProvider[];
   resourceHierarchyProviders?: readonly ResourceHierarchyProvider[];

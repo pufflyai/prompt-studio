@@ -2,7 +2,7 @@ import type {
   CommandMiddlewareHandler,
   CommandPaletteContribution,
   CommandRunHandler,
-  ExtensionConnectionContribution,
+  DeclaredExtensionConnection,
   ExtensionDefinition,
   ExtensionSourceKind,
   HarnessProvider,
@@ -103,7 +103,7 @@ export interface RuntimeConnectionRecord {
   extensionId: string;
   name: string;
   sourcePath: string;
-  contribution: ExtensionConnectionContribution;
+  contribution: DeclaredExtensionConnection;
 }
 
 export interface RuntimePrivateHandlerRecord {

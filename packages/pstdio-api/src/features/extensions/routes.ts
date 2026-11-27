@@ -42,6 +42,16 @@ import {
   uploadExtensionFileRoute,
 } from "./endpoints/extension-files";
 import {
+  disconnectExtensionOAuthHandler,
+  disconnectExtensionOAuthRoute,
+  extensionOAuthCallbackHandler,
+  extensionOAuthCallbackRoute,
+  extensionOAuthStatusHandler,
+  extensionOAuthStatusRoute,
+  startExtensionOAuthHandler,
+  startExtensionOAuthRoute,
+} from "./endpoints/extension-oauth";
+import {
   getExtensionProcessEnvironmentHandler,
   getExtensionProcessEnvironmentRoute,
   grantExtensionProcessEnvironmentHandler,
@@ -168,6 +178,10 @@ const registerExtensionSettingsRoutes = (routes: ExtensionRoutes, deps: Extensio
   routes.openapi(listExtensionConnectionsRoute, listExtensionConnectionsHandler(deps));
   routes.openapi(configureExtensionConnectionRoute, configureExtensionConnectionHandler(deps));
   routes.openapi(checkExtensionConnectionRoute, checkExtensionConnectionHandler(deps));
+  routes.openapi(startExtensionOAuthRoute, startExtensionOAuthHandler(deps));
+  routes.openapi(extensionOAuthStatusRoute, extensionOAuthStatusHandler(deps));
+  routes.openapi(disconnectExtensionOAuthRoute, disconnectExtensionOAuthHandler(deps));
+  routes.openapi(extensionOAuthCallbackRoute, extensionOAuthCallbackHandler(deps));
   routes.openapi(deleteExtensionConnectionRoute, deleteExtensionConnectionHandler(deps));
   routes.openapi(getExtensionProcessEnvironmentRoute, getExtensionProcessEnvironmentHandler(deps));
   routes.openapi(grantExtensionProcessEnvironmentRoute, grantExtensionProcessEnvironmentHandler(deps));

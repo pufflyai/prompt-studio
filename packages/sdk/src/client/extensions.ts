@@ -17,14 +17,19 @@ import type {
   ListExtensionCommandsResponse,
   ListExtensionConnectionsResponse,
   ListProjectExtensionsResponse,
+  StartExtensionOAuthResponse,
   UpgradeProjectExtensionResponse,
 } from "pstdio-api-contracts";
+import type { ExtensionOAuthStatus } from "pstdio-api-contracts/extension-kernel";
 import type { CommandStream } from "../extensions/command-stream";
 import { createExtensionControlsClient } from "./extension-controls";
 import { createExtensionManagementClient } from "./extension-management";
 import { type CommandStreamClientEvent, openExtensionCommandStream, streamExtensionCommand } from "./extension-stream";
 import type { RequestFn } from "./request";
 import type { createSessionStreamTransport } from "./session-stream";
+
+const oauthPath = (projectId: string, extensionId: string, connectionId: string) =>
+  `/v1/projects/${encodeURIComponent(projectId)}/extension-connections/${encodeURIComponent(extensionId)}/${encodeURIComponent(connectionId)}/oauth`;
 
 export type ExtensionClient = ReturnType<typeof createExtensionControlsClient> &
   ReturnType<typeof createExtensionManagementClient> & {
@@ -62,6 +67,13 @@ export type ExtensionClient = ReturnType<typeof createExtensionControlsClient> &
       connectionId: string,
       input: ConfigureExtensionConnectionInput,
     ): Promise<ExtensionConnectionRecord>;
+    startConnectionOAuth(
+      projectId: string,
+      extensionId: string,
+      connectionId: string,
+    ): Promise<StartExtensionOAuthResponse>;
+    connectionOAuthStatus(projectId: string, extensionId: string, connectionId: string): Promise<ExtensionOAuthStatus>;
+    disconnectConnectionOAuth(projectId: string, extensionId: string, connectionId: string): Promise<void>;
     checkConnection(projectId: string, extensionId: string, connectionId: string): Promise<ExtensionConnectionRecord>;
     deleteConnection(
       projectId: string,
@@ -110,6 +122,12 @@ export const createExtensionClient = (
       `/v1/projects/${projectId}/extension-connections/${encodeURIComponent(extensionId)}/${encodeURIComponent(connectionId)}`,
       { method: "PUT", body },
     ),
+  startConnectionOAuth: (projectId, extensionId, connectionId) =>
+    request(oauthPath(projectId, extensionId, connectionId), { method: "POST" }),
+  connectionOAuthStatus: (projectId, extensionId, connectionId) =>
+    request(oauthPath(projectId, extensionId, connectionId)),
+  disconnectConnectionOAuth: (projectId, extensionId, connectionId) =>
+    request(oauthPath(projectId, extensionId, connectionId), { method: "DELETE" }),
   checkConnection: (projectId, extensionId, connectionId) =>
     request(
       `/v1/projects/${projectId}/extension-connections/${encodeURIComponent(extensionId)}/${encodeURIComponent(connectionId)}/check`,

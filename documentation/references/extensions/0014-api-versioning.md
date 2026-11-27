@@ -593,4 +593,12 @@ API 0.5.1 also permits `viewMenus.side: "bottom"`. Menu sides define an initial 
 
 Extensions adopting these fields or commands require `^0.5.1` and a supporting published SDK.
 
-*Updated at: 2026-11-24*
+## OAuth named connections on main
+
+The named connection OAuth and MCP operations share the coordinated API 0.6.0
+step. Existing static connection declarations retain their bearer and header
+behavior. Extensions using browser sign-in, `ctx.connections.oauthStatus`, or
+`ctx.connections.callTool` need a host and SDK build with these additions.
+See [Named connections](0003-command-and-process-api.md#named-connections).
+
+*Updated at: 2026-11-27*

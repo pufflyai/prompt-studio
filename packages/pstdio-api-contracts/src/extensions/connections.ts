@@ -69,3 +69,15 @@ export type DeleteExtensionConnectionInput = z.infer<typeof deleteExtensionConne
 export type ExtensionConnectionSignInScope = z.infer<typeof extensionConnectionSignInScopeSchema>;
 export type SavedExtensionSignIn = z.infer<typeof savedExtensionSignInSchema>;
 export type ListExtensionConnectionsResponse = z.infer<typeof listExtensionConnectionsResponseSchema>;
+
+export const extensionOAuthStatusSchema = z.discriminatedUnion("status", [
+  z.object({ status: z.enum(["disconnected", "authorizing", "reconnect_required"]) }),
+  z.object({
+    status: z.literal("connected"),
+    grantId: z.string(),
+    scopes: z.array(z.string()),
+    expiresAt: z.iso.datetime().nullable(),
+  }),
+]);
+export const startExtensionOAuthResponseSchema = z.object({ authorizationUrl: z.url() });
+export type StartExtensionOAuthResponse = z.infer<typeof startExtensionOAuthResponseSchema>;

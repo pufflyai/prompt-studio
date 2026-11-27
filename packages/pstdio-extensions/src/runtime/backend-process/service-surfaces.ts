@@ -89,7 +89,10 @@ export const serviceSurfaces: Members = {
   net: object(calls("findFreePort")),
   // The checkpoint callback and signal in its input cross as remote values.
   diagnostics: object(calls("capture")),
-  connections: object({ ...calls("request"), stream: { kind: "iterate", signalArg: 1 } }),
+  connections: object({
+    ...calls("request", "oauthStatus", "callTool"),
+    stream: { kind: "iterate", signalArg: 1 },
+  }),
   account: object(
     calls(
       "status",

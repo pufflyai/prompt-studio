@@ -350,7 +350,7 @@ Return IDs and relevant state from mutating commands, and expose read or list co
 
 ## Named connections
 
-Extensions declare remote HTTP access by name. The host stores the base URL and credential. Extension code receives request and stream methods, never the secret value.
+Extensions declare remote HTTP and MCP access by name. The host holds credentials and applies the declared request or tool policy. Commands receive data through `ctx.connections`.
 
 ```ts
 import { defineConnection, defineExtension } from "@pstdio/sdk/extensions";
@@ -392,6 +392,66 @@ Configure, check, or revoke it through any project that enables the extension.
 New projects can use the existing global connection. Global connection metadata
 and credentials stay on the host and are not included in project sync or shared
 extension packages. Removing a project does not remove a global connection.
+
+### Browser sign-in for OAuth
+
+Use `auth.type: "oauth"` for a project connection that needs provider consent.
+REST connections keep their method and path allowlists. Declare `auth.baseUrl`,
+`auth.authorizationEndpoint`, `auth.tokenEndpoint`, and the public OAuth
+`auth.clientId` registered with the provider. Add `auth.scopes` and
+`auth.revocationEndpoint` as needed. For a path-scoped issuer, declare `auth.issuer`. Register the callback
+`/v1/extension-connections/oauth/callback` on the host origin with the provider.
+Use an HTTPS host origin or a loopback HTTP origin for local development.
+
+A Streamable HTTP MCP connection declares its resource URL and exact tool names.
+
+```ts
+import { defineConnection } from "@pstdio/sdk/extensions";
+
+const crm = defineConnection({
+  id: "crm",
+  label: "CRM",
+  transport: "mcp",
+  auth: { type: "oauth", resourceUrl: "https://crm.example.com/mcp" },
+  allowedTools: ["read_accounts", "read_agreements"],
+});
+```
+
+Add this declaration to `defineExtension({ connections: [...] })`. The host
+discovers the MCP resource and authorization server metadata and registers an
+OAuth client with the provider. The token request is bound to the MCP resource.
+Call `ctx.connections.callTool("crm", { name: "read_accounts", arguments: { cursor } })`
+from a command or schedule. The call returns the MCP tool result without a model turn.
+HTTPS endpoints must stay on HTTPS throughout discovery. Resource metadata is read
+on the declared MCP origin. If the authorization server has a separate origin,
+declare that exact origin in `auth.authorizationServerOrigin`. Discovered OAuth
+endpoints must use the trusted authorization server origin. OAuth and resource
+requests never follow redirects.
+
+The host SDK exposes management on `client.extensions`:
+
+- `startConnectionOAuth(projectId, extensionId, connectionId)` returns an
+  `authorizationUrl` to open in the browser. Provider consent returns the browser
+  to the callback. A new sign-in replaces any pending attempt for the same owner.
+- `connectionOAuthStatus(projectId, extensionId, connectionId)` returns
+  `disconnected`, `authorizing`, `connected`, or `reconnect_required`.
+  Commands read the same typed state with `ctx.connections.oauthStatus(connectionId)`.
+  The connected status contains the granted scopes, expiry if known, and an opaque
+  `grantId`. Scope cached data to this grant ID. Check it before and after the read
+  and store the result only if the grant is still connected and its ID matches.
+- `disconnectConnectionOAuth(projectId, extensionId, connectionId)` discards pending
+  authorization and the current owner's local grant. It also requests provider
+  revocation when the provider advertises or declares that endpoint.
+
+Grants belong to the project, extension, connection and active Prompt Studio
+account on the executing host. A local host without an account uses its local
+principal. A scheduled command on that host can use the same owner's grant
+after restart. The host refreshes on demand and retains rotated credentials.
+When consent is revoked or the grant cannot be renewed, sign in again.
+Tokens and registered client secrets stay behind the host connection secret
+store. See [RB 5.A.7](../../requirement-book/book.json) and
+[ADR 0034](../../adrs/0034-temporary-file-connection-secret-store.md) for the
+default storage's deployment limits.
 
 Harnesses that can use a remote execution target set `cwdRequirement: "optional"`. Their start, resume, reattach, and message inputs receive `workspace.executionTarget`. A remote target contains the provider id and its opaque provider reference. It does not contain a local path.
 

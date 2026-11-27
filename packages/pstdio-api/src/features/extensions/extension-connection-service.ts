@@ -1,6 +1,8 @@
 import type { ConfigureExtensionConnectionInput, DeleteExtensionConnectionInput } from "pstdio-api-contracts";
 import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { ExtensionConnectionsApi } from "pstdio-api-contracts/extension-kernel";
+import { createOAuthGrants } from "./connection-oauth/grants";
+import { createMcpToolCaller } from "./connection-oauth/mcp";
 import type { ConnectionSecretStore } from "./connection-secret-store";
 import { deleteSecret, prepareProjectConnectionRemoval, reportCleanupError } from "./extension-connection-cleanup";
 import { createExtensionConnectionListService } from "./extension-connection-list-service";
@@ -185,12 +187,19 @@ const assertCredentialScope = (
     throw new ConnectionInputError("A global connection requires a shared credential.");
 };
 
+const requireStaticContribution = async (deps: ExtensionConnectionServiceDeps, input: ConnectionKey) => {
+  const contribution = await deps.getContribution(input);
+  if (!contribution) throw new Error(`Connection is not declared: ${input.connectionId}`);
+  if (contribution.auth.type === "oauth")
+    throw new ConnectionInputError("Use browser authorization for OAuth connections.");
+  return { scope: contribution.scope, auth: contribution.auth };
+};
+
 const configureConnection = async (
   deps: ExtensionConnectionServiceDeps,
   input: ConnectionKey & ConfigureExtensionConnectionInput,
 ) => {
-  const contribution = await deps.getContribution(input);
-  if (!contribution) throw new Error(`Connection is not declared: ${input.connectionId}`);
+  const contribution = await requireStaticContribution(deps, input);
   const key = connectionKey(input, contribution.scope);
   assertCredentialScope(key, input.credentialScope);
   const existing = await deps.connectionsDBService.get(key);
@@ -278,7 +287,6 @@ export const createExtensionConnectionService = (input: ExtensionConnectionServi
     ...input,
     getContribution: (key) => input.getContribution({ ...key, extensionId: canonicalExtensionId(key.extensionId) }),
   };
-  const requestService = createExtensionConnectionRequestService(deps);
   const listService = createExtensionConnectionListService(deps);
   // Cleanup compares database references with secret files. Keep that comparison
   // ordered with credential writes now that startup cleanup runs beside requests.
@@ -291,6 +299,9 @@ export const createExtensionConnectionService = (input: ExtensionConnectionServi
     );
     return result;
   };
+  const oauth = createOAuthGrants(deps, mutate);
+  const requestService = createExtensionConnectionRequestService(deps, oauth);
+  const callTool = createMcpToolCaller(deps, oauth);
   const configure = (input: ConnectionKey & ConfigureExtensionConnectionInput) =>
     mutate(() => configureConnection(deps, input));
   const remove = (input: ConnectionRemoval) =>
@@ -305,6 +316,7 @@ export const createExtensionConnectionService = (input: ExtensionConnectionServi
         throw new ConnectionInputError(
           "This connection is unavailable. Provide a server origin with all-projects revocation to remove a saved sign-in.",
         );
+      if (contribution.auth.type === "oauth") throw new ConnectionInputError("Use the OAuth disconnect operation.");
       const key = connectionKey(input, contribution.scope);
       assertCredentialScope(key, input.credentialScope);
       if (input.credentialScope === "all-projects" && key.projectId !== null)
@@ -313,19 +325,38 @@ export const createExtensionConnectionService = (input: ExtensionConnectionServi
     });
   const reconcile = () => mutate(() => reconcileConnections(deps));
   const prepareProjectRemoval = async (projectId: string) => {
-    const removeSecrets = await mutate(() => prepareProjectConnectionRemoval(deps, projectId));
+    const removeSecrets = await mutate(() => {
+      oauth.cancelPending(projectId);
+      return prepareProjectConnectionRemoval(deps, projectId);
+    });
     return () => mutate(removeSecrets);
   };
   const removeExtension = (projectId: string, extensionId: string) =>
-    mutate(() => removeExtensionConnections(deps, projectId, canonicalExtensionId(extensionId)));
+    mutate(() => {
+      const canonical = canonicalExtensionId(extensionId);
+      oauth.cancelPending(projectId, canonical);
+      return removeExtensionConnections(deps, projectId, canonical);
+    });
 
-  return { ...requestService, ...listService, configure, prepareProjectRemoval, reconcile, remove, removeExtension };
+  return {
+    ...requestService,
+    ...listService,
+    configure,
+    prepareProjectRemoval,
+    reconcile,
+    remove,
+    removeExtension,
+    oauth,
+    callTool,
+  };
 };
 
 export const createExtensionConnectionsApi = (
-  service: Pick<ReturnType<typeof createExtensionConnectionService>, "request" | "stream">,
-  scope: { projectId: string; extensionId: string },
+  service: Pick<ReturnType<typeof createExtensionConnectionService>, "request" | "stream" | "oauth" | "callTool">,
+  scope: { projectId: string; extensionId: string; oauthOwner?: () => Promise<string> },
 ): ExtensionConnectionsApi => ({
+  oauthStatus: (connectionId) => service.oauth.status({ ...scope, connectionId }, scope.oauthOwner),
+  callTool: (connectionId, input) => service.callTool({ ...scope, connectionId, input }),
   request: (connectionId, input) => service.request({ ...scope, connectionId, input }),
   stream: (connectionId, input) => service.stream({ ...scope, connectionId, input }),
 });

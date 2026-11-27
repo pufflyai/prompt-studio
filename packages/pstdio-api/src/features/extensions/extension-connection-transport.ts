@@ -1,6 +1,6 @@
 import type {
-  ExtensionConnectionContribution,
   ExtensionConnectionRequest,
+  HttpExtensionConnection,
   JsonValue,
 } from "pstdio-api-contracts/extension-kernel";
 
@@ -27,11 +27,13 @@ const connectionUrl = (baseUrl: string, path: string) => {
   return url;
 };
 
-export const responseHeaders = (headers: Headers, secretHeader: string, secret: string) => {
+export const responseHeaders = (headers: Headers, secretHeader: string, secret: string | readonly string[]) => {
+  const secrets = typeof secret === "string" ? [secret] : secret;
   const result: Record<string, string> = {};
   for (const [key, value] of headers) {
     if (key === "authorization" || key === "set-cookie" || key === secretHeader.toLowerCase()) continue;
-    if (value.includes(secret)) throw new Error("Connection response reflected the configured credential.");
+    if (secrets.some((token) => value.includes(token)))
+      throw new Error("Connection response reflected the configured credential.");
     result[key] = value;
   }
   return result;
@@ -99,13 +101,16 @@ export const readBoundedBody = async (body: ReadableStream<Uint8Array> | null) =
 
 export const readSafeStream = async function* (
   body: ReadableStream<Uint8Array> | null,
-  secret: string,
+  secret: string | readonly string[],
   state: { total: number },
 ): AsyncIterable<Uint8Array> {
   const reader = body?.getReader();
   if (!reader) return;
-  const secretBytes = new TextEncoder().encode(secret);
-  const protectedBytes = Math.max(secretBytes.byteLength, secret.length * 6);
+  const secrets = (typeof secret === "string" ? [secret] : secret).map((value) => ({
+    value,
+    bytes: new TextEncoder().encode(value),
+  }));
+  const protectedBytes = Math.max(...secrets.map(({ bytes, value }) => Math.max(bytes.byteLength, value.length * 6)));
   let pending = new Uint8Array();
   let completed = false;
   try {
@@ -115,7 +120,9 @@ export const readSafeStream = async function* (
       state.total += chunk.value.byteLength;
       if (state.total > MAX_RESPONSE_BYTES) throw new Error("Connection response body is too large.");
       const combined = concatBytes([pending, chunk.value], pending.byteLength + chunk.value.byteLength);
-      if (containsBytes(combined, secretBytes) || containsJsonEncodedSecret(combined, secret)) {
+      if (
+        secrets.some(({ value, bytes }) => containsBytes(combined, bytes) || containsJsonEncodedSecret(combined, value))
+      ) {
         throw new Error("Connection response reflected the configured credential.");
       }
       const safeLength = Math.max(0, combined.byteLength - protectedBytes + 1);
@@ -134,6 +141,34 @@ export const parseResponseBody = (bytes: Uint8Array, contentType: string | null)
   const text = new TextDecoder().decode(bytes);
   if (contentType?.toLowerCase().includes("application/json")) return JSON.parse(text) as JsonValue;
   return text;
+};
+
+export const containsSecretText = (text: string, secrets: readonly string[]) =>
+  secrets.some((secret) => text.includes(secret) || text.includes(JSON.stringify(secret).slice(1, -1)));
+
+export const readProtectedResponse = async (response: Response, secretHeader: string, secrets: readonly string[]) => {
+  const declaredLength = Number(response.headers.get("content-length"));
+  let headers: Record<string, string>;
+  try {
+    if (Number.isFinite(declaredLength) && declaredLength > MAX_RESPONSE_BYTES)
+      throw new Error("Connection response body is too large.");
+    headers = responseHeaders(response.headers, secretHeader, secrets);
+  } catch (error) {
+    await response.body?.cancel();
+    throw error;
+  }
+  const bytes = await readBoundedBody(response.body);
+  if (secrets.some((secret) => containsBytes(bytes, new TextEncoder().encode(secret))))
+    throw new Error("Connection response reflected the configured credential.");
+  let body: JsonValue;
+  try {
+    body = parseResponseBody(bytes, response.headers.get("content-type"));
+  } catch {
+    throw new Error("Connection returned invalid JSON.");
+  }
+  if (containsSecretText(typeof body === "string" ? body : JSON.stringify(body), secrets))
+    throw new Error("Connection response reflected the configured credential.");
+  return { headers, body, responseBytes: bytes.byteLength };
 };
 
 export const timeoutSignal = (timeoutMs: number | undefined, signal: AbortSignal | undefined) => {
@@ -169,7 +204,7 @@ export const validateSharedOrigin = (value: string) => {
 };
 
 export const resolveRequestUrl = (
-  contribution: ExtensionConnectionContribution,
+  contribution: HttpExtensionConnection,
   baseUrl: string,
   request: ExtensionConnectionRequest,
 ) => {
@@ -184,15 +219,15 @@ export const resolveRequestUrl = (
 };
 
 export const authenticatedHeaders = (
-  contribution: ExtensionConnectionContribution,
+  contribution: HttpExtensionConnection,
   request: ExtensionConnectionRequest,
   secret: string,
 ) => {
-  const secretHeader = contribution.auth.type === "bearer" ? "authorization" : contribution.auth.headerName;
+  const secretHeader = contribution.auth.type === "header" ? contribution.auth.headerName : "authorization";
   const headers = new Headers(request.headers);
   headers.delete("authorization");
   headers.delete(secretHeader);
-  headers.set(secretHeader, contribution.auth.type === "bearer" ? `Bearer ${secret}` : secret);
+  headers.set(secretHeader, contribution.auth.type === "header" ? secret : `Bearer ${secret}`);
   return { headers, secretHeader };
 };
 

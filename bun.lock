@@ -800,6 +800,7 @@
       "dependencies": {
         "@hono/swagger-ui": "^0.5.2",
         "@hono/zod-openapi": "^1.1.5",
+        "@modelcontextprotocol/sdk": "1.32.2",
         "@pstdio/sdk": "workspace:*",
         "diff": "^8.0.3",
         "drizzle-orm": "^0.45.2",

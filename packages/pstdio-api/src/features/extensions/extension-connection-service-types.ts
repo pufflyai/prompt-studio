@@ -1,5 +1,5 @@
 import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
-import type { ExtensionConnectionContribution } from "pstdio-api-contracts/extension-kernel";
+import type { DeclaredExtensionConnection } from "pstdio-api-contracts/extension-kernel";
 import type { createExtensionConnectionsDBService } from "pstdio-db";
 import type { ConnectionSecretStore } from "./connection-secret-store";
 
@@ -24,10 +24,12 @@ export type ConnectionCleanupContext = { operation: string; secretRef?: string }
 export type ExtensionConnectionServiceDeps = {
   connectionsDBService: ReturnType<typeof createExtensionConnectionsDBService>;
   secretStore: ConnectionSecretStore;
-  getContribution: (input: ConnectionKey) => Promise<ExtensionConnectionContribution | null | undefined>;
+  getContribution: (input: ConnectionKey) => Promise<DeclaredExtensionConnection | null | undefined>;
   isExtensionInstalled?: (projectId: string | null, extensionId: string) => Promise<boolean>;
   onCleanupError?: (error: unknown, context: ConnectionCleanupContext) => void;
   fetch?: typeof fetch;
+  oauthOwner?: () => Promise<string>;
+  now?: () => number;
   onRequestComplete?: (audit: ConnectionRequestAudit) => void | Promise<void>;
 };
 

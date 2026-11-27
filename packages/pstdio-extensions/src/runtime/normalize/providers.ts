@@ -1,4 +1,4 @@
-import type { ExtensionConnectionContribution, HarnessProvider, WorkspaceTypeProvider } from "@pstdio/sdk/extensions";
+import type { DeclaredExtensionConnection, HarnessProvider, WorkspaceTypeProvider } from "@pstdio/sdk/extensions";
 import type {
   NormalizedExtension,
   RuntimeConnectionRecord,
@@ -59,13 +59,18 @@ const registerConnections = (ext: NormalizedExtension, source: LoadedExtensionSo
     source,
     runtime,
     kind: "connection",
-    contributions: contributionArray<ExtensionConnectionContribution>(source.definition.connections),
+    contributions: contributionArray<DeclaredExtensionConnection>(source.definition.connections),
   });
   for (const connection of connections) {
     if (!isRecord(connection) || typeof connection.id !== "string" || !isLocalizableString(connection.label)) continue;
-    if (connection.transport !== "http") continue;
     if (connection.scope !== undefined && connection.scope !== "project" && connection.scope !== "global") continue;
-    if (!Array.isArray(connection.allowedMethods) || !Array.isArray(connection.allowedPathPrefixes)) continue;
+    if (connection.transport === "http") {
+      if (!Array.isArray(connection.allowedMethods) || !Array.isArray(connection.allowedPathPrefixes)) continue;
+    } else if (connection.transport === "mcp") {
+      if (connection.auth?.type !== "oauth" || !Array.isArray(connection.allowedTools)) continue;
+    } else {
+      continue;
+    }
     const record: RuntimeConnectionRecord = {
       ...contributionRecordBase(ext, source, "connection", connection.id),
       contribution: connection as RuntimeConnectionRecord["contribution"],

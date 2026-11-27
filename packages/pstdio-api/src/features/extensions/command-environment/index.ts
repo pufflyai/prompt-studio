@@ -77,10 +77,6 @@ export const createCommandEnvironment = (
   if (!enabledSource) throw new Error(`Enabled extension instance not found: ${input.extensionId}`);
 
   const terminal = deps.terminal;
-  const connections = createExtensionConnectionsApi(deps.extensionConnectionService, {
-    projectId: input.projectId,
-    extensionId: input.extensionId,
-  });
   const manifest = (enabledSource.installedSource.manifest_json ?? {}) as {
     pstdio?: { projectFiles?: { tracked?: boolean } };
   };
@@ -92,6 +88,15 @@ export const createCommandEnvironment = (
   );
   const scopedHostApis = (scope?: InvocationScope) => {
     const signal = scope?.signal;
+    // Pin identity when the invocation starts, before extension code can await other work.
+    const oauthOwner = scope ? deps.extensionConnectionService?.oauth?.currentOwner() : undefined;
+    // Static connections and commands that never read a connection still work without an OAuth owner.
+    void oauthOwner?.catch(() => undefined);
+    const connections = createExtensionConnectionsApi(deps.extensionConnectionService, {
+      projectId: input.projectId,
+      extensionId: input.extensionId,
+      oauthOwner: () => oauthOwner ?? deps.extensionConnectionService.oauth.currentOwner(),
+    });
     // Presentation lookups may dispatch another tool. They must stop when their caller returns,
     // without aborting ctx.signal that durable host work can keep using after that return.
     const resourceReads = new AbortController();

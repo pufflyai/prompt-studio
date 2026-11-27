@@ -88,7 +88,9 @@ export const createExtensionCredentialsDBService = (db: Client) => {
     async upsert(
       input: CredentialKey & {
         provider: string;
-        authType: "bearer" | "header";
+        authType: "bearer" | "header" | "oauth";
+        scopes?: string[];
+        expiresAt?: string | null;
         authHeaderName?: string | null;
         secretRef: string;
       },
@@ -100,7 +102,8 @@ export const createExtensionCredentialsDBService = (db: Client) => {
         auth_header_name: input.authHeaderName ?? null,
         secret_ref: input.secretRef,
         updated_at: stamp,
-        expires_at: null,
+        expires_at: input.expiresAt ?? null,
+        scopes: input.scopes ?? [],
       };
       const [row] = await db
         .insert(credentials)
