@@ -6,6 +6,7 @@ import { jwt } from "better-auth/plugins/jwt";
 import { oneTimeToken } from "better-auth/plugins/one-time-token";
 import { and, eq, lte, sql } from "drizzle-orm";
 import { type AccountSignInProvider, identitySchema, teamInviteEmailSchema } from "pstdio-sync-contracts";
+import { createAccountProfileReader } from "./account-profile";
 import { type ManagerAuthConfig, parseManagerAuthConfig } from "./auth-config";
 import * as authSchema from "./auth-schema";
 import { digestCredential } from "./credential";
@@ -104,7 +105,7 @@ export const createManagerAuthentication = (input: ManagerAuthConfig, objects?: 
   const readSession = (headers: Headers) => auth.api.getSession({ headers, query: { disableCookieCache: true } });
   const withPersonalAccount = createPersonalAccountAccess(connection.db, readSession);
   const deviceLogin = createDeviceLogin(withPersonalAccount);
-  const devicesAccess = createDeviceAccess(connection.db);
+  const devicesAccess = createDeviceAccess(connection.db, createAccountProfileReader(config.microsoft?.clientId));
   const managedExtensions = createTeamManagedExtensions(connection.db, devicesAccess.withTeam, objects);
   const relayDigest = config.projectDeletionRelayToken
     ? Buffer.from(digestCredential(config.projectDeletionRelayToken), "hex")
