@@ -202,7 +202,6 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
     ownerKey: rendererReadKey(placement),
     queryEvents: contribution.queryEvents,
     onAccept: pages.accept,
-    onInvalidate: pages.reset,
     load: async (signal, _publish, accepted) => {
       const state = { settings, filter, sorts, pageParams, resource: placement.resource };
       const loaded = await loadKanbanRows(contribution, state, pages, signal, accepted);
@@ -265,13 +264,7 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
   }
 
   const readNotice = read.error ? (
-    <RendererReadNotice
-      error={read.error}
-      initial={!read.value}
-      retry={() => {
-        if (!paged || !pages.reset()) void read.retry();
-      }}
-    />
+    <RendererReadNotice error={read.error} initial={!read.value} retry={() => void read.retry()} />
   ) : null;
 
   return (

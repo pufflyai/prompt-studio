@@ -110,6 +110,92 @@ test("production duplicate boards share semantic queries while retaining indepen
   expect(calls).toBe(6);
 });
 
+test("status moves keep loaded pages visible and the next scroll still appends", async () => {
+  environment.IS_REACT_ACT_ENVIRONMENT = true;
+  core = createWorkbench();
+  const renderers = getWorkbenchRenderers(core);
+  const release = Promise.withResolvers<void>();
+  let revision = 0;
+  let status = "todo";
+  let refreshStarted = false;
+  renderers.registerKanbanRenderer({
+    id: "tickets",
+    title: "Tickets",
+    attributes: [],
+    initialPageSize: 2,
+    executeQuery: () => [],
+    executePage: async ({ page: { offset = 0, limit } }) => {
+      if (revision === 1) {
+        refreshStarted = true;
+        await release.promise;
+      }
+      const ids = Array.from({ length: 8 }, (_, index) => String(index));
+      return {
+        rows: ids.slice(offset, offset + limit).map((id) => ({
+          id,
+          title: id,
+          attributes: { status: id === "0" ? status : "todo" },
+        })),
+        page: {
+          revision: String(revision),
+          cursor: offset + limit < ids.length ? String(offset + limit) : null,
+          total: ids.length,
+          filteredTotal: ids.length,
+          groups: [],
+        },
+      };
+    },
+    onMove: ({ attributes }) => {
+      status = String(attributes.status);
+      revision++;
+    },
+  });
+  let board!: KanbanRendererProps;
+  const Renderer = (props: KanbanRendererProps) => {
+    board = props;
+    return null;
+  };
+  await act(async () => {
+    tree = create(
+      <ChakraProvider value={psTheme}>
+        <WorkbenchKanbanView
+          workbench={core}
+          contribution={renderers.getKanbanRenderer("tickets")!}
+          placement={{ instanceId: "tickets", panelId: "tickets", closable: false }}
+          Renderer={Renderer}
+        />
+      </ChakraProvider>,
+    );
+  });
+  expect(board.rows.map(({ id }) => id)).toEqual(["0", "1"]);
+  await act(async () => board.page?.onLoadMore?.());
+  const untouched = board.rows[2];
+  const moves: Promise<void>[] = [];
+  const move = (next: string) =>
+    moves.push(Promise.resolve(board.onMove?.({ rowId: "0", attributes: { status: next } })));
+  await act(async () => {
+    move("done");
+  });
+  expect(refreshStarted).toBe(true);
+  expect(board.page?.loading).toBe(false);
+  expect(board.rows.map(({ id }) => id)).toEqual(["0", "1", "2", "3"]);
+  expect(board.rows[0].attributes.status).toBe("done");
+  expect(board.rows[2]).toBe(untouched);
+  await act(async () => {
+    move("todo");
+  });
+  expect(board.rows[0].attributes.status).toBe("todo");
+  expect(board.rows[2]).toBe(untouched);
+  await act(async () => {
+    release.resolve();
+    await Promise.all(moves);
+  });
+  expect(revision).toBe(2);
+  expect(board.rows[2]).toBe(untouched);
+  await act(async () => board.page?.onLoadMore?.());
+  expect(board.rows.map(({ id }) => id)).toEqual(["0", "1", "2", "3", "4", "5"]);
+});
+
 test("create and open leaves the departing board stale until it is visible again", async () => {
   environment.IS_REACT_ACT_ENVIRONMENT = true;
   core = createWorkbench();

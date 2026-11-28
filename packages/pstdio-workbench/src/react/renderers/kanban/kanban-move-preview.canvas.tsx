@@ -77,6 +77,8 @@ const meta: CanvasMeta = { title: "Product/Workbench/Views/Kanban/Move preview" 
 export default meta;
 export const MoveBeforeSave: CanvasFrame = {
   id: "renderers-kanban-move-preview--move-before-save",
+  description:
+    "A card changes columns immediately. Loaded cards stay in place while the save reconciles, and scrolling still loads more cards.",
   render: () => <DeferredMove />,
 };
 export const RestoreAfterFailure: CanvasFrame = {

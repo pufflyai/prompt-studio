@@ -326,7 +326,7 @@ test("paged duplicate boards restart once on changed data and on a stale hidden 
   });
   await act(async () => {
     for (const name of ["one", "two"])
-      pages[name].controls(values[name].value?.page, false, true, values[name].value?.position)?.onLoadMore();
+      pages[name].controls(values[name].value?.page, false, true, values[name].value?.position)?.onLoadMore?.();
   });
   expect(calls).toBe(2);
   expect(values.two.value?.rows).toHaveLength(2);

@@ -1,6 +1,6 @@
 import type { CollectionPage, CollectionPageRequest } from "@pstdio/sdk/extensions";
 import { useRef, useState } from "react";
-import { appendRendererRows, loadRendererPage } from "./renderer-page-continuation";
+import { appendRendererRows, loadRendererPage, refreshRendererWindow } from "./renderer-page-continuation";
 import { rendererPagePosition } from "./renderer-page-position";
 import { clampCollectionPageSize, defaultCollectionPageSize } from "./renderer-page-size";
 
@@ -99,36 +99,48 @@ export const useRendererPages = <TRow>(input: {
       loading: boolean,
       enabled: boolean,
       displayed?: CollectionPageRequest,
-    ) =>
-      enabled
-        ? {
-            request,
-            result,
-            displayed,
-            loading,
-            onSearchChange: setSearch,
-            onPageSizeChange: (size: number) => setLimit(clampCollectionPageSize(size)),
-            onCollapsedGroupsChange: setCollapsedGroups,
-            onPageChange: (index: number) => {
-              if (result) go(index);
-            },
-            onLoadMore: () => {
-              if (result?.cursor) go(Math.floor(current.offset / limit) + 1);
-            },
-          }
-        : undefined,
+    ) => {
+      if (!enabled) return undefined;
+      const loadingNextPage = current.offset > (displayed?.offset ?? 0);
+      return {
+        request,
+        result,
+        displayed,
+        loading: loading && (!input.rowId || loadingNextPage),
+        onSearchChange: setSearch,
+        onPageSizeChange: (size: number) => setLimit(clampCollectionPageSize(size)),
+        onCollapsedGroupsChange: setCollapsedGroups,
+        onPageChange: (index: number) => {
+          if (result) go(index);
+        },
+        // A new query can return the same cursor. Remount its boundary so a viewport
+        // already at the end can request that query's next page.
+        onLoadMore:
+          input.rowId && loading && !loadingNextPage
+            ? undefined
+            : () => {
+                if (result?.cursor) go(Math.floor(current.offset / limit) + 1);
+              },
+      };
+    },
     load: async <TResult extends { rows: TRow[]; page: CollectionPage }>(
       read: (request: CollectionPageRequest) => Promise<TResult>,
       signal: AbortSignal,
     ) => {
-      const loaded = await loadRendererPage(request, read, signal);
-      const result = loaded.value;
+      const rowId = input.rowId;
       const saved = previous.current;
-      const rows =
-        input.rowId && current.offset > 0 && saved?.identity === identity
-          ? appendRendererRows(saved.rows.slice(0, current.offset), result.rows, input.rowId)
-          : result.rows;
-      return { ...result, rows, position: loaded.request };
+      if (rowId && current.offset > 0) {
+        // Only a forward navigation can append. Refreshing the same position replaces the loaded window.
+        if (saved?.identity === identity && saved.offset === current.offset - limit && request.cursor) {
+          const { value, request: position } = await loadRendererPage(request, read, signal);
+          if (value.page.revision === saved.page.revision)
+            return { ...value, rows: appendRendererRows(saved.rows, value.rows, rowId), position };
+        }
+        const value = await refreshRendererWindow<TRow, TResult>(request, read, signal);
+        return { ...value, position: request };
+      }
+      const loaded = await loadRendererPage(request, read, signal);
+      return { ...loaded.value, position: loaded.request };
     },
   };
 };
