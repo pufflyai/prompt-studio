@@ -4,7 +4,7 @@ import { type ComponentType, type ReactNode, useRef, useState } from "react";
 import type { ResourceContextAction } from "@/components/overlays/resource-context-menu";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { useVirtualizer } from "@/utils/use-virtualizer";
-import { CollectionLoadMore } from "../collection-view/collection-load-more";
+import { CollectionPageBoundary } from "../collection-view/collection-page-boundary";
 import type { AttributeBadge } from "./kanban-renderer-helpers";
 import { KanbanRendererListRow } from "./kanban-renderer-list-row";
 import { shouldVirtualizeKanban } from "./kanban-renderer-virtualization";
@@ -109,9 +109,6 @@ export const KanbanRendererList = (props: KanbanRendererListProps) => {
   const { virtualizer, virtualItems, totalSize } = useVirtualizer<HTMLDivElement, HTMLDivElement>({
     count: rows.length,
     enabled: virtualize,
-    onChange: (instance, scrolling) => {
-      if (scrolling && instance.range && instance.range.endIndex >= rows.length - 1) props.onLoadMore?.();
-    },
     getScrollElement: () => viewport.current,
     getItemKey: (index) => rows[index].id,
     estimateSize: (index) => (rows[index].isGroup ? 29 : 35),
@@ -131,24 +128,7 @@ export const KanbanRendererList = (props: KanbanRendererListProps) => {
     : rows.map((row, index) => ({ row, index, start: undefined }));
 
   return (
-    <ScrollArea
-      flex="1"
-      minH="0"
-      viewportRef={viewport}
-      viewportProps={{
-        "aria-label": "Collection list",
-        onScroll: (event) => {
-          if (virtualize) return;
-          const viewport = event.currentTarget;
-          if (viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight > 8) return;
-          if (!props.loadingMore) props.onLoadMore?.();
-        },
-        onWheel: (event) => {
-          const viewport = event.currentTarget;
-          if (event.deltaY > 0 && viewport.scrollHeight <= viewport.clientHeight) props.onLoadMore?.();
-        },
-      }}
-    >
+    <ScrollArea flex="1" minH="0" viewportRef={viewport} viewportProps={{ "aria-label": "Collection list" }}>
       <Box position={virtualize ? "relative" : undefined} height={virtualize ? `${totalSize}px` : undefined}>
         {renderedRows.map(({ row, index, start }) => {
           return (
@@ -180,9 +160,7 @@ export const KanbanRendererList = (props: KanbanRendererListProps) => {
           );
         })}
       </Box>
-      {props.onLoadMore ? (
-        <CollectionLoadMore label="Load more rows" loading={props.loadingMore} onLoadMore={props.onLoadMore} />
-      ) : null}
+      {props.onLoadMore ? <CollectionPageBoundary loading={props.loadingMore} onLoadMore={props.onLoadMore} /> : null}
     </ScrollArea>
   );
 };

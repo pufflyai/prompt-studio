@@ -1,4 +1,5 @@
 import { expect, type Page } from "@playwright/test";
+import { revealTreeEntry } from "../helpers/tree-entry";
 import { exerciseGroupedPageSelection } from "./paged-collection-group-selection";
 import { observeCollectionReadiness } from "./paged-collection-readiness";
 
@@ -51,7 +52,10 @@ export const exercisePagedCollections = async (
     await expect(page.getByRole("cell", { name: `paged-owner-${owner} row 0000`, exact: true })).toBeVisible();
     evidence.push({ view: `owner-${owner}-table`, elapsedMs, rows: 100, responseBytes: text.length });
   }
-  await page.getByRole("option", { name: "paged-owner-0 table", exact: true }).click();
+  const firstTable = page.getByRole("option", { name: "paged-owner-0 table", exact: true });
+  const sidenav = page.locator('[data-workbench-region="sidenav"]');
+  expect(await revealTreeEntry(page, sidenav, firstTable)).toBe(true);
+  await firstTable.click();
   await expect(page.getByRole("cell", { name: "paged-owner-0 row 0000", exact: true })).toBeVisible();
   const continuation = nextResult(0, "table", 100);
   await page.getByRole("button", { name: "Go to next page", exact: true }).click();
@@ -100,6 +104,7 @@ export const exercisePagedCollections = async (
   await expect(page.getByRole("cell", { name: "paged-owner-0 row 0000", exact: true })).toBeVisible();
 
   const boardResult = nextResult(0, "board");
+  const automaticPage = nextResult(0, "board", 100);
   const readiness = await observeCollectionReadiness(page, "board", 0);
   await page.getByRole("option", { name: "paged-owner-0 board", exact: true }).click();
   const elapsedMs = await readiness();
@@ -117,20 +122,17 @@ export const exercisePagedCollections = async (
   expect(board.outcome.value.rows[0].title).toBe("paged-owner-0 row 0001");
   expect(board.outcome.value.rows[99].title).toBe("paged-owner-0 row 0199");
   await recordEvidence(evidence);
-  const emptyColumn = page.getByTestId("board-column-todo");
-  await expect(emptyColumn.getByText(/hidden by search/)).toHaveCount(0);
-  const load = emptyColumn.getByRole("button", { name: "Load more cards" });
-  await expect(load).toBeVisible();
-  await expect(load).toBeEnabled();
-  const keyboardPage = nextResult(0, "board", 100);
-  await load.press("Enter");
-  expect((await (await keyboardPage).json()).outcome.value.rows[0].title).toBe("paged-owner-0 row 0201");
-  await expect(emptyColumn.getByText("paged-owner-0 row 0000", { exact: true })).toBeVisible();
+  const todo = page.getByTestId("board-column-todo");
+  expect((await (await automaticPage).json()).outcome.value.rows[0].title).toBe("paged-owner-0 row 0201");
+  const firstCard = todo.getByRole("button", { name: "paged-owner-0 row 0000", exact: true });
+  await expect(firstCard).toBeVisible();
+  await expect(todo.getByText(/hidden by search/)).toHaveCount(0);
   const more = nextResult(0, "board", 200);
-  const viewport = renderer.locator("[data-board-column-viewport]").first();
-  await viewport.hover();
-  await page.mouse.wheel(0, 10000);
+  await firstCard.focus();
+  await firstCard.press("End");
   expect((await (await more).json()).outcome.value.rows[0].title).toBe("paged-owner-0 row 0150");
+  await expect(todo.getByRole("button", { name: "paged-owner-0 row 0150", exact: true })).toBeVisible();
+  await expect(todo.getByRole("button", { name: "paged-owner-0 row 0148", exact: true })).toBeFocused();
   await exerciseSelectionAndSearch(page, expectedSelection);
   await page.getByRole("button", { name: "Go to next page", exact: true }).click();
   await expect(page.getByRole("cell", { name: "paged-owner-0 row 0100", exact: true })).toBeVisible();
