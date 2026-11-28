@@ -3,7 +3,7 @@ import { defaultRangeExtractor } from "@tanstack/react-virtual";
 import { type DragEvent, type KeyboardEvent, useLayoutEffect, useRef, useState } from "react";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { useVirtualizer } from "@/utils/use-virtualizer";
-import { CollectionLoadMore } from "../collection-view/collection-load-more";
+import { CollectionPageBoundary } from "../collection-view/collection-page-boundary";
 import type { KanbanRendererBoardColumn } from "./kanban-renderer-board";
 import { BoardEntry, type BoardEntryData } from "./kanban-renderer-board-entry";
 import { shouldVirtualizeKanban } from "./kanban-renderer-virtualization";
@@ -11,6 +11,7 @@ import { shouldVirtualizeKanban } from "./kanban-renderer-virtualization";
 interface BoardColumnCardsProps {
   onLoadMore?: () => void;
   loadingMore?: boolean;
+  loadedPage: string | number;
   column: KanbanRendererBoardColumn;
   selectedItemId: string | null;
   draggedKey: string | null;
@@ -23,6 +24,8 @@ interface BoardColumnCardsProps {
 
 export const BoardColumnCards = (props: BoardColumnCardsProps) => {
   const { column, selectedItemId, draggedKey, revealedItemId, onDragStart, onDragEnd, onDragTarget, onDrop } = props;
+  // With no aggregate count, populated columns can still request the next page.
+  const hasMoreCards = column.count ? column.count > column.items.length : column.items.length > 0;
   const recipe = useSlotRecipe({ key: "kanbanBoardColumn" });
   const styles = recipe();
   const viewport = useRef<HTMLDivElement>(null);
@@ -42,13 +45,12 @@ export const BoardColumnCards = (props: BoardColumnCardsProps) => {
             }))),
       ])
     : column.items.map((item) => ({ key: JSON.stringify(["row", column.id, item.id]), item }));
-  const virtualize = shouldVirtualizeKanban(entries.length);
+  // A paged column can start short. Choose its rendering mode from the full count so appending
+  // a page does not replace the focused card or reset the viewport when crossing the threshold.
+  const virtualize = shouldVirtualizeKanban(Math.max(entries.length, column.count ?? 0));
   const { virtualizer, virtualItems, totalSize } = useVirtualizer<HTMLDivElement, HTMLDivElement>({
     count: entries.length,
     enabled: virtualize,
-    onChange: (instance, scrolling) => {
-      if (scrolling && instance.range && instance.range.endIndex >= entries.length - 1) props.onLoadMore?.();
-    },
     getScrollElement: () => viewport.current,
     getItemKey: (index) => entries[index].key,
     estimateSize: (index) => (entries[index].group ? 32 : 100),
@@ -120,16 +122,6 @@ export const BoardColumnCards = (props: BoardColumnCardsProps) => {
       viewportProps={{
         ...{ "data-board-column-viewport": column.id },
         "aria-label": column.label,
-        onScroll: (event) => {
-          if (virtualize) return;
-          const viewport = event.currentTarget;
-          if (viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight > 8) return;
-          if (!props.loadingMore) props.onLoadMore?.();
-        },
-        onWheel: (event) => {
-          const viewport = event.currentTarget;
-          if (event.deltaY > 0 && viewport.scrollHeight <= viewport.clientHeight) props.onLoadMore?.();
-        },
       }}
       verticalScrollbarProps={{ css: styles.scrollbar }}
     >
@@ -184,8 +176,8 @@ export const BoardColumnCards = (props: BoardColumnCardsProps) => {
           );
         })}
       </Box>
-      {props.onLoadMore && (column.count ?? 0) > column.items.length ? (
-        <CollectionLoadMore label="Load more cards" loading={props.loadingMore} onLoadMore={props.onLoadMore} />
+      {props.onLoadMore && hasMoreCards ? (
+        <CollectionPageBoundary key={props.loadedPage} loading={props.loadingMore} onLoadMore={props.onLoadMore} />
       ) : null}
     </ScrollArea>
   );

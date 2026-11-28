@@ -18,6 +18,7 @@ interface KanbanRendererEmptyStateProps {
 interface KanbanRendererContentProps {
   onLoadMore?: () => void;
   loadingMore?: boolean;
+  pageCursor?: string | null;
   contentPlaceholder?: ReactNode;
   sourceCount: number;
   filteredCount: number;
@@ -107,6 +108,7 @@ export const KanbanRendererContent = (props: KanbanRendererContentProps) => {
             <KanbanRendererBoard
               onLoadMore={props.onLoadMore}
               loadingMore={props.loadingMore}
+              pageCursor={props.pageCursor}
               columns={boardColumns}
               pendingCreations={props.pendingCreations}
               selectedItemId={selectedRowId}
@@ -136,6 +138,7 @@ export const KanbanRendererContent = (props: KanbanRendererContentProps) => {
         <KanbanRendererList
           onLoadMore={props.onLoadMore}
           loadingMore={props.loadingMore}
+          pageCursor={props.pageCursor}
           key={listKey}
           items={listItems}
           selectedItemId={selectedRowId}

@@ -263,6 +263,7 @@ export const KanbanRenderer = <TRow extends KanbanRendererRow>(props: KanbanRend
         listKey={`${settings.columnGrouping}:${settings.rowGrouping}`}
         onLoadMore={props.page?.result?.cursor ? props.page.onLoadMore : undefined}
         loadingMore={props.page?.loading}
+        pageCursor={props.page?.result?.cursor}
       />
       {createRow && onCreateRow && createColumnId ? (
         <KanbanRendererCreateDialog
