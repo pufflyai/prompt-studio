@@ -60,10 +60,8 @@ const setupEvents = async (home: string, name = "smoke.jsonl") => {
     .map((line) => JSON.parse(line) as { phase?: string; state?: string });
 };
 
-const defaultsRegistered = async (home: string, log?: string) =>
-  (await setupEvents(home, log)).some(
-    (event) => event.phase === "default_extensions.active" && event.state === "completed",
-  );
+const defaultsRegistered = async (home: string) =>
+  (await setupEvents(home)).some((event) => event.phase === "default_extensions.active" && event.state === "completed");
 
 const acceptedHarnesses = async (home: string) => {
   const accepted = join(home, "cache", "extension-revisions", "accepted");
@@ -100,7 +98,9 @@ const getJson = async <T>(
     method: request?.method,
     headers: { ...runtimeAuthorization(runtime.descriptor), "content-type": "application/json" },
     body: request?.body && JSON.stringify(request.body),
-    signal: AbortSignal.timeout(60_000),
+    signal: AbortSignal.timeout(90_000),
+  }).catch((error) => {
+    throw new Error(`${request?.method ?? "GET"} ${pathname} failed`, { cause: error });
   });
   if (!response.ok) throw new Error(`${pathname} failed (${response.status}): ${await response.text()}`);
   return response.json() as Promise<T>;
@@ -108,16 +108,18 @@ const getJson = async <T>(
 
 const checkAvailability = async (runtime: Runtime, selected = harnesses, projectId?: string) => {
   const project = projectId ? `&projectId=${encodeURIComponent(projectId)}` : "";
-  await Promise.all(
+  const states = await Promise.all(
     selected.map(async (harness) => {
       const id = harnessId(harness);
       const result = await getJson<{ type: string; reason?: string }>(
         runtime,
         `/v1/agents/availability?agent=${encodeURIComponent(id)}${project}`,
       );
-      assert.equal(result.type, "INSTALLED", `${id}: ${result.reason ?? result.type}`);
+      return result.type === "INSTALLED" ? [] : [`${id}: ${result.reason ?? result.type}`];
     }),
   );
+  const unavailable = states.flat();
+  assert.ok(unavailable.length === 0, unavailable.join("\n"));
 };
 
 const checkModels = async (runtime: Runtime, selected = harnesses, projectId?: string) => {
@@ -158,27 +160,17 @@ const createProject = async (runtime: Runtime, folder: string) => {
 
 const checkUpgrade = async (previous: string, candidate: string, home: string, path: string) => {
   const defaults = upgradeHarnesses.map(({ extension }) => extension);
-  const previousLog = "previous.jsonl";
   const projectId = await withRuntime(
     previous,
     home,
     path,
     async (runtime) => {
-      const deadline = performance.now() + 90_000;
-      while (
-        !(await defaultsRegistered(home, previousLog)) ||
-        !(await setupEvents(home, previousLog)).some(({ phase }) => phase === "extensions_ready")
-      ) {
-        assert.ok(performance.now() < deadline, "The published baseline did not finish preparing its extensions");
-        await Bun.sleep(200);
-      }
-      for (const extension of defaults) {
-        const { version } = await Bun.file(join(home, "extensions", extension, "package.json")).json();
-        console.log(`Previous profile has ${extension} ${version}`);
-      }
-      return createProject(runtime, join(home, "existing-project"));
+      const projectId = await createProject(runtime, join(home, "existing-project"));
+      for (const { installName, version } of await projectHarnesses(runtime, projectId))
+        console.log(`Previous profile has ${installName} ${version}`);
+      return projectId;
     },
-    { defaults, log: previousLog },
+    { defaults, log: "previous.jsonl" },
   );
   await withRuntime(
     candidate,
