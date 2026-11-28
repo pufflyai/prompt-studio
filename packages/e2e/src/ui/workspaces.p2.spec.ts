@@ -185,6 +185,7 @@ test.describe("Grouped Workspaces", () => {
     const dialog = page.frameLocator('iframe[title="Workspace action"]');
     await dialog.getByRole("textbox", { name: "Name" }).fill(nextName);
     await dialog.getByRole("button", { name: "Rename", exact: true }).click();
+    await expect(page.locator('iframe[title="Workspace action"]')).toHaveCount(0);
 
     await page.getByRole("button", { name: "Back to project", exact: true }).click();
     await page.keyboard.press("Alt+Shift+Space");

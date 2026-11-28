@@ -50,10 +50,11 @@ test("reopens the Main right menu from a single-resource page", async ({ page, r
   const ticketLink = page.getByRole("link", { name: `${ticket.shorthand} Reopen ticket details` });
   await expect(ticketLink).toBeVisible();
 
-  const mainPanelHeader = page.locator('[data-workbench-panel-header="main"]');
+  const pageControls = page.getByRole("group", { name: "Page controls", exact: true });
   const rightMenu = page.getByRole("region", { name: "Main right menu", exact: true });
-  const opener = mainPanelHeader.getByRole("button", { name: "Open Main right menu: Activity", exact: true });
-  const closer = mainPanelHeader.getByRole("button", { name: "Close Main right menu: Activity", exact: true });
+  const opener = pageControls.getByRole("button", { name: "Open Main right menu: Activity", exact: true });
+  const closer = pageControls.getByRole("button", { name: "Close Main right menu: Activity", exact: true });
+  await opener.click();
   await expect(rightMenu).toBeVisible();
   await expect(closer).toHaveAttribute("aria-expanded", "true");
 

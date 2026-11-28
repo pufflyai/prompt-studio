@@ -11,6 +11,7 @@ import { getOwnedPlacementPreparation } from "../../registries/placements/owned-
 import type { WorkbenchCore } from "../../workbench-core-types";
 import { getPageLocationPreparation } from "../page-location/page-location-preparation";
 import type { ResolvedPageLocation } from "../page-location/page-location-types";
+import { pageContextChanged } from "../page-runtime/page-main-tabs";
 import { reusableNavigationViewer } from "../resource-viewers/reusable-navigation-viewer";
 import { requirePanelOpen } from "../shell/panel-open-policy";
 import { prepareMainDeparture } from "./main-page-departure";
@@ -175,6 +176,7 @@ export const prepareWorkbenchNavigation = (
     history?: "push" | "replace" | "none";
     resourceTabs?: boolean;
     previewSource?: LinkSource;
+    onCommit?(): void;
   } = {},
 ) => {
   requireCorePanelTargets(core, targets);
@@ -331,6 +333,7 @@ export const prepareWorkbenchNavigation = (
     commit: () =>
       commitPreparedNavigation({
         core,
+        onCommit: pageContextChanged(final, original) ? options.onCommit : undefined,
         original,
         pins: outgoingPins.values(),
         transfers: finalHostTransfers(transfers, final),

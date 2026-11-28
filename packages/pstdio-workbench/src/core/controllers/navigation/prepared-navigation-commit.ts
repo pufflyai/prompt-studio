@@ -18,6 +18,7 @@ interface PreparedNavigationCommit {
   owners: { owner: OwnedPlacementPreparation; previous: OwnedPlacementState; next: OwnedPlacementState }[];
   publish(beforePublish: () => void): WorkbenchPageNavigationResult | undefined;
   afterPublish(): void;
+  onCommit?(): void;
 }
 
 export const commitPreparedNavigation = (input: PreparedNavigationCommit) =>
@@ -28,6 +29,7 @@ export const commitPreparedNavigation = (input: PreparedNavigationCommit) =>
     }));
     const result = input.publish(() => {
       // The publisher accepts browser history before committing these live owners.
+      input.onCommit?.();
       retainOutgoingViewerPins(input.core, input.pins, input.original);
       for (const transfer of input.transfers) replaceViewerHost(input.core, transfer.source, transfer.destination);
       for (const { owner, next } of input.owners) owner.apply(next);

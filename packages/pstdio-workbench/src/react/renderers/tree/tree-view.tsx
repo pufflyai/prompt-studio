@@ -336,6 +336,7 @@ const TreeViewport = ({
     viewportRef={scrollRef}
     viewportProps={{
       display: "block",
+      maxH: "var(--workbench-menu-max-height, none)",
       style: { overflowX: "hidden" },
       onScroll: (event) => onScroll(event.currentTarget.scrollTop),
     }}

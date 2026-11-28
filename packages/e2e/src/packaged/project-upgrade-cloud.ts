@@ -2,13 +2,20 @@ import assert from "node:assert/strict";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { expect } from "@playwright/test";
-import { createClient, PstdioConnectionError } from "@pstdio/sdk/client";
+import { createClient, type ProjectSyncStatus } from "@pstdio/sdk/client";
 import { signInDevice, writeCertificate } from "./packaged-folder-recovery.fixture";
 import { startPackagedServe } from "./packaged-serve-helpers";
 import { createPackagedSyncPeer } from "./packaged-sync-relay.fixture";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 import { installUpgradePlanner, planner, seedUpgradeProject, upgradeApi } from "./project-upgrade-fixture";
 import { stopUpgradeProcess } from "./project-upgrade-shutdown";
+
+const syncReady = (status: ProjectSyncStatus) => {
+  const sources = status.sources ?? [];
+  return (
+    status.state === "synced" && status.offlineReady && sources.every((source) => source.downloaded && !source.busy)
+  );
+};
 
 export const checkCloudProjectUpgrade = async (
   home: string,
@@ -66,7 +73,7 @@ export const checkCloudProjectUpgrade = async (
     const deviceId = await signInDevice(a, peer.origin);
     await a.client.account.syncProject(seed.id);
     await expect
-      .poll(async () => (await a.client.account.projectSyncStatus(seed.id)).offlineReady, {
+      .poll(async () => syncReady(await a.client.account.projectSyncStatus(seed.id)), {
         timeout: PACKAGED_TEST_TIMEOUT,
       })
       .toBe(true);
@@ -80,19 +87,13 @@ export const checkCloudProjectUpgrade = async (
       })
       .toBe(true);
     await expect
-      .poll(async () => (await b.client.account.projectSyncStatus(seed.id)).offlineReady, {
+      // offlineReady alone does not require the reported owners to finish their
+      // current work. Wait for this device's sync to settle before opening once.
+      .poll(async () => syncReady(await b.client.account.projectSyncStatus(seed.id)), {
         timeout: PACKAGED_TEST_TIMEOUT,
       })
       .toBe(true);
-    try {
-      await b.client.projects.open(seed.id);
-    } catch (error) {
-      // Released hosts can close the idle HTTP socket while the synced folder is still
-      // provisioning. Reopening the same project resumes that idempotent operation.
-      if (!(error instanceof PstdioConnectionError) || (error.cause as NodeJS.ErrnoException)?.code !== "ECONNRESET")
-        throw error;
-      await b.client.projects.open(seed.id);
-    }
+    await b.client.projects.open(seed.id);
     await installUpgradePlanner(upgradeApi(b.host.descriptor), seed.id);
     await seen(b, await content(a));
     console.log("[Cloud upgrade] Second released device read the saved ticket");

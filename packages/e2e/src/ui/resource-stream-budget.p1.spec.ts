@@ -211,7 +211,10 @@ test("resource discussion sends file-only comments and retains the original atta
   await input.press("ControlOrMeta+a");
   await input.press("ControlOrMeta+b");
   await expect(input.locator("strong, b")).toHaveText("Important");
-  const toolbar = page.locator(".floating-text-format-toolbar");
+  // Read-only messages have selection actions too; follow the composer's formatting toolbar.
+  const toolbar = page
+    .locator(".floating-text-format-toolbar")
+    .filter({ has: page.getByRole("button", { name: "Bold", exact: true, includeHidden: true }) });
   await input.press("ArrowRight");
   // Wait for Lexical's selection update before Enter can replace the selected text.
   await expect(toolbar).not.toHaveClass(/\bactive\b/);

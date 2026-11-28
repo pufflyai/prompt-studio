@@ -18,6 +18,7 @@ interface ExtensionCommandInput {
 interface ExecuteWebviewCommandInput extends ExtensionCommandInput {
   placement?: PlacementIdentity;
   isViewerCurrent?(): boolean;
+  onNavigationCommit?(): void;
   executeExtensionCommand: (input: ExtensionCommandInput, signal?: AbortSignal) => Promise<unknown>;
   declarations?: Parameters<typeof runWorkbenchWebviewCommandOperation>[0]["metadata"];
   trackOperation?: false;
@@ -47,7 +48,12 @@ export const executeWebviewCommand = async (input: ExecuteWebviewCommandInput) =
       executeWorkbenchExtensionCommandResponse(
         { projectId, workbench, executeCommand: (_ignoredId, _ignoredBody, commandSignal) => execute(commandSignal) },
         commandId,
-        { placement: input.placement, signal, isViewerCurrent: input.isViewerCurrent },
+        {
+          placement: input.placement,
+          signal,
+          isViewerCurrent: input.isViewerCurrent,
+          onNavigationCommit: input.onNavigationCommit,
+        },
       );
     if (input.trackOperation === false) return dispatch(input.signal);
     return runWorkbenchWebviewCommandOperation({
@@ -97,6 +103,7 @@ export const createFrameCommandAdapters = (input: {
         resource: request.resource ?? input.resource,
         placement: input.placement,
         isViewerCurrent: invocation?.isViewerCurrent,
+        onNavigationCommit: invocation?.onNavigationCommit,
         slot: input.slot,
         workbench: input.workbench,
         projectId: input.projectId,

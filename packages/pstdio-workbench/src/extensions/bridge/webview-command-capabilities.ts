@@ -41,6 +41,7 @@ export const createWorkbenchExtensionWebviewAdapters =
         signal,
         placement: context.placement.placementIdentity,
         isViewerCurrent: invocation?.isViewerCurrent,
+        onNavigationCommit: invocation?.onNavigationCommit,
         slot: createExtensionSlot({
           id: context.webviewId,
           kind: input.slotKind,
