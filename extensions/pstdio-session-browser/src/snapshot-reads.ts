@@ -1,4 +1,4 @@
-import type { ExtensionContextBase, ExtensionWorkspace } from "@pstdio/sdk/extensions";
+import type { ChatRendererSnapshot, ExtensionContextBase, ExtensionWorkspace } from "@pstdio/sdk/extensions";
 import type { nativePresentation } from "./native-presentation";
 import { readQueue } from "./queue-snapshot";
 import { readWorkspacePresentation } from "./workspace";
@@ -7,7 +7,7 @@ export interface SnapshotReads {
   execution: Awaited<ReturnType<ExtensionContextBase["sessions"]["getExecutionState"]>>;
   queued: Awaited<ReturnType<typeof readQueue>>;
   session: Awaited<ReturnType<ExtensionContextBase["sessions"]["getConversation"]>>["session"];
-  harness: Awaited<ReturnType<ExtensionContextBase["sessions"]["getHarnessCommands"]>> | undefined;
+  harness: NonNullable<ChatRendererSnapshot["harness"]> | undefined;
   workspace: ExtensionWorkspace | undefined;
   workspacePresentation?: Awaited<ReturnType<typeof readWorkspacePresentation>>;
   native?: Awaited<ReturnType<typeof nativePresentation>>;
@@ -51,9 +51,16 @@ export const readSnapshotInputs = async (ctx: ExtensionContextBase, id: string, 
     const sources = remote && options.messages !== false ? await ctx.sessions.getConversationSources(id) : undefined;
     return { session, messages: sources?.checkpoint ?? [] };
   };
-  const readHarness = () => {
+  const readHarness = async () => {
     if (remote) return undefined;
-    return sessionRead || options.changes?.has("harness") ? ctx.sessions.getHarnessCommands(id) : previous!.harness;
+    if (!sessionRead && !options.changes?.has("harness")) return previous!.harness;
+    try {
+      return await ctx.sessions.getHarnessCommands(id);
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") throw error;
+      // Publish empty controls so a failed refresh also clears stale native commands and modes.
+      return { commands: [], modes: [], slashCommands: false };
+    }
   };
   const [{ session, messages }, harness] = await Promise.all([readConversation(), readHarness()]);
   const workspaceId = session.workspaceId ?? undefined;

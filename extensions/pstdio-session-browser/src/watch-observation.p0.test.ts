@@ -4,6 +4,35 @@ import { nativeSubmissionIndex, saveNativeSubmission, updateNativeSubmission } f
 import { watchConversation } from "./watch";
 import { createWatchObservationFixture } from "./watch-observation.test-fixture";
 
+test("the session stream opens with saved messages and restores native controls when the harness returns", async () => {
+  const f = createWatchObservationFixture();
+  const getCommands = f.ctx.sessions.getHarnessCommands;
+  f.ctx.sessions.getHarnessCommands = async () => {
+    throw new Error("Codex app-server connection closed.");
+  };
+  const messages = [{ id: "saved", role: "user" as const, parts: [{ type: "text" as const, text: "Saved message" }] }];
+  f.state.stream = async (onEvent) =>
+    onEvent({ event: "patch", data: { op: "replace", path: "/messages", value: messages } });
+  const displayed = Promise.withResolvers<unknown>();
+  const recovered = Promise.withResolvers<boolean>();
+  f.state.wrote = (frame) => {
+    if (!("snapshot" in frame)) return;
+    if (frame.snapshot.messages) displayed.resolve(frame.snapshot.messages);
+    if (frame.snapshot.harness?.commands.some((command) => command.name === "/first")) recovered.resolve(true);
+  };
+  const watching = watchConversation(f.ctx, { type: "session", id: "s" });
+  try {
+    expect(await Promise.race([watching, displayed.promise])).toEqual(messages);
+    f.ctx.sessions.getHarnessCommands = getCommands;
+    f.change("harness");
+    expect(await Promise.race([watching, recovered.promise])).toBe(true);
+    expect(f.counts.stream).toBe(1);
+  } finally {
+    f.controller.abort();
+    await watching.catch(() => undefined);
+  }
+});
+
 test("another session's native inputs do not refresh this conversation's metadata", async () => {
   const f = createWatchObservationFixture();
   const watching = watchConversation(f.ctx, { type: "session", id: "s" });

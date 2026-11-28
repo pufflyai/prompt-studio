@@ -3,7 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { SessionMessage } from "pstdio-api-contracts";
-import { getSessionHistory, loadSessionHistory } from "./session-history";
+import { getSessionHistory, loadSessionHistory, readSessionHistorySources } from "./session-history";
 import { createSessionStore } from "./session-store";
 import { inertSessionChannelHooks } from "./session-store.test-utils";
 
@@ -34,6 +34,38 @@ test("an unreadable native transcript without a saved conversation starts from a
   } as never;
   expect(await loadSessionHistory("s", deps)).toEqual([]);
   expect(await loadSessionHistory("s", deps, [])).toEqual([]);
+});
+
+test("saved history survives a provider lookup failure", async () => {
+  const root = await mkdtemp(join(tmpdir(), "unavailable-harness-history-"));
+  const path = join(root, "checkpoint.json");
+  const messages: SessionMessage[] = [{ id: "saved", role: "user", parts: [{ type: "text", text: "Saved message" }] }];
+  try {
+    await Bun.write(path, JSON.stringify(messages));
+    const deps = {
+      sessionService: {
+        get: async () => ({
+          id: "s",
+          agent: "agent",
+          agent_session_id: "thread",
+          session_file_id: "checkpoint",
+        }),
+      },
+      fileService: { get: async () => ({ storage_path: path }) },
+      harnessRegistry: {
+        get: async () => {
+          throw new Error("Harness runtime unavailable");
+        },
+      },
+    } as never;
+    expect(await loadSessionHistory("s", deps)).toEqual(messages);
+    expect((await readSessionHistorySources("s", deps)).sources).toMatchObject({
+      checkpoint: messages,
+      nativeError: "native_unavailable",
+    });
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });
 
 test("saved conversation history survives removal of its workspace worktree", async () => {
