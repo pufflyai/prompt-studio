@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { benchmarkPlanEvidence } from "./benchmark-plan-evidence";
+import { browserQuarantineInventory } from "./browser-quarantine-inventory";
 import { productionPerformanceEvidence } from "./production-performance-evidence";
 import { assertStableQuarantineExclusions, verifyBunQuarantineCases } from "./quarantine-reports";
 import type { PlannedRun, TestPlan } from "./test-plan";
@@ -11,6 +12,27 @@ interface ReportedCase {
   title: string;
   outcome: string;
 }
+const completeBrowserReport = (
+  report: {
+    complete: boolean;
+    shard: string;
+    selected: string[];
+    errors: unknown[];
+    cases: Array<{ id: string; file: string }>;
+  },
+  run: PlannedRun,
+  quarantineOnlyFiles: string[],
+) =>
+  report.complete &&
+  report.shard === (run.shard ?? "1/1") &&
+  (report.selected.length > 0 || quarantineOnlyFiles.length === run.files.length) &&
+  !report.errors.length &&
+  report.cases.length === report.selected.length &&
+  new Set(report.selected).size === report.selected.length &&
+  new Set(report.cases.map((entry: { id: string }) => entry.id)).size === report.selected.length &&
+  report.cases.every(
+    (entry: { id: string; file: string }) => report.selected.includes(entry.id) && run.files.includes(entry.file),
+  );
 export const collectRunEvidence = (
   root: string,
   directory: string,
@@ -28,6 +50,7 @@ export const collectRunEvidence = (
   let quarantine: { executed: number; failures: number } | undefined;
   let reportedFiles: string[] = [];
   let cases: ReportedCase[] = [];
+  let quarantineOnlyFiles: string[] = [];
   try {
     if (run.productionFamily) {
       const evidence = productionPerformanceEvidence(directory, run, plan, executionId);
@@ -72,19 +95,10 @@ export const collectRunEvidence = (
       reportedFiles = [...new Set(cases.map((entry) => entry.file))];
     } else if (["app", "component", "desktop", "packaged-browser", "vite"].includes(run.runner)) {
       const report = read("browser.json");
-      reports = ["browser.json"];
-      complete =
-        identity(report) &&
-        report.complete &&
-        report.shard === (run.shard ?? "1/1") &&
-        report.selected.length > 0 &&
-        !report.errors.length &&
-        report.cases.length === report.selected.length &&
-        new Set(report.selected).size === report.selected.length &&
-        new Set(report.cases.map((entry: { id: string }) => entry.id)).size === report.selected.length &&
-        report.cases.every(
-          (entry: { id: string; file: string }) => report.selected.includes(entry.id) && run.files.includes(entry.file),
-        );
+      const inventory = browserQuarantineInventory(directory, run, plan, executionId);
+      reports = ["browser.json", ...inventory.reports];
+      quarantineOnlyFiles = inventory.files;
+      complete = identity(report) && completeBrowserReport(report, run, quarantineOnlyFiles);
       cases = report.cases.map((entry: ReportedCase) => ({
         ...entry,
         outcome: ({ passed: "success", skipped: "skipped" } as Record<string, string>)[entry.outcome] ?? "failure",
@@ -145,6 +159,7 @@ export const collectRunEvidence = (
     reason,
     quarantine,
     reportedFiles,
+    quarantineOnlyFiles,
     reports: reports.map((file) => relative(root, join(directory, file)).replaceAll("\\", "/")),
   };
 };

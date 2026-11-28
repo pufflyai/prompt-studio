@@ -14,6 +14,7 @@ export interface TestRunResult {
   exitCode: number | null;
   reports: string[];
   reportedFiles?: string[];
+  quarantineOnlyFiles?: string[];
   quarantine?: { executed: number; failures: number };
   reason?: string;
   elapsedMs?: number;
@@ -216,7 +217,43 @@ export const browserCoverageErrors = (plan: TestPlan, results: TestRunResult[]) 
         .filter((result) => runs.some((run) => run.id === result.runId))
         .flatMap((result) => result.reportedFiles ?? []),
     );
-    return runs[0]!.files.filter((file) => !files.has(file)).map((file) => `Browser selection never reported: ${file}`);
+    const representative = runs[0]!;
+    const quarantined = (file: string) =>
+      representative.quarantineIds.some((id) => id.startsWith(`${file}:`)) &&
+      representative.lane === "stable" &&
+      results.some(
+        (result) =>
+          runs.some((run) => run.id === result.runId) &&
+          result.planDigest === plan.digest &&
+          planHash(result.source) === planHash(plan.source) &&
+          result.complete &&
+          result.quarantineOnlyFiles?.includes(file),
+      ) &&
+      plan.runs.some(
+        (run) =>
+          run.lane === "quarantine" &&
+          run.runner === representative.runner &&
+          run.owner === representative.owner &&
+          run.artifact === representative.artifact &&
+          planHash(run.target) === planHash(representative.target) &&
+          representative.quarantineIds
+            .filter((id) => id.startsWith(`${file}:`))
+            .every((id) => run.quarantineIds.includes(id)) &&
+          run.files.includes(file) &&
+          results.some(
+            (result) =>
+              result.runId === run.id &&
+              result.planDigest === plan.digest &&
+              planHash(result.source) === planHash(plan.source) &&
+              result.complete &&
+              ["success", "quarantined-failure"].includes(result.outcome) &&
+              result.quarantine?.executed === run.quarantineIds.length &&
+              result.reportedFiles?.includes(file),
+          ),
+      );
+    return representative.files
+      .filter((file) => !files.has(file) && !quarantined(file))
+      .map((file) => `Browser selection never reported: ${file}`);
   });
 };
 if (import.meta.main) {

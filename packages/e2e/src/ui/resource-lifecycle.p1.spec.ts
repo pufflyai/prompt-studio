@@ -64,6 +64,7 @@ test("returns to a resource's parent after deleting the open resource", async ({
       new URL(response.url()).pathname.endsWith("/extensions/commands/pstdio.planner.command.delete-ticket/execute"),
   );
   await page.getByRole("menuitem", { name: "Delete", exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Delete ticket", exact: true }).click();
   expect((await deleteResponse).ok()).toBe(true);
 
   await expect(page.getByRole("button", { name: "Create row", exact: true })).toBeVisible();

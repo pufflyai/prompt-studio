@@ -1,5 +1,6 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { discoverBrowserQuarantineInventory, needsBrowserQuarantineInventory } from "./browser-quarantine-inventory";
 import { runCiChecks } from "./run-ci-checks";
 import { runnerCommand } from "./runner-profiles";
 import type { PlannedRun, TestPlan } from "./test-plan";
@@ -24,6 +25,31 @@ export const runPlannedTest = async (plan: TestPlan, run: PlannedRun, result: Te
   const command =
     run.target.platform === "linux" && process.env.PLAN_DISPLAY === "true" ? ["xvfb-run", "-a", ...selected] : selected;
   const start = performance.now();
+  const env = {
+    ...options.env,
+    TEST_PRIORITIES: run.priority,
+    CI_PRIORITY: run.lane === "quarantine" ? "P2" : run.priority,
+    CI_PLAN_DIGEST: plan.digest,
+    CI_PLAN_RUN_ID: run.id,
+    CI_TEST_EXECUTION_ID: executionId,
+    CI_TEST_ROOT: root,
+    CI_PLAN_SOURCE_SHA: plan.source.sha,
+    CI_PLAN_RUN_FILES: JSON.stringify(run.files),
+    CI_PLAN_REPORTER: join(root, "scripts/ci/plan-playwright-reporter.ts"),
+    CI_PLAN_BROWSER_EVIDENCE: join(evidence, "browser.json"),
+    CI_PLAN_FIXTURE_STATS: join(evidence, "fixture-inputs.json"),
+    CI_PLAN_SHARD: run.shard ?? "1/1",
+    BUN_TEST_EVIDENCE_FILE: join(evidence, "cases.json"),
+    API_TEST_REPORT_DIR: join(evidence, "api"),
+    ...(run.componentOwner ? { CANVAS_TEST_PACKAGES: run.componentOwner } : {}),
+    E2E_TEST_LANE: run.lane === "quarantine" ? "quarantine" : "stable",
+    ...(run.priority === "P3" ? { UI_PERF_ASSERT_BUDGETS: "1" } : {}),
+    E2E_PACKAGED_BINARY_PATH:
+      process.env.E2E_PACKAGED_BINARY_PATH ??
+      join(root, "dist", process.platform === "win32" ? "pstdio.exe" : "pstdio"),
+  };
+  if (needsBrowserQuarantineInventory(run))
+    await discoverBrowserQuarantineInventory(root, evidence, run, env, signal, options.inheritProcessGroup);
   const outcome = await runCiChecks([{ id: run.id, cwd: join(root, run.cwd), command }], {
     priority: run.lane === "quarantine" ? "P2" : run.priority,
     concurrency: 1,
@@ -31,29 +57,7 @@ export const runPlannedTest = async (plan: TestPlan, run: PlannedRun, result: Te
     inheritProcessGroup: options.inheritProcessGroup,
     observePeers: Boolean(process.env.GITHUB_ACTIONS) && !run.continueIndependentFiles,
     logDirectory: join(evidence, "logs"),
-    env: {
-      ...options.env,
-      TEST_PRIORITIES: run.priority,
-      CI_PRIORITY: run.lane === "quarantine" ? "P2" : run.priority,
-      CI_PLAN_DIGEST: plan.digest,
-      CI_PLAN_RUN_ID: run.id,
-      CI_TEST_EXECUTION_ID: executionId,
-      CI_TEST_ROOT: root,
-      CI_PLAN_SOURCE_SHA: plan.source.sha,
-      CI_PLAN_RUN_FILES: JSON.stringify(run.files),
-      CI_PLAN_REPORTER: join(root, "scripts/ci/plan-playwright-reporter.ts"),
-      CI_PLAN_BROWSER_EVIDENCE: join(evidence, "browser.json"),
-      CI_PLAN_FIXTURE_STATS: join(evidence, "fixture-inputs.json"),
-      CI_PLAN_SHARD: run.shard ?? "1/1",
-      BUN_TEST_EVIDENCE_FILE: join(evidence, "cases.json"),
-      API_TEST_REPORT_DIR: join(evidence, "api"),
-      ...(run.componentOwner ? { CANVAS_TEST_PACKAGES: run.componentOwner } : {}),
-      E2E_TEST_LANE: run.lane === "quarantine" ? "quarantine" : "stable",
-      ...(run.priority === "P3" ? { UI_PERF_ASSERT_BUDGETS: "1" } : {}),
-      E2E_PACKAGED_BINARY_PATH:
-        process.env.E2E_PACKAGED_BINARY_PATH ??
-        join(root, "dist", process.platform === "win32" ? "pstdio.exe" : "pstdio"),
-    },
+    env,
   });
   result.exitCode = outcome.results[0]?.exitCode ?? null;
   result.outcome = outcome.results[0]?.outcome ?? "cancelled";

@@ -39,13 +39,15 @@ export default class PlanReporter {
     const path = process.env.CI_PLAN_BROWSER_EVIDENCE;
     if (!path) return;
     const terminal = [...this.finished.values()];
-    const complete =
-      !this.errors.length &&
-      this.finished.size === this.selected.length &&
-      this.selected.every((test) => this.finished.has(test.id)) &&
-      terminal.every((entry) => entry.outcome !== "interrupted" && entry.retry === 0) &&
-      result.status !== "interrupted" &&
-      result.status !== "timedout";
+    const discovery = process.env.CI_PLAN_BROWSER_DISCOVERY === "1";
+    const complete = discovery
+      ? !this.errors.length && result.status === "passed"
+      : !this.errors.length &&
+        this.finished.size === this.selected.length &&
+        this.selected.every((test) => this.finished.has(test.id)) &&
+        terminal.every((entry) => entry.outcome !== "interrupted" && entry.retry === 0) &&
+        result.status !== "interrupted" &&
+        result.status !== "timedout";
     mkdirSync(dirname(path), { recursive: true });
     writeFileSync(
       path,
@@ -54,11 +56,13 @@ export default class PlanReporter {
           planDigest: process.env.CI_PLAN_DIGEST,
           runId: process.env.CI_PLAN_RUN_ID,
           executionId: process.env.CI_TEST_EXECUTION_ID,
+          discovery,
           selected: this.selected.map((test) => test.id),
           selection: this.selected.map((test) => ({
             id: test.id,
             file: relative(process.env.CI_TEST_ROOT!, test.location.file).replaceAll("\\", "/"),
             project: test.parent.project()?.name ?? "",
+            title: test.titlePath().join(" > "),
           })),
           shard: this.shard,
           cases: terminal,

@@ -94,5 +94,25 @@
     ],
     "removalCriteria": "Merge #2616, which makes a cancelled command wait for the accepted-workspace cleanup it started before the run reports cancelled (reproduced 3/3 with a 100 ms provider cancel delay before the fix). Then restore this unchanged case to the stable lane with first-attempt evidence. Keep every assertion.",
     "failureMessageIncludes": ["providerCancelCount"]
+  },
+  {
+    "runner": "playwright-ui",
+    "file": "packages/e2e/src/ui/desktop-upgrade.p1.spec.ts",
+    "name": "shows a downloaded update as a movable status widget and asks before restarting",
+    "platforms": ["linux"],
+    "arch": "x64",
+    "owner": "PS-1350",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/46181534119/job/141096913231",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/46144047603/job/140980411927"
+    ],
+    "removalCriteria": "Repair the keyboard placement race after the restart confirmation closes: Alt+Shift+ArrowRight twice left desktop.upgrade in the leading slot in verify run 46181534119, while the unchanged test, updater, status bar and dialog code passed verify run 46144047603. Restore this unchanged case to the stable lane after first-attempt Linux evidence with every assertion and workload preserved. Execute once in quarantine; reject missing, skipped, retried, incomplete or differently failing coverage.",
+    "failureMessageIncludes": [
+      "toHaveAttribute",
+      "desktop.upgrade",
+      "Expected: \"trailing\"",
+      "Received: \"leading\"",
+      "data-status-bar-slot=\"leading\""
+    ]
   }
 ]

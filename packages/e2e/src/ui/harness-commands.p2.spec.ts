@@ -111,7 +111,7 @@ for (const [harness, modes] of [
     await expect(editor).toHaveText("/unknown");
     await editor.fill("/fail");
     await send.click();
-    await expect(editor).toHaveText("/fail");
+    await expect(editor).toBeEmpty();
     await expect(main.getByText(/Native command \/fail failed/).filter({ visible: true })).toBeVisible();
     if (modes) {
       const text = "/goal Saved before failure";
@@ -127,6 +127,7 @@ for (const [harness, modes] of [
       await editor.fill(text);
       await send.click();
       await expect(main.getByText("Message delivery could not be confirmed.", { exact: true })).toBeVisible();
+      await expect(editor).toHaveText(text);
       await expect
         .poll(async () => JSON.stringify((await (await request.get(`${url}/harness-commands`)).json()).modes))
         .toContain("Saved before failure");
