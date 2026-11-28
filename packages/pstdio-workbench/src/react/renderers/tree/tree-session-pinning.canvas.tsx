@@ -74,5 +74,5 @@ export const PinSessions = () => {
 
 export default {
   title: "Product/Workbench/Navigation/Tree/Session pinning",
-  description: "Drag a session onto Pinned or onto a session that is already pinned.",
+  description: "Drag a session into Pinned or onto a session that is already pinned.",
 } satisfies CanvasMeta;
