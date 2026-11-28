@@ -41,6 +41,8 @@ Preserve required suite selection, save full logs and source revision, and verif
 
 Use the supported local workflow only when cloud execution is unavailable or cannot run a required workload. Record the concrete reason and keep blocked checks visible. A missing prerequisite never reduces the gate, and focused results do not replace a complete review run.
 
+See the [execution reference](../references/architecture/0016-remote-execution-and-automation.md#cloud-test-execution) for ownership and deployment boundaries, and the [workspace setup guide](../guides/development/0024-cloud-test-workspaces.md) for operator configuration and qualification.
+
 ## 5. Packaged files
 
 1. When bundled runtime behavior, assets, or file inclusion change, update the relevant packaged smoke test. This includes built-in templates, prompts, skills, and other packaged defaults. Documentation-reference-only edits do not require packaged tests.

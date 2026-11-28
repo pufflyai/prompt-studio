@@ -1,7 +1,6 @@
 Read and follow this document before starting work:
 
 - [Requirement book](documentation/requirement-book/README.md), then the Mission and product boundaries rules (RB1) in [the canonical book](documentation/requirement-book/book.json).
-- Run agent tests primarily in configured cloud workspaces, including focused tests and `test:review`. Follow the `run-cloud-tests` or `run-tests-remotely` skill. Use local execution only when cloud is unavailable or cannot run the required workload, and record why. Native desktop tests run in GitHub Actions when the selected workspace has no desktop session; use `--desktop-in-ci` and retain the candidate’s CI evidence. See [005.9.8](documentation/guidance/0005-testing.md#9-targeted-validation-and-repairs).
 
 ## Work guidance
 

@@ -16,6 +16,14 @@ Remote session starts use the stable Prompt Studio session id as the provider id
 
 The host does not invent a local path for a remote workspace. Local file and terminal APIs stay absent. Provider credentials never enter the provider reference, workspace record, extension settings, command input, child-process environment, or logs.
 
+## Cloud test execution
+
+Cloud Workspaces delegates repository uploads, execution collection and cleanup to its private Remote Testing companion. The [source upload](../../../extensions/remote-testing/src/source.ts) includes the candidate and selected comparison-base Git histories. Clean committed snapshots retain their original HEAD; working-tree edits become a child commit in the runner. Host Git configuration, templates, hooks and credentials stay on the host.
+
+Equipped test templates use an extended runtime image with Docker CLI, Compose, Buildx and the pinned Node runtime. An [operator-owned admission service](../../../extensions/remote-testing/operator/docker-admission.ts) adds a dedicated Docker daemon to each approved test Pod and places it on a separate trusted worker pool. The runner and daemon share the same workspace path for bind mounts. Image-evidence probes receive matching scheduling without Docker privileges. These are companion and deployment changes; PocketCoder core is unchanged.
+
+The [testing guidance](../../guidance/0005-testing.md#cloud-execution) owns the policy for choosing cloud execution, required coverage and local fallback. The [cloud test workspace guide](../../guides/development/0024-cloud-test-workspaces.md) describes operator setup and qualification.
+
 ## Named connection boundary
 
 A connection contribution declares its allowed HTTP methods, path prefixes, authentication shape, and streaming support. Project settings hold the base URL. The device stores credential references and sign-in metadata separately, and the secret bytes live in the host secret store. Projects can share a sign-in for the same contribution and server origin. Each connection keeps its own check result on the device and clears the displayed result when its credential changes. The request proxy enforces same-origin relative paths, HTTPS outside loopback, bounded request and response sizes, timeouts, cancellation, and no redirects.
