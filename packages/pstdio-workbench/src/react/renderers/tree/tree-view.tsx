@@ -216,6 +216,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
     onToggleSection: toggleSection,
     onToggleNode: toggleNode,
     onReorderNodes,
+    onMoveNode: moveNode,
     canMove: treeRenderer.canMove,
     onNavigate: navigate,
   };
@@ -271,7 +272,6 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
             customizationAvailable={isSidenav}
             scrollRef={scrollRef}
             onReorderSections={(nextSectionIds) => onReorderSections("content", nextSectionIds)}
-            onMoveNode={moveNode}
           />
         </TreeViewport>
         <PinnedTree

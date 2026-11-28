@@ -24,7 +24,7 @@ Draft identity and persistence stay here. “New in this tab” uses the shared
 Current view shortcut and captured viewer, without changing Main from Side.
 Switch options follow public query cursors rather than truncate older history.
 
-Pin and Unpin actions keep chosen sessions in a separate leading section, including sessions beyond the first history page. Pins use small project-scoped storage records.
+Drag a session into the **Pinned** section or onto a pinned session to keep it at the top of the list. You can also choose **Pin session** or **Unpin session** from a session’s context menu, including for sessions beyond the first history page. Pins use small project-scoped storage records.
 
 Session history loads the next bounded page as the person scrolls toward its end, including within an expanded workspace group. Stable date headings join pages at the same level. This requires a published SDK and host supporting `view.tree.pages.v1`; updating the SDK alone does not update the running host.
 

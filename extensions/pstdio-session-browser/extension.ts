@@ -18,7 +18,7 @@ import {
 } from "@pstdio/sdk/extensions";
 import { sessionBrowser } from "./refs";
 import { act } from "./src/actions";
-import { browse, browsePage, search } from "./src/browse";
+import { browse, browsePage, pinDroppedSession, search } from "./src/browse";
 import { changeHeads, readChange } from "./src/changes";
 import { connectionRefresh } from "./src/controls";
 import { copySessionId } from "./src/copy-session-id";
@@ -137,6 +137,7 @@ const list = defineView({
     refreshEvents: [viewDataEvents.sessionsChanged, sessionPinsChanged],
     body: browse,
     page: browsePage,
+    onMove: pinDroppedSession,
   },
 });
 const links = defineView({

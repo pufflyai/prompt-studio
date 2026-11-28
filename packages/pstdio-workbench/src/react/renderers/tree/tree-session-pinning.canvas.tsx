@@ -17,27 +17,34 @@ const createFixture = () => {
     title: "Sessions",
     body: {
       kind: "tree",
-      defaultExpandedNodeIds: ["pinned-sessions"],
       getChildren: (node) => node.children ?? [],
       getBody: () => [
         {
           id: "pinned",
-          nodes: [
-            {
-              id: "pinned-sessions",
-              label: "Pinned",
-              icon: "pin",
-              collapsible: true,
-              canDrop: true,
-              children: sessions.filter((node) => pinned.has(node.id)).map((node) => ({ ...node, canDrop: true })),
-            },
-          ],
+          label: "Pinned",
+          collapsible: false,
+          nodes: pinned.size
+            ? sessions
+                .filter((node) => pinned.has(node.id))
+                .map((node) => ({ ...node, canDrop: true, canReorder: false }))
+            : [
+                {
+                  id: "pinned-sessions",
+                  label: "Drop a session here",
+                  icon: "pin",
+                  tone: "muted",
+                  canDrop: true,
+                  canReorder: false,
+                },
+              ],
         },
         {
           id: "sessions",
           label: "Sessions",
           collapsible: false,
-          nodes: sessions.filter((node) => !pinned.has(node.id)).map((node) => ({ ...node, canDrag: true })),
+          nodes: sessions
+            .filter((node) => !pinned.has(node.id))
+            .map((node) => ({ ...node, canDrag: true, canReorder: false })),
         },
       ],
       moveNode: (source, target) => {

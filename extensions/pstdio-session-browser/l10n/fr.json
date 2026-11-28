@@ -26,6 +26,7 @@
   "actions.sessionName": "Nom de la conversation",
   "commands.pin": "Épingler la session",
   "commands.unpin": "Désépingler la session",
+  "sessions.pinDropTarget": "Déposer une session ici",
   "sessions.pinned": "Épinglées",
   "links.title": "Ressources liées",
   "links.tickets": "Tickets",
