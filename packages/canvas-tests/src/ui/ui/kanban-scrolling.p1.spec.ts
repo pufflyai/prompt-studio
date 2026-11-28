@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { openCanvasPreview } from "../preview";
 
 // Critical: a visible column can have matching cards even when the first page contains none of them.
-test("the board loads an empty column and continues when keyboard navigation reaches the end", async ({ page }) => {
+test("the board loads successive pages for an empty column and keeps focus during continuation", async ({ page }) => {
   const preview = await openCanvasPreview(
     page,
     "packages/ui/src/components/kanban-renderer/paged-board.canvas.tsx#UnloadedColumn",

@@ -1,6 +1,6 @@
 import { Stack } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { KanbanRenderer } from "./kanban-renderer";
 import type { AttributeDescriptor } from "./types";
 
@@ -25,15 +25,7 @@ const rows = Array.from({ length: 250 }, (_, index) => ({
 }));
 const PagedBoard = () => {
   const [loaded, setLoaded] = useState(100);
-  const [loading, setLoading] = useState(false);
-  useEffect(() => {
-    if (!loading) return;
-    const timer = setTimeout(() => {
-      setLoaded((count) => Math.min(rows.length, count + 100));
-      setLoading(false);
-    }, 250);
-    return () => clearTimeout(timer);
-  }, [loading]);
+  const [onLoadMore] = useState(() => () => setLoaded((count) => Math.min(rows.length, count + 50)));
   return (
     <Stack height="600px">
       <KanbanRenderer
@@ -42,7 +34,7 @@ const PagedBoard = () => {
         attributes={attributes}
         defaultSettings={{ viewMode: "board", columnGrouping: "status", rowGrouping: "none", displayProperties: [] }}
         page={{
-          request: { limit: 100, offset: Math.max(0, loaded - 100), search: "", fields: ["title", "status"] },
+          request: { limit: 50, offset: loaded - 50, search: "", fields: ["title", "status"] },
           result: {
             revision: "1",
             cursor: loaded < 250 ? String(loaded) : null,
@@ -53,8 +45,8 @@ const PagedBoard = () => {
               { field: "status", value: "todo", count: 75 },
             ],
           },
-          loading,
-          onLoadMore: () => setLoading(true),
+          loading: false,
+          onLoadMore,
           onPageChange: () => {},
           onPageSizeChange: () => {},
           onSearchChange: () => {},
@@ -73,5 +65,5 @@ export default meta;
 type Story = CanvasFrame<typeof meta>;
 export const UnloadedColumn: Story = {
   id: "patterns-kanban-renderer-paged-board--unloaded-column",
-  description: "A visible empty column with more results loads automatically. Scroll near the last card to continue.",
+  description: "A visible empty column loads through successive pages. Scroll near the last card to continue.",
 };

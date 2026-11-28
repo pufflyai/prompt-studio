@@ -40,6 +40,7 @@ export type KanbanRendererListExpandedState = Record<string, boolean>;
 export interface KanbanRendererListProps {
   onLoadMore?: () => void;
   loadingMore?: boolean;
+  pageCursor?: string | null;
   items: KanbanRendererListItem[];
   selectedItemId?: string | null;
   expandedGroups?: KanbanRendererListExpandedState;
@@ -160,7 +161,13 @@ export const KanbanRendererList = (props: KanbanRendererListProps) => {
           );
         })}
       </Box>
-      {props.onLoadMore ? <CollectionPageBoundary loading={props.loadingMore} onLoadMore={props.onLoadMore} /> : null}
+      {props.onLoadMore ? (
+        <CollectionPageBoundary
+          key={props.pageCursor ?? rows.length}
+          loading={props.loadingMore}
+          onLoadMore={props.onLoadMore}
+        />
+      ) : null}
     </ScrollArea>
   );
 };

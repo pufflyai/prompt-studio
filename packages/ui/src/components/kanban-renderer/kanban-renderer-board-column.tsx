@@ -11,6 +11,7 @@ import { shouldVirtualizeKanban } from "./kanban-renderer-virtualization";
 interface BoardColumnCardsProps {
   onLoadMore?: () => void;
   loadingMore?: boolean;
+  loadedPage: string | number;
   column: KanbanRendererBoardColumn;
   selectedItemId: string | null;
   draggedKey: string | null;
@@ -176,7 +177,7 @@ export const BoardColumnCards = (props: BoardColumnCardsProps) => {
         })}
       </Box>
       {props.onLoadMore && hasMoreCards ? (
-        <CollectionPageBoundary loading={props.loadingMore} onLoadMore={props.onLoadMore} />
+        <CollectionPageBoundary key={props.loadedPage} loading={props.loadingMore} onLoadMore={props.onLoadMore} />
       ) : null}
     </ScrollArea>
   );
