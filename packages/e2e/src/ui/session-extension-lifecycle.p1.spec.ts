@@ -88,7 +88,8 @@ test("Sessions can be disabled and restored without losing drafts or stopping it
       .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-workbench-tab")));
     const projectNavigation = async () => {
       const back = page.getByRole("button", { name: "Back to project", exact: true });
-      if (await back.isVisible()) await back.click();
+      await expect(back).toBeVisible();
+      await back.click();
     };
     await projectNavigation();
     await expect(page.getByRole("option", { name: "Sessions", exact: true })).toHaveCount(1);

@@ -52,8 +52,8 @@ test("reopens the Main right menu from a single-resource page", async ({ page, r
 
   const mainPanelHeader = page.locator('[data-workbench-panel-header="main"]');
   const rightMenu = page.getByRole("region", { name: "Main right menu", exact: true });
-  const opener = mainPanelHeader.getByRole("button", { name: "Open Main right menu: Activity", exact: true });
-  const closer = mainPanelHeader.getByRole("button", { name: "Close Main right menu: Activity", exact: true });
+  const opener = mainPanelHeader.getByRole("button", { name: "Open Main right menu", exact: true });
+  const closer = mainPanelHeader.getByRole("button", { name: "Close Main right menu", exact: true });
   await expect(rightMenu).toBeVisible();
   await expect(closer).toHaveAttribute("aria-expanded", "true");
 

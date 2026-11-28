@@ -7,8 +7,8 @@ import { openSessionSidePanel } from "./helpers/resource-actions";
 import { prepareDashboard } from "./helpers/workspace-files";
 import { createGitRepo } from "./helpers/workspace-session-attempt";
 
-// Critical risk: following a link must not hide the conversation that holds it.
-test("a link in a Side conversation previews in Main and keeps the conversation visible", async ({ page, request }) => {
+// Critical risk: a Side preview must retain its conversation and leave Main in place.
+test("a link in a Side conversation previews in Side and retains the conversation tab", async ({ page, request }) => {
   const root = createGitRepo("pstdio-side-chat-links-", "Side chat links");
   mkdirSync(join(root, "src"), { recursive: true });
   writeFileSync(join(root, "src", "app.ts"), "export const sideLinkedFile = true;\n");
@@ -35,11 +35,12 @@ test("a link in a Side conversation previews in Main and keeps the conversation 
     const conversationTab = page
       .locator('[data-workbench-panel-header="side"]')
       .getByRole("tab", { name: session.title, exact: true });
+    const mainUrl = page.url();
     await side.getByRole("link", { name: "App", exact: true }).last().click();
-    await expect(
-      page.getByRole("region", { name: "Main", exact: true }).locator(".monaco-editor .view-lines"),
-    ).toContainText("sideLinkedFile");
-    await expect(page).toHaveURL(/document=src%2Fapp\.ts/);
+    await expect(side.locator(".monaco-editor .view-lines:visible")).toContainText("sideLinkedFile");
+    await expect(page).toHaveURL(mainUrl);
+    await expect(conversationTab).toHaveAttribute("aria-selected", "false");
+    await conversationTab.click();
     await expect(conversationTab).toHaveAttribute("aria-selected", "true");
     await expect(side.getByRole("link", { name: "App", exact: true }).last()).toBeVisible();
   } finally {

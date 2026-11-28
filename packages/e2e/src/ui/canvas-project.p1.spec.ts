@@ -187,6 +187,9 @@ export const Default = () => <label>Secondary canvas<input aria-label="Preview n
     await page.goto(`/projects/${project.id}/extensions/pstdio.canvas/canvases`);
     const viewer = page.frameLocator('iframe[title="UI Canvas"]:visible');
     const openCanvas = page.getByRole("option", { name: "UI Canvas", exact: true });
+    // Back to project only leaves the Sidenav level and keeps Main; Home replaces the design in Main.
+    const backToProject = page.getByRole("button", { name: "Back to project", exact: true });
+    const home = page.getByRole("option", { name: "Home", exact: true });
     await expect(viewer.locator("[data-ui-canvas-setup]")).toBeVisible();
     watcher = spawn("bun", [join(repoRoot, "packages/canvas/bin/pstdio-canvas.ts"), "watch", "--root", root], {
       stdio: "inherit",
@@ -233,7 +236,8 @@ export const Default = () => <label>Secondary canvas<input aria-label="Preview n
     try {
       await page.getByText("Button", { exact: true }).first().click();
       await loading.promise;
-      await page.getByRole("button", { name: "Back to project", exact: true }).click();
+      await backToProject.click();
+      await home.click();
       await expect(page).not.toHaveURL(/canvases/);
       const settled = page.waitForResponse("**/pstdio.canvas.command.preview.assets/execute");
       resume.resolve();
@@ -248,14 +252,16 @@ export const Default = () => <label>Secondary canvas<input aria-label="Preview n
     // Reload the chosen design, then reopen Canvas through project navigation.
     await page.reload();
     await expect(frame.getByRole("textbox", { name: "Preview note" })).toBeVisible();
-    await page.getByRole("button", { name: "Back to project", exact: true }).click();
+    await backToProject.click();
+    await home.click();
     await openCanvas.click();
     await expect(frame.getByRole("textbox", { name: "Preview note" })).toBeVisible();
     await frame.getByRole("textbox", { name: "Preview note" }).fill("Draft across project navigation");
     const designViewer = await page.locator('iframe[title="UI Canvas"]:visible').elementHandle();
     const retainedDesign = await designViewer!.contentFrame();
     await designViewer!.dispose();
-    await page.getByRole("button", { name: "Back to project", exact: true }).click();
+    await backToProject.click();
+    await home.click();
     // A build while the design is hidden must not replace its retained draft with a closed-viewer error.
     writeFileSync(
       join(root, "src/third.canvas.tsx"),
@@ -275,7 +281,8 @@ export const Default = () => <label>Secondary canvas<input aria-label="Preview n
     await expect(retainedDesign!.locator("[data-ui-canvas-build-error]")).toHaveCount(0);
     await openCanvas.click();
     await expect(frame.getByRole("textbox", { name: "Preview note" })).toHaveValue("Draft across project navigation");
-    await page.getByRole("button", { name: "Back to project", exact: true }).click();
+    await backToProject.click();
+    await home.click();
     rmSync(join(root, "src/secondary.canvas.tsx"));
     await expect
       .poll(async () => {

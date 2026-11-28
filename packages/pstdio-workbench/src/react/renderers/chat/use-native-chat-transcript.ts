@@ -30,9 +30,10 @@ export const useNativeChatTranscript = (props: NativeChatTranscriptOptions) => {
       if (!selected) return;
       const key = workbench.pages.resourceReferenceKey(viewer.resource);
       const targets = target.kind === "compound" ? target.targets : [target];
+      // A draft confirmation replaces its resource without reopening the visible transcript.
       const opened = targets.some(
         (item) =>
-          (item.kind === "page" || item.kind === "panel" || item.kind === "viewer") &&
+          (item.kind === "page" || item.kind === "panel" || (item.kind === "viewer" && item.operation !== "replace")) &&
           item.resource &&
           workbench.pages.resourceReferenceKey(item.resource) === key &&
           (item.kind !== "viewer" && item.region
