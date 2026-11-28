@@ -89,6 +89,8 @@ const runtimeManager = new DesktopRuntimeManager({
     }),
   onPhase: (phase) => setState({ kind: "starting", phase }),
   onIntentionalShutdown: () => {
+    // Once desktop has requested shutdown, its quit flow owns when the window closes.
+    if (quitFlow.isQuitting()) return;
     setState({ kind: "closing" });
     void windowController?.showLifecycle().catch((error) => {
       logger.warn({ event: "desktop.closing.unavailable", message: String(error) }, "Closing interface unavailable");

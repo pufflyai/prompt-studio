@@ -97,7 +97,7 @@ for (const shutdown of ["desktop quit", "API shutdown"] as const) {
         await waitForExit(app.child);
         expect(await close).toMatchObject({ exitCode: 0 });
       }
-      expect(existsSync(join(home, "runtime.json"))).toBe(false);
+      await expect.poll(() => existsSync(join(home, "runtime.json"))).toBe(false);
       observe("after-shutdown");
       const tick = readHeartbeat(heartbeatPath)!.tick;
       await expect.poll(() => readHeartbeat(heartbeatPath)?.tick).toBeGreaterThan(tick);

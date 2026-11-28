@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { EventEmitter } from "node:events";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DesktopRuntimeManager } from "./runtime-manager";
@@ -81,6 +81,51 @@ test.each([
       onShutdown();
       expect(announcements).toBe(1);
     }
+  } finally {
+    await manager.detach();
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("reopening waits for the previous desktop runtime to release its descriptor", async () => {
+  const root = mkdtempSync(join(tmpdir(), "desktop-reopen-"));
+  const descriptorPath = join(root, "runtime.json");
+  const replacement = { ...descriptor, instanceId: "replacement-runtime" };
+  const child = new RuntimeChild();
+  const calls: string[] = [];
+  writeFileSync(descriptorPath, JSON.stringify(descriptor));
+  writeFileSync(`${descriptorPath}.shutdown`, JSON.stringify(descriptor));
+  let retired = false;
+  const manager = new DesktopRuntimeManager(
+    {
+      descriptorPath,
+      resolveSidecarPath: () => "/app/pstdio",
+      onIntentionalShutdown() {},
+      onUnexpectedExit() {},
+      onPhase() {},
+    },
+    {
+      discoverRuntime: async (_path, options) => {
+        calls.push("discover");
+        if (!retired) return { state: "healthy", descriptor };
+        return options?.expectedRuntime ? { state: "healthy", descriptor: replacement } : { state: "missing" };
+      },
+      isRuntimePidAlive: () => true,
+      resolveEnvironment: async () => ({}),
+      existsSync: () => true,
+      createInstanceId: () => replacement.instanceId,
+      observeRuntimeShutdown: async () => {},
+      sleep: async () => {
+        calls.push("wait");
+        retired = true;
+        unlinkSync(descriptorPath);
+      },
+      spawn: () => Object.assign(child, { pid: replacement.pid }),
+    },
+  );
+  try {
+    await expect(manager.start()).resolves.toMatchObject({ descriptor: replacement });
+    expect(calls).toEqual(["wait", "discover", "discover"]);
   } finally {
     await manager.detach();
     rmSync(root, { recursive: true, force: true });

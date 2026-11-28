@@ -1,7 +1,8 @@
 import { readAcceptedRevision } from "pstdio-extensions";
 import { createExtensionSourceWatcher, hashExtensionSource } from "pstdio-extensions/authoring";
+import type { PreparationEvent } from "pstdio-extensions/preparation-client";
 import { publishPreparationEvent } from "pstdio-extensions/preparation-server";
-import { createExtensionRootWatcher } from "./extension-root-watcher";
+import { createLocalExtensionRootWatcher } from "./extension-root-watcher";
 
 interface WatchState {
   sources: { install_name: string; source_path: string; source_hash?: string | null }[];
@@ -9,16 +10,19 @@ interface WatchState {
   watcher: { refresh(path?: string): Promise<void>; dispose(): void };
 }
 const watchers = new Map<string, WatchState>();
-type WatchUpdate = { id: string } & (
+export type WatchUpdate = { id: string } & (
   | { kind: "sources"; rows: WatchState["sources"]; sourcePaths: string[]; reconcileAll: boolean }
   | { kind: "roots"; rows: WatchState["roots"] }
 );
-export const updatePreparationWatcher = async (input: WatchUpdate) => {
+export const updatePreparationWatcher = async (
+  input: WatchUpdate,
+  publish: (event: PreparationEvent) => void = publishPreparationEvent,
+) => {
   const existing = watchers.get(input.id);
   const previousSources = new Set(existing?.sources.map((row) => row.source_path));
   const addedSources =
     input.kind === "sources" ? input.rows.filter((row) => !previousSources.has(row.source_path)) : [];
-  const report = (event: object) => publishPreparationEvent({ watchId: input.id, ...event });
+  const report = (event: object) => publish({ watchId: input.id, ...event });
   const sourceHash = (sourcePath: string) => {
     try {
       return hashExtensionSource(sourcePath);
@@ -71,7 +75,7 @@ export const updatePreparationWatcher = async (input: WatchUpdate) => {
       onError: (error) => report({ error: error instanceof Error ? error.message : String(error) }),
     });
   else
-    state.watcher = await createExtensionRootWatcher({
+    state.watcher = await createLocalExtensionRootWatcher({
       listExtensionRoots: async () =>
         state.roots.map((row) => ({ ...row, sync: async () => report({ sourcePath: row.path }) })),
       // Reconcile every native attachment, including recovery after a watcher error.

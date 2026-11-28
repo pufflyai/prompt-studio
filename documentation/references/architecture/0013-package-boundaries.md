@@ -129,6 +129,9 @@ See [project composition](../extensions/0004-contribution-api.md#configure-proje
    `pstdio-api/extension-input-inspector` is the third private API export. It owns the
    private digest-only compiled command and imports pure revision inputs. The CLI invokes
    it before application boot; importing the app entry would load unrelated host code.
+   `pstdio-api/extension-watch-worker` is the fourth private export. The compiled CLI
+   uses it to start the macOS process that owns extension file watches before it loads
+   the API or opens a database.
 
    Host tests use fake harnesses, such as the one from
    `writeProvisionHarnessExtension` or `workbench-fixture`. They never load the

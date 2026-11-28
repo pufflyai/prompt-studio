@@ -2,9 +2,14 @@ import { subscribePreparationEvents, withBackgroundPreparation } from "pstdio-ex
 import { withPreparationContinuation } from "pstdio-extensions/preparation-client";
 import { runExtensionPreparation } from "./extension-preparation";
 import type { CreateExtensionRootWatcherInput } from "./extension-root-watcher";
+import type { ExtensionWatchProcess } from "./extension-watch-process";
 import { createPreparationWatchRefresh } from "./preparation-watch-refresh";
+import type { WatchUpdate } from "./preparation-watchers";
 
-export const createRootWatcherClient = async (input: CreateExtensionRootWatcherInput) => {
+export const createRootWatcherClient = async (
+  input: CreateExtensionRootWatcherInput,
+  watchProcess?: ExtensionWatchProcess,
+) => {
   const id = crypto.randomUUID();
   let disposed = false;
   let registered = false;
@@ -27,9 +32,10 @@ export const createRootWatcherClient = async (input: CreateExtensionRootWatcherI
       });
     running.set(path, work);
   };
-  const unsubscribe = subscribePreparationEvents((event) => {
+  const unsubscribe = (watchProcess?.subscribe ?? subscribePreparationEvents)((event) => {
     if (!disposed && registered && (event.kind === "worker-ready" || event.kind === "worker-lost")) {
-      void withPreparationContinuation(refresh, { priority: "restoration" }).catch((error) => input.onError?.(error));
+      const restored = watchProcess ? refresh() : withPreparationContinuation(refresh, { priority: "restoration" });
+      void restored.catch((error) => input.onError?.(error));
       return;
     }
     if (disposed || event.watchId !== id) return;
@@ -40,11 +46,9 @@ export const createRootWatcherClient = async (input: CreateExtensionRootWatcherI
     if (disposed) return;
     roots = await input.listExtensionRoots();
     if (disposed) return;
-    await runExtensionPreparation(
-      "watch.update",
-      { id, kind: "roots", rows: roots.map(({ path, ownerRoot }) => ({ path, ownerRoot })) },
-      { priority: "background", signal },
-    );
+    const update: WatchUpdate = { id, kind: "roots", rows: roots.map(({ path, ownerRoot }) => ({ path, ownerRoot })) };
+    if (watchProcess) await watchProcess.run({ task: "watch.update", input: update }, signal);
+    else await runExtensionPreparation("watch.update", update, { priority: "background", signal });
   });
   const refresh = refreshOwner.refresh;
   try {
@@ -64,7 +68,8 @@ export const createRootWatcherClient = async (input: CreateExtensionRootWatcherI
       unsubscribe();
       await refreshOwner.dispose();
       await Promise.allSettled([...running.values()]);
-      await runExtensionPreparation("watch.dispose", { id }).catch(() => {});
+      if (watchProcess) await watchProcess.run({ task: "watch.dispose", input: { id } }).catch(() => {});
+      else await runExtensionPreparation("watch.dispose", { id }).catch(() => {});
     },
   };
 };
