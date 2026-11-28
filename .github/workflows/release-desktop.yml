@@ -398,9 +398,10 @@ jobs:
           chmod +x "$baseline_dir/$asset"
           args=()
           if [[ "$FRESH_HARNESS_SMOKE" != true ]]; then args+=(--upgrade-only); fi
+          # macOS bash 3.2 treats an empty "${args[@]}" as unbound under set -u.
           unset GH_TOKEN
           bun run --cwd __test-tmp__/native-installer/packages/e2e test:packaged:harnesses \
-            "$candidate" "$baseline_dir/$asset" "${args[@]}"
+            "$candidate" "$baseline_dir/$asset" ${args[@]+"${args[@]}"}
 
       - name: Verify macOS signatures and notarization
         if: matrix.platform == 'darwin' && !cancelled() && success()
