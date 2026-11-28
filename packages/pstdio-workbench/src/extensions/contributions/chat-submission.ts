@@ -41,7 +41,17 @@ export const createChatSubmissionRunner = (input: {
           ++sequence,
         )
       : undefined;
-    source.publish({ sending: true, pending: [...(before.pending ?? []), ...(pending ? [pending] : [])] });
+    // Sending a returned message again replaces its failed copy.
+    const kept = pending
+      ? before.pending?.filter(
+          (item) =>
+            !item.failure ||
+            Boolean(item.unresolved) ||
+            item.text !== action.text ||
+            item.attachments.some((file) => !action.attachments.some((sent) => sent.id === file.id)),
+        )
+      : before.pending;
+    source.publish({ sending: true, pending: [...(kept ?? []), ...(pending ? [pending] : [])] });
     const execute = () => source.execute(action, handler);
     const discard = () => {
       if (pending && source.read().active !== false) discardPendingChatSubmission(source, pending.message.id);

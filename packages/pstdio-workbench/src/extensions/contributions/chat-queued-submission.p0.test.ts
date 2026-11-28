@@ -290,7 +290,7 @@ test("an acknowledged queue receipt cannot steal the earlier ordinary input's de
   expect(session.getSnapshot().pending).toBeUndefined();
 });
 
-test("identical failed inputs each keep a receipt until their own acknowledgement", async () => {
+test("a repeated failed send keeps one receipt, which a late delivery still claims", async () => {
   const session = createChatSession({
     initial: { streaming: true },
     query: async () => ({}),
@@ -300,12 +300,11 @@ test("identical failed inputs each keep a receipt until their own acknowledgemen
   });
   await session.run(action).catch(() => {});
   await session.run(action).catch(() => {});
-  expect(session.getSnapshot().pending).toHaveLength(2);
-  session.dismissSubmission(session.getSnapshot().pending![1]!.message.id);
-  const first = { id: "one", prompt: action.text, attachments: action.attachments };
-  session.accept({ revision: 1, snapshot: { queuedFollowUps: [first] } });
   expect(session.getSnapshot().pending).toHaveLength(1);
-  session.accept({ revision: 2, snapshot: { queuedFollowUps: [first, { ...first, id: "two" }] } });
+  session.accept({
+    revision: 1,
+    snapshot: { queuedFollowUps: [{ id: "one", prompt: action.text, attachments: action.attachments }] },
+  });
   expect(session.getSnapshot().pending).toBeUndefined();
 });
 
@@ -329,4 +328,21 @@ test("dismissing an unsent message keeps the composer and shows its files", asyn
   expect(dismissed.pending?.[0]?.failureDismissed).toBe(true);
   expect(dismissed.draft).toEqual(draft);
   expect(visibleChatDraftAttachments(dismissed.draft.attachments, dismissed.pending)).toEqual([file, unrelated]);
+});
+
+test("sending a returned message again replaces its failed copy", async () => {
+  let fail = true;
+  const session = createChatSession({
+    initial: { streaming: true },
+    query: async () => ({}),
+    action: async () => {
+      if (fail) throw new Error("Could not send");
+      return {};
+    },
+  });
+  await expect(session.run(action)).rejects.toThrow("Could not send");
+  expect(session.getSnapshot().pending?.filter((item) => item.failure)).toHaveLength(1);
+  fail = false;
+  await session.run(action);
+  expect(session.getSnapshot().pending?.some((item) => item.failure)).toBeFalsy();
 });
