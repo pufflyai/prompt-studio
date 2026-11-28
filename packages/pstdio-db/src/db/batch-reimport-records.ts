@@ -71,7 +71,7 @@ function currentRow(input: ReleasedRecord) {
   ]);
 }
 
-export async function exportSettledRecords(source: PGlite, file: string, signal?: AbortSignal) {
+export async function exportSettledRecords(source: PGlite, file: string, hasPending: boolean, signal?: AbortSignal) {
   const output = await open(file, "wx", 0o600);
   try {
     await output.writeFile(Buffer.from("5047434f50590aff0d0a000000000000000000", "hex"));
@@ -84,7 +84,8 @@ export async function exportSettledRecords(source: PGlite, file: string, signal?
         WITH live AS MATERIALIZED (
           SELECT c.ctid AS current_tid, r.ctid AS canonical_tid FROM storage_current_records c
           FULL JOIN storage_ordered_records r USING(workbench_id,extension_id,record_id)
-          WHERE NOT c.deleted OR c.record_id IS NULL
+          WHERE (NOT c.deleted OR c.record_id IS NULL)
+          ${hasPending ? "AND (workbench_id,extension_id,record_id) NOT IN (SELECT * FROM pg_temp.reimport_pending_records)" : ""}
         )
         SELECT o.id AS owner_id, c.record_id,
           CASE WHEN c.record_id IS NOT NULL THEN convert_from(r.state,'UTF8') END AS state, c.deleted, c.revision,

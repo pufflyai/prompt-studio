@@ -42,9 +42,9 @@ Published 0.46.0 and 0.47.0 databases can upgrade directly. They run the earlier
 conversions they missed, then adopt the 0.49 baseline. The local-only reset
 applies specifically to the later 0.48 storage format.
 
-A settled 0.48 database is batch re-imported and its source is retained at
-`<database>.before-0.49`. A database with pending edits uses the existing
-conversion to materialize those edits. At this 0.48 boundary every project is local.
+The 0.48 importer bulk-copies settled records and keeps the source at
+`<database>.before-0.49`. It converts records touched by pending ordered edits
+with the original edit and dependency data, including locally created and deleted records. At this 0.48 boundary every project is local.
 The active database retains live records, document contents, local history, attachment references and
 uploads with staged bytes. Old save IDs, deleted records and sync positions expire together.
 The attachment byte store remains available by content hash. A fully converted early 0.49 installation adopts the new journal
