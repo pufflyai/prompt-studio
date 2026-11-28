@@ -88,6 +88,8 @@ const writeAutomationExtension = (root: string) => {
             };
           },
           async cancel(_ctx, input) {
+            // A remote provider takes time to cancel. Cancelling the run must wait for it.
+            await new Promise((resolve) => setTimeout(resolve, 100));
             providerCancelCount += 1;
             return {
               providerRef: input.providerRef,
