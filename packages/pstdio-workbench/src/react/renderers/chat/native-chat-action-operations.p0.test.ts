@@ -92,12 +92,91 @@ test("quick queue changes show at once and run one after another without locking
       order.push("second");
     });
     expect(projectQueuedFollowUps(queue, actions.getSnapshot())).toEqual([]);
-    await Promise.resolve();
+    await new Promise((done) => setTimeout(done, 0));
     expect(order).toEqual(["first"]);
     first.resolve();
     await Promise.all([removingFirst, removingSecond]);
     expect(order).toEqual(["first", "second"]);
     expect(actions.getSnapshot()).toEqual([]);
+  } finally {
+    queries.dispose();
+  }
+});
+
+test("a second change to a moved message is sent against the queue the move returned", async () => {
+  const queries = createScopedQueryClient({ runtimeId: "dashboard", extensionId: "pstdio" });
+  const actions = createChatActionOperations(queries, session, "project");
+  let confirmed = [...queue];
+  const move: ChatRendererAction = {
+    type: "queue",
+    operation: "move",
+    direction: "up",
+    item: queue[1]!,
+    attachments: [],
+    values: {},
+  };
+  const remove: ChatRendererAction = {
+    type: "queue",
+    operation: "remove",
+    item: queue[1]!,
+    attachments: [],
+    values: {},
+  };
+  const sent: ChatRendererAction[] = [];
+  try {
+    const moving = actions.run(
+      move,
+      undefined,
+      async (action) => {
+        sent.push(action);
+        // The runtime renumbers both rows and issues new revisions.
+        confirmed = [
+          { ...queue[1]!, position: 1, revision: "r3" },
+          { ...queue[0]!, position: 2, revision: "r4" },
+        ];
+      },
+      () => confirmed,
+    );
+    const removing = actions.run(
+      remove,
+      undefined,
+      async (action) => void sent.push(action),
+      () => confirmed,
+    );
+    await Promise.all([moving, removing]);
+    expect(sent[1]).toMatchObject({ operation: "remove", item: { prompt: "Second", position: 1, revision: "r3" } });
+  } finally {
+    queries.dispose();
+  }
+});
+
+test("changes waiting behind a lost queue response are refused instead of hanging", async () => {
+  const queries = createScopedQueryClient({ runtimeId: "dashboard", extensionId: "pstdio" });
+  const actions = createChatActionOperations(queries, session, "project");
+  const remove = (item: (typeof queue)[number]): ChatRendererAction => ({
+    type: "queue",
+    operation: "remove",
+    item,
+    attachments: [],
+    values: {},
+  });
+  let writes = 0;
+  try {
+    const lost = actions.run(remove(queue[0]!), undefined, async () => {
+      writes++;
+      throw new PstdioConnectionError(new Error("Queue response lost"));
+    });
+    const waiting = actions.run(remove(queue[1]!), undefined, async () => {
+      writes++;
+    });
+    const [lostResult, waitingResult] = await Promise.allSettled([lost, waiting]);
+    expect(lostResult.status).toBe("rejected");
+    expect(waitingResult).toMatchObject({
+      status: "rejected",
+      reason: expect.objectContaining({ message: expect.stringContaining("An earlier queue change did not go through") }),
+    });
+    expect(writes).toBe(1);
+    expect(projectQueuedFollowUps(queue, actions.getSnapshot())).toEqual(queue);
   } finally {
     queries.dispose();
   }

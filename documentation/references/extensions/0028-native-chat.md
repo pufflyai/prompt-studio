@@ -337,7 +337,7 @@ remain owned by the workbench.
 
 ### Pending queued input
 
-Removing, moving and editing queued messages show at once and run in order, one after another. The queue stays editable meanwhile and no progress line is shown. Approvals and Stop also show no progress line; a repeated approval or Stop for the same target is refused while the first is pending. A change the runtime refuses shows an error, and the queue returns to the runtime's state.
+Removing, moving and editing queued messages show at once and run in order, one after another. Each change waits for the one before it and finds its message again in the queue that change returned, because positions and revisions change after a move. If an earlier change fails or loses its response, the changes waiting behind it are refused with an error. The queue stays editable meanwhile and no progress line is shown. Approvals and Stop also show no progress line; a repeated approval or Stop for the same target is refused while the first is pending. A change the runtime refuses shows an error, and the queue returns to the runtime's state.
 
 The native owner retains an ordinary submitted input while its action is pending, including a sending queue row when the conversation is running. This presentation stays outside canonical transcript and queue indexes, survives placement changes, and hands off once to the matching saved request or canonical user message. Question replies do not create ordinary pending input or consume the message draft.
 
