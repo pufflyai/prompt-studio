@@ -57,7 +57,8 @@ const rebaseQueueAction = <A extends Extract<ChatRendererAction, { type: "queue"
   action: A,
   queue: readonly ChatQueuedRequest[],
 ): A => {
-  if (!queue.length) return action;
+  // A new item is created from the request's content; it addresses no existing message.
+  if (!queue.length || action.operation === "create") return action;
   return {
     ...action,
     item: findQueuedRequest(action.item, queue),
@@ -94,7 +95,8 @@ export const createChatActionOperations = (queries: ScopedQueryClient, source: R
       if (action.type === "queue") {
         // Each queue change shows at once and waits for the one before it, then finds its
         // message again in the queue that change returned.
-        const previous = queueTails.get(resource) ?? Promise.resolve(true);
+        const waiting = queueTails.get(resource);
+        const previous = waiting ?? Promise.resolve(true);
         const settled = Promise.withResolvers<boolean>();
         queueTails.set(resource, settled.promise);
         const result = operations.submit({
@@ -109,7 +111,8 @@ export const createChatActionOperations = (queries: ScopedQueryClient, source: R
           classify: classifyApiWrite,
           write: async () => {
             if (!(await previous)) throw new Error("An earlier queue change did not go through. Try again.");
-            return execute(rebaseQueueAction(action, readQueue()));
+            // Only a change that waited behind another one can address a moved message.
+            return execute(waiting ? rebaseQueueAction(action, readQueue()) : action);
           },
         }).result;
         // A lost response counts as failed for the changes waiting behind it.

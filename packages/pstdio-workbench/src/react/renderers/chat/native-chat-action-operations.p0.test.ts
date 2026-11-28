@@ -173,10 +173,47 @@ test("changes waiting behind a lost queue response are refused instead of hangin
     expect(lostResult.status).toBe("rejected");
     expect(waitingResult).toMatchObject({
       status: "rejected",
-      reason: expect.objectContaining({ message: expect.stringContaining("An earlier queue change did not go through") }),
+      reason: expect.objectContaining({
+        message: expect.stringContaining("An earlier queue change did not go through"),
+      }),
     });
     expect(writes).toBe(1);
     expect(projectQueuedFollowUps(queue, actions.getSnapshot())).toEqual(queue);
+  } finally {
+    queries.dispose();
+  }
+});
+
+test("creating a queue item from a message that has left the queue is sent as is", async () => {
+  const queries = createScopedQueryClient({ runtimeId: "dashboard", extensionId: "pstdio" });
+  const actions = createChatActionOperations(queries, session, "project");
+  const gone = { id: "position-9", position: 9, revision: "r9", prompt: "Steered away" };
+  const create: ChatRendererAction = {
+    type: "queue",
+    operation: "create",
+    item: gone,
+    prompt: "Retained edit",
+    attachments: [],
+    values: {},
+  };
+  const sent: ChatRendererAction[] = [];
+  const held = Promise.withResolvers<void>();
+  try {
+    const first = actions.run(
+      { type: "queue", operation: "remove", item: queue[0]!, attachments: [], values: {} },
+      undefined,
+      () => held.promise,
+      () => queue,
+    );
+    const creating = actions.run(
+      create,
+      undefined,
+      async (action) => void sent.push(action),
+      () => queue,
+    );
+    held.resolve();
+    await Promise.all([first, creating]);
+    expect(sent).toEqual([create]);
   } finally {
     queries.dispose();
   }
