@@ -1,6 +1,6 @@
 import { Box } from "@chakra-ui/react";
 import type { ChatAttachment, ChatQueuedRequest, ChatRendererSnapshot } from "@pstdio/sdk/extensions";
-import { type ChatLinkHandler, ChatPanel } from "@pstdio/ui/chat-ui";
+import { type ChatLinkHandler, ChatPanel, type ReaderPresence } from "@pstdio/ui/chat-ui";
 import { type ComponentProps, type ComponentType, useCallback, useState, useSyncExternalStore } from "react";
 import { visibleChatDraftAttachments } from "../../../extensions/contributions/chat-pending-submission";
 import type { ChatSession } from "../../../extensions/contributions/chat-session";
@@ -101,7 +101,8 @@ export const NativeChatView = (props: NativeChatViewProps) => (
 
 const NativeChatContent = (props: NativeChatViewProps) => {
   // The reader is on this conversation only while its placement is open, selected and shown.
-  const reading = props.visible !== false && props.placementOpen !== false && props.placementSelected !== false;
+  let presence: ReaderPresence = props.visible !== false && props.placementSelected !== false ? "reading" : "away";
+  if (props.placementOpen === false) presence = "closed";
   const { key, ...presentation } = useNativeChatPresentation({
     initial: {
       session: props.session,
@@ -120,7 +121,7 @@ const NativeChatContent = (props: NativeChatViewProps) => {
       {...props}
       {...presentation}
       conversationKey={key}
-      reading={reading}
+      presence={presence}
       unresolved={unresolved}
     />
   );
@@ -144,7 +145,7 @@ const useUnresolvedSubmission = (session: ChatSession) => {
 const runQueueGesture = (work: () => Promise<unknown>, report: (error: unknown) => void) =>
   void Promise.resolve().then(work).catch(report);
 
-const NativeChatConversation = (props: NativeChatViewProps & { reading: boolean; unresolved: boolean }) => {
+const NativeChatConversation = (props: NativeChatViewProps & { presence: ReaderPresence; unresolved: boolean }) => {
   const { session, conversationKey, renderParamField, unresolved, sourceRegion, sourcePlacement } = props;
   const state = useSyncExternalStore(session.subscribeToView, session.getSnapshot, session.getSnapshot);
   const { conversation: confirmed, draft, messages, queuedFollowUps, pending, loading, initializing, sending } = state;
@@ -234,7 +235,7 @@ const NativeChatConversation = (props: NativeChatViewProps & { reading: boolean;
         return (
           <ChatPanel
             conversationKey={conversationKey}
-            reading={props.reading}
+            presence={props.presence}
             onVisibleMessageIdsChange={observation.onVisibleMessageIdsChange}
             onVisibleQuestionChange={observation.onVisibleQuestionChange}
             linkHandler={host.linkHandler ?? props.linkHandler}

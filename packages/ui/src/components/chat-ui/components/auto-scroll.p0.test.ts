@@ -74,24 +74,24 @@ describe("returning to a conversation", () => {
   const away = (seenTail: string) => ({ reading: false, seenTail, returning: false });
 
   test("keeps the reading position when nothing changed while away", () => {
-    const next = getNextReaderReturnState(away("m2"), true, "m2");
+    const next = getNextReaderReturnState(away("m2"), "reading", "m2");
     expect(next.shouldScroll).toBe(false);
     expect(next.state.returning).toBe(true);
   });
 
   test("lands on the latest reply when it is already loaded on return", () => {
-    expect(getNextReaderReturnState(away("m2"), true, "m3").shouldScroll).toBe(true);
+    expect(getNextReaderReturnState(away("m2"), "reading", "m3").shouldScroll).toBe(true);
   });
 
   test("lands on the latest reply once the returning conversation catches up", () => {
-    const returned = getNextReaderReturnState(away("m2"), true, "m2").state;
-    const caughtUp = getNextReaderReturnState(returned, true, "m3");
+    const returned = getNextReaderReturnState(away("m2"), "reading", "m2").state;
+    const caughtUp = getNextReaderReturnState(returned, "reading", "m3");
     expect(caughtUp).toEqual({ shouldScroll: true, state: { reading: true, seenTail: "m3", returning: false } });
   });
 
   test("never scrolls for new content while the reader stays on the conversation", () => {
     const reading = { reading: true, seenTail: "m2", returning: false };
-    expect(getNextReaderReturnState(reading, true, "m3")).toEqual({
+    expect(getNextReaderReturnState(reading, "reading", "m3")).toEqual({
       shouldScroll: false,
       state: { reading: true, seenTail: "m3", returning: false },
     });
@@ -99,6 +99,12 @@ describe("returning to a conversation", () => {
 
   test("remembers what the reader saw when they leave", () => {
     const reading = { reading: true, seenTail: "m2", returning: false };
-    expect(getNextReaderReturnState(reading, false, "m3").state).toEqual(away("m2"));
+    expect(getNextReaderReturnState(reading, "away", "m3").state).toEqual(away("m2"));
+  });
+
+  test("reopening a closed conversation lands on its latest reply", () => {
+    const reading = { reading: true, seenTail: "m2", returning: false };
+    const closed = getNextReaderReturnState(reading, "closed", "m2").state;
+    expect(getNextReaderReturnState(closed, "reading", "m2").shouldScroll).toBe(true);
   });
 });

@@ -8,7 +8,7 @@ export type { MessageContentProps, MessageRootProps } from "./components/ai-mess
 export { ChatMessage } from "./components/ai-message";
 export { ApprovalPrompt } from "./components/approval-prompt";
 export { AttachmentList } from "./components/attachment-list";
-export type { AutoScrollProps } from "./components/auto-scroll";
+export type { AutoScrollProps, ReaderPresence } from "./components/auto-scroll";
 export { AutoScroll } from "./components/auto-scroll";
 export { ChatInput, type ChatInputProps } from "./components/chat-input";
 export type {

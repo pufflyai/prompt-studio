@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { openCanvasPreview } from "../preview";
 
 // Critical regression: dismissing an open panel preserves history, and reopening a closed session shows the latest reply.
-test("preserves reading position when hiding and starts at latest when opening or selecting a session", async ({
+test("starts at latest when opening a session and keeps the reading position when hiding or selecting it again", async ({
   page,
 }) => {
   const preview = await openCanvasPreview(
@@ -37,9 +37,9 @@ test("preserves reading position when hiding and starts at latest when opening o
   await preview.getByRole("button", { name: "Select another session", exact: true }).click();
   await expect(viewport).toBeHidden();
   await preview.getByRole("button", { name: "Return to session", exact: true }).click();
-  await expect(latest).toBeInViewport();
-  await expect.poll(gap).toBeLessThanOrEqual(2);
-  await expect(jump).toBeHidden();
+  // Nothing new arrived while away, so the reader returns to where they left.
+  await expect(jump).toBeVisible();
+  await expect(latest).not.toBeInViewport();
 });
 
 // Critical regression: hiding a panel while its keyboard scroll is still moving keeps the reading position.
