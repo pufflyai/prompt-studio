@@ -396,11 +396,10 @@ jobs:
               if (expected !== hash.digest("hex")) throw new Error(`Checksum mismatch for ${asset}`);'
           )
           chmod +x "$baseline_dir/$asset"
-          args=()
-          if [[ "$FRESH_HARNESS_SMOKE" != true ]]; then args+=(--upgrade-only); fi
+          set -- "$candidate" "$baseline_dir/$asset"
+          if [[ "$FRESH_HARNESS_SMOKE" != true ]]; then set -- "$@" --upgrade-only; fi
           unset GH_TOKEN
-          bun run --cwd __test-tmp__/native-installer/packages/e2e test:packaged:harnesses \
-            "$candidate" "$baseline_dir/$asset" "${args[@]}"
+          bun run --cwd __test-tmp__/native-installer/packages/e2e test:packaged:harnesses "$@"
 
       - name: Verify macOS signatures and notarization
         if: matrix.platform == 'darwin' && !cancelled() && success()
