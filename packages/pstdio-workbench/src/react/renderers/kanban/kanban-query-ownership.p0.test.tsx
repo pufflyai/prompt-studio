@@ -1,6 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
 import { ChakraProvider, psTheme } from "@pstdio/ui";
-import type { KanbanRendererProps } from "@pstdio/ui/kanban-renderer";
+import { type KanbanRendererProps, useKanbanRendererStore } from "@pstdio/ui/kanban-renderer";
 import { Activity, useSyncExternalStore } from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { createWorkbench, getWorkbenchRenderers } from "../../../core";
@@ -205,6 +205,80 @@ test("status moves keep loaded pages visible and the next scroll still appends",
   expect(board.page?.onLoadMore).toBeFunction();
   await act(async () => board.page?.onLoadMore?.());
   expect(board.rows.map(({ id }) => id)).toEqual(["0", "1", "2", "3", "4", "5"]);
+});
+
+test("switching Planner from board to list keeps the loaded pages and their next cursor", async () => {
+  environment.IS_REACT_ACT_ENVIRONMENT = true;
+  core = createWorkbench();
+  const id = "pstdio.planner.view.tickets";
+  const renderers = getWorkbenchRenderers(core);
+  const requests: [number, string | undefined][] = [];
+  renderers.registerKanbanRenderer({
+    id,
+    title: "Tickets",
+    attributes: [],
+    initialPageSize: 50,
+    defaultSettings: { displayProperties: [] },
+    executeQuery: () => [],
+    executePage: async ({ page: { offset = 0, limit, cursor } }) => {
+      requests.push([offset, cursor]);
+      return {
+        rows: Array.from({ length: limit }, (_, index) => ({
+          id: String(offset + index),
+          title: `Ticket ${offset + index}`,
+          attributes: {},
+        })),
+        page: {
+          revision: "r1",
+          cursor: String(offset + limit),
+          total: 3000,
+          filteredTotal: 3000,
+          groups: [],
+          statistics: {},
+        },
+      };
+    },
+  });
+  let renderer!: KanbanRendererProps;
+  let showList!: () => void;
+  const Renderer = (props: KanbanRendererProps) => {
+    renderer = props;
+    const setSettings = useKanbanRendererStore(props.storageKey, (state) => state.setSettings);
+    showList = () => setSettings({ viewMode: "list" });
+    return null;
+  };
+  await act(async () => {
+    tree = create(
+      <ChakraProvider value={psTheme}>
+        <WorkbenchKanbanView
+          workbench={core}
+          contribution={renderers.getKanbanRenderer(id)!}
+          placement={{ instanceId: "paged-tickets", panelId: id, closable: false }}
+          Renderer={Renderer}
+        />
+      </ChakraProvider>,
+    );
+  });
+  await act(async () => renderer.page?.onLoadMore?.());
+  expect(renderer.rows).toHaveLength(100);
+  const firstRow = renderer.rows[0];
+
+  await act(async () => showList());
+  expect(requests).toEqual([
+    [0, undefined],
+    [50, "50"],
+  ]);
+  expect(renderer.rows).toHaveLength(100);
+  expect(renderer.rows[0]).toBe(firstRow);
+
+  await act(async () => renderer.page?.onLoadMore?.());
+  expect(requests).toEqual([
+    [0, undefined],
+    [50, "50"],
+    [100, "100"],
+  ]);
+  expect(renderer.rows).toHaveLength(150);
+  expect(renderer.rows[0]).toBe(firstRow);
 });
 
 test.each([

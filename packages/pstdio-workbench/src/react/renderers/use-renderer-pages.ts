@@ -34,7 +34,7 @@ export const useRendererPages = <TRow>(input: {
   const identity = JSON.stringify([
     input.identity,
     input.fields,
-    input.searchFields,
+    search.trim() ? input.searchFields : undefined,
     presentation,
     search,
     collapsedGroups,

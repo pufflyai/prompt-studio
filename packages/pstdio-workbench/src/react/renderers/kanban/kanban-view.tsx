@@ -185,6 +185,11 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
 
   const storedSettings = useKanbanRendererStore(storageKey, (state) => state.settings, initialState);
   const settings = resolveViewSettings(props, storedSettings);
+  const resource = resourceKey(placement.resource);
+  const plannerTickets = isPlannerTicketsBoard(contribution.id);
+  // Planner's list and board use the same ticket selection. Keep the list's ID field in both
+  // projections so changing how the rows are displayed preserves the loaded window and cursor.
+  const pageSettings = plannerTickets ? { ...settings, viewMode: "list" as const } : settings;
   const filter = useKanbanRendererStore(storageKey, (state) => state.filter, initialState);
   const sorts = useKanbanRendererStore(storageKey, (state) => state.sorts, initialState);
   const views = useRendererViews(
@@ -198,16 +203,16 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
     provider,
   );
   const pageAttributes = useKanbanPageAttributes(
-    rendererQueryKey([contribution.id, contribution.queryScope, resourceKey(placement.resource)]),
+    rendererQueryKey([contribution.id, contribution.queryScope, resource]),
     declaredAttributes,
   );
   const pages = useRendererPages<KanbanRendererRow>({
-    identity: rendererQueryKey([contribution.id, resourceKey(placement.resource), settings, filter, sorts, pageParams]),
+    identity: rendererQueryKey([contribution.id, resource, pageSettings, filter, sorts, pageParams]),
     scope: storageKey,
-    fields: kanbanPageFields(pageAttributes.attributes, settings),
+    fields: kanbanPageFields(pageAttributes.attributes, pageSettings),
     searchFields: kanbanSearchFields(settings),
     presentation: rendererPagePresentation(pageAttributes.attributes),
-    providerOwnsGrouping: isPlannerTicketsBoard(contribution.id),
+    providerOwnsGrouping: plannerTickets,
     initialPageSize: contribution.initialPageSize,
     rowId: (row) => row.id,
   });
@@ -219,20 +224,20 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
   const query = {
     sourceId: contribution.id,
     queryScope: contribution.queryScope,
-    queryKey: rendererQueryKey([contribution.id, resourceKey(placement.resource)]),
+    queryKey: rendererQueryKey([contribution.id, resource]),
     dependency: rendererResourceDependency(placement.resource),
     projectionKey: rendererQueryKey([
       contribution.id,
       contribution.queryScope,
-      resourceKey(placement.resource),
-      settings,
+      resource,
+      pageSettings,
       filter,
       sorts,
       pageParams,
       pages.request.search,
       pages.request.collapsedGroups,
     ]),
-    refreshKey: rendererQueryKey([settings, filter, sorts, pageParams, ...(paged ? [pages.refreshKey] : [])]),
+    refreshKey: rendererQueryKey([pageSettings, filter, sorts, pageParams, ...(paged ? [pages.refreshKey] : [])]),
   };
   const state = { settings, filter, sorts, pageParams, resource: placement.resource };
   const ownerKey = rendererReadKey(placement);
@@ -351,7 +356,7 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
           contribution.onColumnAction,
           workbench,
           async (columnId, actionId, write) => {
-            if (actionId === "archive_all" && isPlannerTicketsBoard(contribution.id))
+            if (actionId === "archive_all" && plannerTickets)
               return mutations.archiveColumn(
                 { columnId, projectionKey: query.projectionKey },
                 () => mutate((snapshot) => snapshot, write),
