@@ -23,7 +23,6 @@ import { ExtensionReplacementConfirmation } from "./extension-replacement-confir
 import { extensionUpgradeAgentAvailable, openExtensionUpgradeAgentDraft } from "./extension-upgrade-agent-draft";
 import { ExtensionUpgradeReviewDialog, type ReviewTarget } from "./extension-upgrade-review-dialog";
 import { ExtensionsPanelView } from "./extensions-panel-view";
-import { SavedExtensionSignIns } from "./saved-extension-sign-ins";
 import { useExtensionPanelActions } from "./use-extension-panel-actions";
 
 interface ExtensionsPanelProps {
@@ -269,7 +268,6 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
       <ExtensionsPanelView
         projectId={projectId}
         header={null}
-        savedSignIns={projectId ? <SavedExtensionSignIns projectId={projectId} /> : undefined}
         filters={filters}
         onFiltersChange={setFilters}
         rowRef={registerFocusTarget}
