@@ -1,5 +1,47 @@
 # @pstdio/ui
 
+## 0.49.0
+
+_2026-11-28_
+
+### Minor Changes
+
+- 1fd4c3c: Add scatterplots, ring charts, custom dashboard content, and page-owned dashboard toolbars.
+- 0af6825: Edit dashboard widget descriptions and chart colors. Prefill custom widget headings and keep Cancel and Apply on the right.
+- 1c8b09a: Expose scoped Markdown plugins and selection toolbar slots, preserve captured editor context for contributed commands, and let Activity own a minimal anchored comment input and independent inline thread replies. Add a native unsent session draft action that preserves existing browser draft isolation.
+- bce3bc0: Move the Side Panel with consistent drop feedback or free positioning, resize from the available top corners for its alignment, and choose the bubble visibility and default panel in Appearance settings. Move the complete Bottom panel into a closed Side Panel while preserving both trays and their drafts.
+- d7bb3ed: Show the animated Prompt Studio logo while pages, panels and dialogs load, with new `LoadingState` and `LogoLoader` components; the action bar, navigation and status bar show skeletons instead.
+- 26262f1: Preview, complete and cancel numeric property gestures with mixed values, units and retained authored drafts.
+- 6d70a09: Navigate conversation turns and identify attributed messages by sender.
+- 026e2e3: Show settings, notification changes, resource changes, and collection edits immediately across views. Keep failed and uncertain drafts available through System activity.
+- 1c8b09a: Expose live workbench context to agents, preview resource links beside their source, add Markdown Find and passage discussions, manage nested navigation visibility with eye buttons, preserve navigation fonts, open selected conversations at the latest message, and recover compatible extension upgrades without losing local files.
+
+  Tell extension settings editors when Reset discards their pending changes so inline fields can clear their drafts.
+
+### Patch Changes
+
+- aaf35b1: Keep a conversation stopped when a previously queued scroll event arrives after following is disabled.
+- 9303acc: Show occurrence counts for repeated polling prompts and errors in session chat.
+- 0ea67fc: Keep clipped Kanban cards whole when dragging and wait for earlier moves before running a column action.
+- 0ea67fc: Keep Planner moves, column counts and ticket deletion optimistic. Load the first board page independently of filter counts and preserve loaded pages when switching between board and list.
+
+  Show skeleton rows during list pagination, inside groups with unloaded items.
+
+- 0ea67fc: Keep optimistic Kanban changes visible across navigation and show whole-view totals in paged filter pickers.
+- 9469636: Keep a chat's reading position when its panel is hidden while the conversation is still scrolling.
+- 79b5149: Keep panel resizing under the finger that started the drag when another finger touches the screen.
+- 328fb5d: Switch between open session tabs without rebuilding their conversations; return to the latest reply only when something new arrived.
+- 1c8b09a: Hide placeholder avatars for local users in chat and Activity while preserving named participants and action icons.
+- 4c4b384: Open newly saved tickets directly from the creation form while the board refreshes and attachments finish uploading.
+- b9d46b0: Load more Kanban cards and list rows automatically near the end of the visible content.
+- 0ea67fc: Show skeletons for Kanban pagination and pause them while cards move.
+- 889efc0: Keep keyboard focus on a Workbench panel header when a restored terminal finishes loading.
+- 47960a3: Keep view controls and resource menus with their live page or tab, support movable menu headers and bottom menu presets, and align web app headers with desktop. Add the public header-view contract and TextPen icon for extension consumers.
+- ce8dca2: Keep modal drafts open when Escape closes a just-opened popover.
+- b697943: Show compact sender avatars alongside message actions. Click a session avatar to open its conversation. Outline marks animate on hover and focus.
+- 80fce4d: Reopen closed sessions at the latest reply and run queued follow-ups in the order shown after reordering.
+- 9dd9fff: Dismiss popovers and tooltips when navigating away from retained views. Preserve unfinished popup fields when a retained workbench is suspended.
+
 ## 0.48.0
 
 _2026-11-21_

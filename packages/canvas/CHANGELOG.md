@@ -1,5 +1,13 @@
 # @pstdio/canvas
 
+## 0.49.0
+
+_2026-11-28_
+
+### Patch Changes
+
+- f7e08bd: Switch between canvases faster by sharing preview assets and project fonts, and keep the two most recent designs live.
+
 ## 0.48.0
 
 _2026-11-21_
