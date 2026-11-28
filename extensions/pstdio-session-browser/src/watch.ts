@@ -16,6 +16,7 @@ import { createStreamObservation } from "./changes";
 import { diagnosticChatFrames } from "./chat-stream-diagnostics";
 import { conversationOperations } from "./controls";
 import { conversationState } from "./conversation-state";
+import { confirmNativeInputs } from "./native-submission";
 import type { readQueue } from "./queue-snapshot";
 import { createRecoveryBackoff } from "./recovery-backoff";
 import { sessionId } from "./resource";
@@ -232,7 +233,7 @@ export const watchConversation = async (ctx: CommandContext, resource?: Resource
     void stream.catch(() => undefined);
   };
   const applyMetadata = async (result: NonNullable<ReturnType<typeof metadata.query.getSnapshot>["data"]>) => {
-    const { reads, readAt } = result;
+    const { session, reads, readAt } = result;
     const snapshot = { ...result.snapshot };
     harnessId = selectedHarness(snapshot.values ?? {})?.harnessId;
     remote = Boolean(snapshot.nativeHarnessAccount?.remote);
@@ -258,6 +259,8 @@ export const watchConversation = async (ctx: CommandContext, resource?: Resource
       delete snapshot.streamingStartedAt;
     }
     await write(snapshot);
+    if (result.sessionRead || result.marks.some(([field]) => field === "storage"))
+      await confirmNativeInputs(ctx, id, session);
   };
   try {
     stopMetadata = metadata.observe(changed);

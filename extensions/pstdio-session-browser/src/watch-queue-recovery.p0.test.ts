@@ -124,7 +124,7 @@ test("only an observed read-only online remote queue recovers and becomes quiet 
   try {
     await f.connected;
     await Bun.sleep(2100);
-    expect(f.counts).toMatchObject({ execution: 1, session: 1, queue: 2, harness: 0, native: 1, stream: 1 });
+    expect(f.counts).toMatchObject({ execution: 1, session: 1, queue: 2, harness: 0, native: 2, stream: 1 });
     expect(f.frames.at(-1)).toMatchObject({ snapshot: { queueReadOnly: false } });
     await Bun.sleep(2100);
     expect(f.counts.queue).toBe(2);

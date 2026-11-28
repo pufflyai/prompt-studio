@@ -111,3 +111,32 @@ export const updateNativeSubmission = async (
     edits: [{ recordId, replace: { ...value } }, changed],
   });
 };
+
+/**
+ * Settle accepted native inputs once the session has moved past them, so hidden ones are deleted.
+ * A failed input stays pending while visible, which keeps its failure notice.
+ */
+export const confirmNativeInputs = async (
+  ctx: ExtensionContextBase,
+  id: string,
+  session: { status: string; lastRequestStarted: string | null },
+) => {
+  if (["in_progress", "awaiting_input", "queued"].includes(session.status)) return;
+  const page = await ctx.storage.records.query({
+    index: nativeSubmissionIndex.name,
+    where: {
+      all: [
+        { field: "sessionId", op: "eq", value: id },
+        { field: "state", op: "eq", value: "pending" },
+      ],
+    },
+    limit: 100,
+  });
+  const failed = session.status === "failed" || session.status === "disconnected";
+  for (const record of await ctx.storage.records.readMany(page.records.map((row) => row.recordId))) {
+    const value = record.value as unknown as NativeSubmission | undefined;
+    if (!record.exists || record.deleted || !value || value.sessionId !== id) continue;
+    if (session.lastRequestStarted === value.previousRequest || (failed && !value.hidden)) continue;
+    await updateNativeSubmission(ctx, record.recordId, { state: "confirmed" });
+  }
+};

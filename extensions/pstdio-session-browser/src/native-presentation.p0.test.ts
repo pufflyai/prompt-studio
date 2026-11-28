@@ -97,3 +97,27 @@ test("a later ordinary failure cannot revive an earlier native command error", a
     ).notice,
   ).toBe("");
 });
+
+test("a hidden native command is deleted once the session moves past it, while a visible failure stays", async () => {
+  const { saveNativeSubmission, updateNativeSubmission, confirmNativeInputs, readNativeSubmissions } = await import(
+    "./native-submission"
+  );
+  const ctx = makeCommandContext({ storage: createMemoryStorage({ indexes: [nativeSubmissionIndex] }), params: {} });
+  const draft = { text: "/goal Ship", attachments: [], values: {} };
+  const hidden = await saveNativeSubmission(
+    ctx,
+    "s",
+    { draft, operation: { kind: "command", text: "/goal Ship" } },
+    "a",
+    true,
+  );
+  await updateNativeSubmission(ctx, hidden, { hidden: true });
+  await confirmNativeInputs(ctx, "s", { status: "in_progress", lastRequestStarted: "b" });
+  expect(await readNativeSubmissions(ctx, "s")).toHaveLength(1);
+  await confirmNativeInputs(ctx, "s", { status: "completed", lastRequestStarted: "b" });
+  expect(await readNativeSubmissions(ctx, "s")).toHaveLength(0);
+
+  await saveNativeSubmission(ctx, "s", { draft, operation: { kind: "command", text: "/goal Ship" } }, "b", true);
+  await confirmNativeInputs(ctx, "s", { status: "failed", lastRequestStarted: "c" });
+  expect((await readNativeSubmissions(ctx, "s"))[0]?.value.state).toBe("pending");
+});
