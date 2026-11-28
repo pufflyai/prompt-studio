@@ -1,11 +1,22 @@
-import { defineView, type TreeNode, workbenchPanels } from "@pstdio/sdk/extensions";
+import { defineView, type NavigationTarget, type TreeNode, workbenchPanels } from "@pstdio/sdk/extensions";
 import { commands } from "../commands";
 import { isNewPost, type Run, type Thread } from "../schemas";
 import { readSettings } from "../settings";
 import { channelNames } from "../sites";
 import { newest, pageRef, radarChanged, runLabel, runRef, runsOf, threadsOf } from "../store";
 import { plural } from "../text";
-import { sectionTarget } from "./settings-menu";
+import { sectionRef } from "./settings-menu";
+
+export const radarTabTarget = (id: "radar" | "threads" | "settings") => {
+  const page = pageRef("radar");
+  return {
+    kind: "compound",
+    targets: [
+      { kind: "page", page, intent: "restore" },
+      { kind: "panel", panel: { kind: "page-slot", page, id }, ...(id === "settings" && { resource: sectionRef() }) },
+    ],
+  } satisfies NavigationTarget;
+};
 
 const runIcon = (run: Run) => {
   if (run.status === "running") return { icon: "LoaderCircle", iconColor: "fg.info" };
@@ -73,14 +84,9 @@ export const radarTree = defineView({
           id: "pages",
           collapsible: false,
           nodes: [
-            { id: "radar", label: "Social radar", icon: "Radar", target: { kind: "page", page: pageRef("radar") } },
-            { id: "threads", label: "Threads", icon: "List", target: { kind: "page", page: pageRef("threads") } },
-            {
-              id: "settings",
-              label: "Settings",
-              icon: "Settings",
-              target: sectionTarget(),
-            },
+            { id: "radar", label: "Social radar", icon: "Radar", target: radarTabTarget("radar") },
+            { id: "threads", label: "Threads", icon: "List", target: radarTabTarget("threads") },
+            { id: "settings", label: "Settings", icon: "Settings", target: radarTabTarget("settings") },
           ],
         },
         {

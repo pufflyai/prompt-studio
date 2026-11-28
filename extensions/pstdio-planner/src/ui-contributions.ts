@@ -1,11 +1,11 @@
 import {
-  defineNavigationItem,
   defineNavigationTree,
   defineSettingsPanel,
   defineSettingsSection,
   defineView,
   defineViewMenu,
   l10n,
+  type PageRef,
   packageAsset,
   viewDataEvents,
   workbenchModes,
@@ -33,6 +33,7 @@ import { ticketNavigationStructure } from "./ticket-navigation-structure";
 import { createTicketPages } from "./ticket-pages";
 import { timelineViewSchema } from "./timeline/commands/view-schema";
 import { planChanged } from "./timeline/contracts";
+import { timelinePage } from "./timeline/pages";
 import { queryWorkflowSettings, saveWorkflowSettings } from "./views/workflow-settings";
 
 export { ticketResourceKind } from "./resource-kinds";
@@ -74,6 +75,38 @@ const createTicketFilesView = () =>
         "sub-tickets",
         "workspaces",
         "sessions",
+      ],
+    },
+  });
+
+const createPlanningNavigation = (ticketsPage: PageRef) =>
+  defineView({
+    id: "planning-navigation",
+    title: "Project Planning",
+    body: {
+      kind: "tree",
+      defaultExpandedSectionIds: ["project-planning"],
+      body: () => [
+        {
+          id: "project-planning",
+          label: "Project Planning",
+          collapsible: true,
+          nodes: [
+            {
+              id: "tickets",
+              label: l10n("kanbanRenderers.tickets.title", "Tickets"),
+              icon: "square-kanban",
+              target: { kind: "page", page: ticketsPage },
+            },
+            {
+              id: "timeline",
+              label: timelinePage.title,
+              icon: timelinePage.icon,
+              target: { kind: "page", page: timelinePage.ref },
+              hiddenByDefault: true,
+            },
+          ],
+        },
       ],
     },
   });
@@ -214,6 +247,7 @@ export const createPlannerUi = (baseUrl: string) => {
     editor.ref,
     requests.ref,
   );
+  const planningNavigation = createPlanningNavigation(ticketsPage.ref);
   return {
     views: [
       statusSettings,
@@ -225,6 +259,7 @@ export const createPlannerUi = (baseUrl: string) => {
       tagSettings,
       requests,
       workflowSettings,
+      planningNavigation,
     ],
     pages: [ticketsPage, ticketDetailPage, requestsPage],
     placements: [ticketBoardPanel],
@@ -234,20 +269,17 @@ export const createPlannerUi = (baseUrl: string) => {
         owner: editor.ref,
         view: properties.ref,
         side: "right",
-      }),
-    ],
-    navigationItems: [
-      defineNavigationItem({
-        id: "tickets",
-        owner: workbenchModes.project,
-        slot: "content",
-        label: l10n("kanbanRenderers.tickets.title", "Tickets"),
-        icon: "square-kanban",
-        group: "Project Planning",
-        action: { kind: "page", page: ticketsPage.ref },
+        placement: "first",
       }),
     ],
     navigationTrees: [
+      defineNavigationTree({
+        id: "planning-navigation",
+        owner: workbenchModes.project,
+        slot: "content",
+        resourceScope: "project",
+        view: planningNavigation.ref,
+      }),
       defineNavigationTree({
         id: "ticket-files",
         owner: ticketDetailPage.ref,

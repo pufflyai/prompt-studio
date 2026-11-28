@@ -7,21 +7,33 @@ import {
 } from "@pstdio/sdk/extensions";
 import { channelResource, runResource, settingsSection, threadResource } from "./store";
 import { digestView } from "./views/digest";
-import { radarTree } from "./views/navigation";
+import { radarTabTarget, radarTree } from "./views/navigation";
 import { settingsMenu } from "./views/settings-menu";
 import { settingsView } from "./views/settings-view";
 import { threadsBoard } from "./views/threads-board";
 import { analysisView, threadSummaryView, threadView } from "./views/webviews";
 
-// The radar page owns the navigation tree, so it and its child pages share one Sidenav level.
+// One page owns the Sidenav level and the three peer tabs.
 const radarPage = definePage({
   id: "radar",
   title: "Social radar",
   icon: "radar",
   path: "social-radar",
   mode: workbenchModes.project,
-  main: { kind: "view", view: analysisView.ref, cardinality: "one" },
-  slots: [],
+  main: { kind: "panels" },
+  slots: [
+    { id: "radar", region: "main", item: { kind: "view", view: analysisView.ref, presence: "open" } },
+    { id: "threads", region: "main", item: { kind: "view", view: threadsBoard.ref, presence: "closed" } },
+    {
+      id: "settings",
+      region: "main",
+      tab: { query: () => ({ label: "Settings" }) },
+      item: {
+        kind: "binding",
+        binding: { kinds: [settingsSection.ref, channelResource.ref], view: settingsView.ref, cardinality: "one" },
+      },
+    },
+  ],
 });
 const threadsPage = definePage({
   id: "threads",
@@ -90,7 +102,7 @@ export const navigationItems = [
     group: "Tools",
     label: "Social radar",
     icon: "radar",
-    action: { kind: "page", page: radarPage.ref },
+    action: radarTabTarget("radar"),
   }),
 ];
 export const navigationTrees = [

@@ -14,7 +14,7 @@ const provider = (id: string, remainingPercent: number): QuotaReport => ({
   limits: [{ id: "weekly", label: "Weekly", remainingPercent }],
 });
 
-test("Home graphs an exhausted quota with an accessible value and leaves unknown quotas ungraphed", () => {
+test("graphs an exhausted quota with an accessible value and leaves unknown quotas ungraphed", () => {
   const html = renderToStaticMarkup(
     createElement(ChakraProvider, {
       value: psTheme,
@@ -51,7 +51,7 @@ test("Home graphs an exhausted quota with an accessible value and leaves unknown
   expect(html.includes('aria-label="Quota harness:')).toBe(false);
 });
 
-test("Home hides the quota widget when no provider has quota data", () => {
+test("shows a quota empty state when no provider has quota data", () => {
   const html = renderToStaticMarkup(
     createElement(ChakraProvider, {
       value: psTheme,
@@ -60,6 +60,7 @@ test("Home hides the quota widget when no provider has quota data", () => {
     }),
   );
   expect(html.includes('aria-label="Agent quota usage"')).toBe(false);
+  expect(html).toContain('role="status"');
 });
 
 test("multiple harnesses use a dropdown and display only the selected harness's chart", () => {

@@ -1,10 +1,9 @@
 import "@pstdio/ui/style.css";
-import { Box, Button, Stack, Text } from "@chakra-ui/react";
+import { Button, Stack, Text } from "@chakra-ui/react";
 import {
   createWebviewClient,
   defineExtensionView,
   type ExtensionViewRenderContext,
-  sessionBrowser,
   workbenchCommands,
 } from "@pstdio/sdk/extensions";
 import { useWebviewCommandQuery, useWebviewScope, useWebviewVisibility } from "@pstdio/sdk/extensions/react";
@@ -12,10 +11,9 @@ import { AlertMessage, ChakraProvider, psTheme, ScrollArea } from "@pstdio/ui";
 import { Activity, useState, useSyncExternalStore } from "react";
 import { createRoot } from "react-dom/client";
 import type { commands } from "./commands";
-import { HomeQuotas } from "./components/home-quotas";
+import { HomePromptCarousel } from "./components/home-prompt-carousel";
+import { HomeWelcome } from "./components/home-welcome";
 import { ProjectSetupStatus } from "./components/project-setup-status";
-import { StartAboutPanel } from "./components/start-about-panel";
-import { StartActionList } from "./components/start-action-list";
 import { StartRecentList } from "./components/start-recent-list";
 import { homeQueries } from "./home-queries";
 import { recentProjectResources } from "./recent-resources";
@@ -61,107 +59,59 @@ export const HomeApp = (props: AppProps) => {
       setPending(undefined);
     }
   };
-  const browse = () => {
-    void context.host
-      .call("navigation.open", {
-        target: { kind: "page", page: { kind: "page", extensionId: "pstdio", id: "extensions" } },
-      })
-      .catch((error) => setActionError({ id: "browse-extensions", message: String(error) }));
-  };
-  const actions = [
-    {
-      id: "new-conversation",
-      label: "New conversation",
-      icon: "message-square-plus",
-      run: () => {
-        void context.host
-          .call("navigation.open", {
-            target: { kind: "command", target: { command: sessionBrowser.commands.create, params: {} } },
-          })
-          .catch((error) => setActionError({ id: "new-conversation", message: String(error) }));
-      },
-    },
-    {
-      id: "open-tool",
-      label: "Open a tool",
-      icon: "panels-top-left",
-      run: () => {
-        void run("open-tool", workbenchCommands.openToolSearch.id);
-      },
-    },
-    { id: "browse-extensions", label: "Browse extensions", icon: "blocks", run: browse },
-  ];
   return (
-    <ScrollArea height="100dvh" width="full" bg="bg" color="fg">
-      <Stack
-        w="full"
-        maxW="52rem"
-        mx="auto"
-        px={{ base: "md", md: "lg" }}
-        pt="4xl"
-        pb="3xl"
-        gap="3xl"
-        position="relative"
-        data-testid="start-page"
-      >
-        <Stack gap="xs" minW="0">
-          <Text textStyle="heading/M">{data?.project.name ?? "Project"}</Text>
-          <Text textStyle="paragraph/M/regular" color="fg.muted">
-            Project home
-          </Text>
-        </Stack>
-        {showLoadError && (
-          <AlertMessage
-            size="sm"
-            status="error"
-            title="Could not load project home"
-            position="absolute"
-            bottom="xs"
-            insetInline="sm"
-            zIndex="docked"
-            onClose={() => setDismissedLoadError(loadError)}
-          >
-            <Stack>
-              <Text>{String(loadError)}</Text>
-              <Button onClick={() => refresh()}>Retry</Button>
-            </Stack>
-          </AlertMessage>
-        )}
-        {!showLoadError && (data?.setupError || actionError?.id === "retry") && (
-          <ProjectSetupStatus
-            error={actionError?.id === "retry" ? actionError.message : (data?.setupError ?? "")}
-            retrying={pending === "retry"}
-            onRetry={() => {
-              void run("retry", workbenchCommands.retryProjectSetup.id);
-            }}
-          />
-        )}
-        <StartAboutPanel />
-        <HomeQuotas client={client} />
-        <Stack direction={{ base: "column", md: "row" }} gap={{ base: "3xl", md: "4xl" }} align="flex-start" minW="0">
-          <Box flex="1" minW="0" w="full">
-            <StartActionList
-              actions={actions}
-              pending={pending}
-              error={actionError}
-              onDismissError={() => setActionError(undefined)}
-            />
-          </Box>
-          <Box flex="1" minW="0" w="full">
-            <StartRecentList
-              resources={recentProjectResources(recent.data ?? [])}
-              onOpen={(recent) => {
-                void context.host
-                  .call("navigation.open", {
-                    target: recent.target,
-                  })
-                  .catch((error) => setNavigationError(String(error)));
-              }}
-            />
-          </Box>
-        </Stack>
-      </Stack>
-    </ScrollArea>
+    <Stack
+      w="full"
+      maxW="2xl"
+      mx="auto"
+      px={{ base: "md", md: "lg" }}
+      pt="4xl"
+      pb="3xl"
+      gap="2xl"
+      position="relative"
+      data-testid="start-page"
+    >
+      {showLoadError && (
+        <AlertMessage
+          size="sm"
+          status="error"
+          title="Could not load project home"
+          position="absolute"
+          bottom="xs"
+          insetInline="sm"
+          zIndex="docked"
+          onClose={() => setDismissedLoadError(loadError)}
+        >
+          <Stack>
+            <Text>{String(loadError)}</Text>
+            <Button onClick={() => refresh()}>Retry</Button>
+          </Stack>
+        </AlertMessage>
+      )}
+      {!showLoadError && (data?.setupError || actionError?.id === "retry") && (
+        <ProjectSetupStatus
+          error={actionError?.id === "retry" ? actionError.message : (data?.setupError ?? "")}
+          retrying={pending === "retry"}
+          onRetry={() => {
+            void run("retry", workbenchCommands.retryProjectSetup.id);
+          }}
+        />
+      )}
+      <HomeWelcome />
+      <StartRecentList
+        resources={recentProjectResources(recent.data ?? [])}
+        onOpen={(recent) => {
+          void context.host
+            .call("navigation.open", { target: recent.target })
+            .catch((error) => setNavigationError(String(error)));
+        }}
+      />
+      <HomePromptCarousel
+        onBuild={async (idea) => {
+          await client.commands["build-home"]({ idea });
+        }}
+      />
+    </Stack>
   );
 };
 
@@ -178,7 +128,9 @@ const View = (props: AppProps) => {
   return (
     <ChakraProvider value={psTheme}>
       <Activity mode={visible ? "visible" : "hidden"}>
-        <HomeApp key={hostProps.projectId} context={context} />
+        <ScrollArea h="full">
+          <HomeApp key={hostProps.projectId} context={context} />
+        </ScrollArea>
       </Activity>
     </ChakraProvider>
   );

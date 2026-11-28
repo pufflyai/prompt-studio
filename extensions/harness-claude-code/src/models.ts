@@ -21,7 +21,7 @@ const modelIdentity = (value: string, displayName: unknown) => {
 const thinkingParam = (levels: string[]): HarnessParamDescriptor => ({
   type: "select",
   label: "Thinking",
-  defaultValue: levels.includes("high") ? "high" : levels[0],
+  defaultValue: ["medium", "high"].find((level) => levels.includes(level)) ?? levels[0],
   options: levels.map((value) => ({
     label: effortMetadata[value]?.label ?? value,
     value,

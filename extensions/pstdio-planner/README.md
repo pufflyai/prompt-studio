@@ -51,7 +51,7 @@ Open Settings → Project Planner → Workflow & automation, to configure the `i
 - **Adversarial review** runs a review automatically before the final commit and handoff.
 - **Open PR** opens a draft pull request after validation and links it to the ticket.
 - **Default target branch** selects a remote branch from the project's Git folder. Clear the selection to use the repository's default branch.
-- **Maximum in-progress tickets** limits how many tickets run an implementation at once. Run attempt does not start another ticket at this limit, whether automation or a person runs it.
+- **Maximum in-progress tickets** limits how many tickets run an implementation at once. Implement ticket does not start another ticket at this limit, whether automation or a person runs it.
 
 Choose **Auto Build** in Project Timeline to open its modal. Enter a prompt, choose the supervisor harness, model and run options, set **Eligible tickets**, and confirm with **Auto Build**. All options stay in the same modal. The information icon next to the title explains how it works. A supervisor uses your prompt to assign valid, unassigned tickets as dependencies and capacity allow. Completed tickets are excluded using your workflow settings. Each implementation uses the default agent and target branch.
 

@@ -17,11 +17,11 @@ const emptyMain = (page: Page) => {
     .or(main.getByText("No tabs available", { exact: true }));
 };
 
-test("Home resumes opened resources and public actions without prematurely creating a session", async ({
-  page,
-  request,
-}) => {
-  const response = await request.post("/v1/projects", { data: folderProjectInput({ name: "Home actions" }) });
+test("Home shows project ideas and reopens recently used resources", async ({ page, request }) => {
+  const harness = "pstdio.workbench-fixture.harness.fake";
+  const response = await request.post("/v1/projects", {
+    data: folderProjectInput({ name: "Home actions", agents: [harness] }),
+  });
   expect(response.status()).toBe(201);
   const project = (await response.json()) as { id: string };
   const sessions: { id: string; title: string }[] = [];
@@ -31,7 +31,7 @@ test("Home resumes opened resources and public actions without prematurely creat
         project_id: project.id,
         title: `Home conversation ${i}`,
         prompt: "",
-        agent: "pstdio.workbench-fixture.harness.fake",
+        agent: harness,
       },
     });
     expect(created.status()).toBe(201);
@@ -40,7 +40,70 @@ test("Home resumes opened resources and public actions without prematurely creat
   await page.goto(`/projects/${project.id}`);
   await expect(homePage(page)).toBeVisible();
   await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/extensions/pstdio.home/home$`));
-  await expect(homeFrame(page).getByText("Nothing opened yet", { exact: true })).toBeVisible();
+  await expect(homeFrame(page).getByText("Recently Used", { exact: true })).toHaveCount(0);
+  for (const mode of ["light", "dark"]) {
+    await page.keyboard.press("Alt+Shift+K");
+    const palette = page.getByRole("dialog", { name: "Command palette", exact: true });
+    await palette.getByRole("textbox").fill(">Choose color theme");
+    await palette.getByRole("option", { name: /Choose color theme/ }).click();
+    await palette.getByRole("option", { name: mode === "dark" ? "Prompt Dark" : "Prompt Light", exact: true }).click();
+    const screenshot = homeFrame(page).getByRole("img", { name: "Release checklist example interface", exact: true });
+    await expect(screenshot).toHaveCount(1);
+    await expect(screenshot).toHaveAttribute("src", new RegExp(`/release-checklist-${mode}\\.png$`));
+    await screenshot.evaluate((image: HTMLImageElement) => image.decode());
+  }
+  await expect(homeFrame(page).getByRole("heading", { name: "Release checklist", exact: true })).toBeInViewport();
+  await homeFrame(page)
+    .getByRole("img", { name: "Release checklist example interface", exact: true })
+    .evaluate((image: HTMLImageElement) => image.decode());
+  // The selected idea must start real work and open the resulting conversation.
+  const building = page.waitForResponse(
+    (response) =>
+      response.url().includes("/extensions/commands/pstdio.home.command.build-home/execute") &&
+      response.request().method() === "POST",
+  );
+  await homeFrame(page)
+    .getByRole("article", { name: "Release checklist", exact: true })
+    .getByRole("button", { name: "Build this!", exact: true })
+    .click();
+  const built = await building;
+  expect(built.ok()).toBe(true);
+  const result = (await built.json()) as { outcome: { ok: boolean; value: { sessionId: string } } };
+  expect(result.outcome.ok).toBe(true);
+  const created = await request.get(`/v1/sessions/${result.outcome.value.sessionId}`);
+  expect(created.ok()).toBe(true);
+  expect(await created.json()).toMatchObject({ project_id: project.id, title: "Build Home: Release checklist" });
+  await expect(page.getByRole("tab", { name: "Build Home: Release checklist", exact: true })).toBeVisible();
+  // Exploration must start a project-aware conversation rather than launch a preset build.
+  await homeFrame(page).getByRole("button", { name: "Show Something different", exact: true }).click();
+  const different = homeFrame(page).getByRole("article", { name: "Something different", exact: true });
+  await expect(different.getByRole("img", { name: "Question mark", exact: true })).toBeVisible();
+  const exploring = page.waitForResponse(
+    (response) =>
+      response.url().includes("/extensions/commands/pstdio.home.command.build-home/execute") &&
+      response.request().method() === "POST",
+  );
+  await different.getByRole("button", { name: "Get ideas", exact: true }).click();
+  const explored = await (await exploring).json();
+  expect(explored.outcome.ok, JSON.stringify(explored)).toBe(true);
+  const exploration = await request.get(`/v1/sessions/${explored.outcome.value.sessionId}`);
+  expect(await exploration.json()).toMatchObject({ project_id: project.id, title: "Explore Home ideas" });
+  await expect(page.getByRole("tab", { name: "Explore Home ideas", exact: true })).toBeVisible();
+  const conversationUrl = `/v1/sessions/${explored.outcome.value.sessionId}/conversation`;
+  await expect
+    .poll(async () => {
+      const conversation = await (await request.get(conversationUrl)).json();
+      return conversation.messages.some(
+        (message: { role: string; parts: { type: string; text?: string }[] }) =>
+          message.role === "user" && message.parts.some((part) => part.type === "text" && Boolean(part.text?.trim())),
+      );
+    })
+    .toBe(true);
+  await test.info().attach("home-exploration-conversation", {
+    body: await (await request.get(conversationUrl)).body(),
+    contentType: "application/json",
+  });
+
   const session = sessions[6];
   await page.goto(
     `/projects/${project.id}/session?resource=${encodeURIComponent(`pstdio://extension-resource/session/${session.id}`)}`,
@@ -51,23 +114,83 @@ test("Home resumes opened resources and public actions without prematurely creat
   const recent = homeFrame(page).getByRole("button", { name: session.title, exact: true });
   await expect(recent).toBeVisible();
   await expect(recent.getByLabel(/Session status/)).toBeVisible();
+  const ideas = await homeFrame(page).getByRole("region", { name: "Home page ideas", exact: true }).boundingBox();
+  const recentBounds = await recent.boundingBox();
+  expect(ideas).not.toBeNull();
+  expect(recentBounds!.y + recentBounds!.height).toBeLessThan(ideas!.y);
   await recent.click();
   await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/session\\?`));
   await page.reload();
   await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText(sessions[6].title);
   await page.getByRole("button", { name: "Back to project", exact: true }).click();
   await page.getByRole("option", { name: "Home", exact: true }).click();
-  await homeFrame(page).getByRole("link", { name: "New conversation", exact: true }).click();
-  await expect(homePage(page)).not.toBeVisible();
-  const current = (await (await request.get(`/v1/projects/${project.id}/sessions`)).json()) as { items: unknown[] };
-  expect(current.items).toHaveLength(7);
-  await page.getByRole("button", { name: "Back to project", exact: true }).click();
-  await page.getByRole("option", { name: "Home", exact: true }).click();
-  await homeFrame(page).getByRole("link", { name: "Open a tool", exact: true }).click();
-  await expect(page.getByRole("dialog")).toBeVisible();
-  await page.keyboard.press("Escape");
-  await homeFrame(page).getByRole("link", { name: "Browse extensions", exact: true }).click();
-  await expect(page.getByTestId("extensions-panel")).toBeVisible();
+  await expect(homeFrame(page).getByText("Recently Used", { exact: true })).toBeVisible();
+  await page.getByRole("option", { name: "Quotas", exact: true }).click();
+  await expect(page).toHaveURL(/\/quotas$/);
+  await expect(page.locator('iframe[title="Quotas"]')).toBeVisible();
+});
+
+// Critical risk: a failed primary action must explain recovery without shifting the Home content.
+test("Home anchors build failures to the selected idea and allows retry", async ({ page, request }) => {
+  const created = await request.post("/v1/projects", {
+    data: folderProjectInput({ name: "Home build recovery", agents: ["pstdio.workbench-fixture.harness.fake"] }),
+  });
+  expect(created.ok()).toBe(true);
+  const project = (await created.json()) as { id: string };
+  let attempts = 0;
+  const failure = Promise.withResolvers<void>();
+  await page.route("**/extensions/commands/pstdio.home.command.build-home/execute", async (route) => {
+    attempts++;
+    if (attempts === 1) {
+      await failure.promise;
+      // Let the host reject a real invalid command so its lifecycle settles before retry.
+      const body = route.request().postDataJSON();
+      await route.continue({
+        postData: JSON.stringify({ ...body, params: { ...body.params, idea: null } }),
+      });
+      return;
+    }
+    await route.continue();
+  });
+  try {
+    await page.goto(`/projects/${project.id}`);
+    const home = homeFrame(page);
+    await expect(homePage(page)).toBeVisible();
+    const build = home
+      .getByRole("article", { name: "Release checklist", exact: true })
+      .getByRole("button", { name: "Build this!", exact: true });
+    const rejected = page.waitForResponse(
+      (response) =>
+        response.url().includes("/extensions/commands/pstdio.home.command.build-home/execute") &&
+        response.request().method() === "POST",
+    );
+    await build.click();
+    await home.getByRole("button", { name: "Next idea", exact: true }).click();
+    await expect(home.getByRole("heading", { name: "Virtual office", exact: true })).toBeInViewport();
+    failure.resolve();
+    const rejection = await (await rejected).json();
+    expect(rejection.outcome).toMatchObject({ ok: false, status: "rejected" });
+    const error = home.getByRole("dialog", { name: "Could not start building", exact: true });
+    await expect(error).toBeVisible();
+    await expect(home.getByRole("heading", { name: "Release checklist", exact: true })).toBeInViewport();
+    await expect(error.getByRole("alert")).toContainText(rejection.outcome.reason);
+    await page.keyboard.press("Escape");
+    await expect(error).toBeHidden();
+    await expect(build).toBeFocused();
+    const retry = page.waitForResponse(
+      (response) =>
+        response.url().includes("/extensions/commands/pstdio.home.command.build-home/execute") &&
+        response.request().method() === "POST",
+    );
+    await build.press("Enter");
+    const retried = await (await retry).json();
+    expect(retried.outcome.ok, JSON.stringify(retried)).toBe(true);
+    await expect(page.getByRole("tab", { name: "Build Home: Release checklist", exact: true })).toBeVisible();
+    expect(attempts).toBe(2);
+  } finally {
+    failure.resolve();
+    await page.unrouteAll({ behavior: "ignoreErrors" });
+  }
 });
 
 test("disabling Home exposes the existing empty panel and enabling it restores one page", async ({ page, request }) => {

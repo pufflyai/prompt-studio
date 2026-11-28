@@ -149,6 +149,34 @@ test("keeps note titles independent of the body and renames them through the con
     await expect(row).toHaveAttribute("aria-selected", "true");
     await expectOpenNote(page, note.title);
 
+    // Find belongs to this editor and leaves saved Markdown unchanged.
+    await editor.press("ControlOrMeta+f");
+    const find = page.getByRole("textbox", { name: "Find in document", exact: true });
+    await expect(find).toBeFocused();
+    await find.fill("different name");
+    await expect(page.getByRole("search", { name: "Find in document" })).toContainText("1 of 1");
+    await find.press("Shift+Enter");
+    await expect(page.getByRole("search", { name: "Find in document" })).toContainText("1 of 1");
+    await find.fill("no such passage");
+    await expect(page.getByText("No matches", { exact: true })).toBeVisible();
+    await find.press("Escape");
+    await expect(editor).toBeFocused();
+    await expect(editor).toHaveText(body);
+
+    await editor.evaluate((element) => {
+      const selection = document.getSelection()!;
+      const text = document.createTreeWalker(element, NodeFilter.SHOW_TEXT).nextNode()!;
+      const range = document.createRange();
+      range.setStart(text, 0);
+      range.setEnd(text, 9);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    });
+    const toolbar = page.locator(".floating-text-format-toolbar.active");
+    await expect(toolbar.getByRole("button", { name: "Bold", exact: true })).toBeVisible();
+    await expect(toolbar.getByRole("button", { name: "Comment", exact: true })).toHaveCount(0);
+    await expect(page.locator('[data-workbench-menu-id="pstdio.notes.view.note-editor:activity"]')).toHaveCount(0);
+
     // Critical: editing must not capture the host command-palette shortcut.
     await editor.press("ControlOrMeta+p");
     await expect(page.getByRole("dialog", { name: "Command palette" })).toBeVisible();

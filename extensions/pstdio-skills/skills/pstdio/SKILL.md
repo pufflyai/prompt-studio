@@ -140,3 +140,8 @@ See [Add tools](https://prompt.studio/docs/guides/getting-started/add-tools/).
 ### Resource Activity
 
 Opted-in resources keep discussion, meaningful changes, and implementation/review outcomes together. Sessions keep their own conversation and have no Activity feed. Use `use-resource-activity` to read context, attach evidence, and publish an immutable outcome on the worked-on resource. `pst resources activity --help` lists the commands. Planner owns ticket status and exact revision checks. New handoffs do not require Reports; historical RP references remain readable through compatibility links.
+
+
+### Read the user's current workbench
+
+When a user asks about the page or selection in the attached workbench, run `pst workbench context --json`. Add `--at-send` to read the original subject of the request. Resolve returned resource references through their owning tools. Headless runs can return an unavailable result.

@@ -153,7 +153,7 @@ export const createClaudeCodeHarness = (overrides: Partial<ClaudeCodeDeps> = {})
       },
       thinking: params.select({
         label: "Thinking",
-        defaultValue: "high",
+        defaultValue: "medium",
         options: [
           { label: "Low", value: "low", icon: "level-low" },
           { label: "Medium", value: "medium", icon: "level-mid" },

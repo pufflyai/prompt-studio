@@ -9,7 +9,7 @@ import {
   TagEditorHeading,
 } from "@pstdio/ui";
 import { Plus, Trash2 } from "lucide-react";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { readTicketTagsCommand } from "../commands/ticket-tags";
 import { plannerSchemaChanged } from "../events";
 import type { readStatusSettings } from "../ticket-status-settings";
@@ -101,17 +101,36 @@ export const PlannerCollectionEditor = (props: { host: GuestHost; kind: PlannerS
         </Text>
       ) : null}
       <Stack flex="1" minH="0">
-        <CollectionFields session={session} kind={kind} />
+        <CollectionDraft session={session} kind={kind} onError={setError} />
       </Stack>
     </Stack>
   );
 };
+const CollectionDraft = (props: {
+  session: WebviewEditingSession<PlannerSettingsState>;
+  kind: PlannerSettingsKind;
+  onError: (message: string) => void;
+}) => {
+  const { session, kind, onError } = props;
+  const snapshot = useSyncExternalStore(session.subscribe, session.getSnapshot);
+  const resetVersion =
+    "resetVersion" in snapshot && typeof snapshot.resetVersion === "number" ? snapshot.resetVersion : 0;
+  const handledReset = useRef(resetVersion);
+  useEffect(() => {
+    if (handledReset.current === resetVersion) return;
+    handledReset.current = resetVersion;
+    // Clear queued previews from the discarded fields before they can reappear.
+    void session.cancel().catch((error) => onError(String(error)));
+  }, [onError, resetVersion, session]);
+  return <CollectionFields key={resetVersion} session={session} kind={kind} value={snapshot.value} />;
+};
+
 const CollectionFields = (props: {
   session: WebviewEditingSession<PlannerSettingsState>;
   kind: PlannerSettingsKind;
+  value: PlannerSettingsState;
 }) => {
-  const { session, kind } = props;
-  const { value } = useSyncExternalStore(session.subscribe, session.getSnapshot);
+  const { session, kind, value } = props;
   const groups = plannerSettingsGroups(value);
   const [deleting, setDeleting] = useState<string>();
   const [error, setError] = useState<string>();
@@ -128,6 +147,28 @@ const CollectionFields = (props: {
           <Text role="alert" color="fg.error">
             {error}
           </Text>
+        ) : null}
+        {kind === "tags" ? (
+          <Button
+            size="sm"
+            variant="outline"
+            alignSelf="start"
+            onClick={() =>
+              update([
+                {
+                  id: crypto.randomUUID(),
+                  name: "New tag",
+                  type: "single_select",
+                  sortOrder: groups.length ? (groups[0].sortOrder ?? 0) - 1 : 0,
+                  values: [],
+                },
+                ...groups,
+              ])
+            }
+          >
+            <Icon as={Plus} boxSize="icon-sm" />
+            Add tag
+          </Button>
         ) : null}
         {groups.map((group) => (
           <Stack key={group.id} gap="2xs">
@@ -220,19 +261,6 @@ const CollectionFields = (props: {
             </SimpleCard>
           </Stack>
         ))}
-        {kind === "tags" ? (
-          <Button
-            size="sm"
-            variant="outline"
-            alignSelf="start"
-            onClick={() =>
-              update([...groups, { id: crypto.randomUUID(), name: "New tag", type: "single_select", values: [] }])
-            }
-          >
-            <Icon as={Plus} boxSize="icon-sm" />
-            Add tag
-          </Button>
-        ) : null}
         <DeleteConfirmationModal
           open={deleting !== undefined}
           onClose={() => setDeleting(undefined)}

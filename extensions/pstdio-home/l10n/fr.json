@@ -1,6 +1,10 @@
 {
   "home.title": "Accueil",
+  "commands.buildHome": "Lancer une idée pour l’accueil",
+  "params.homeIdea": "Idée pour la page d’accueil",
+  "ideas.releaseChecklist": "Liste de contrôle de publication",
+  "ideas.virtualOffice": "Bureau virtuel",
+  "ideas.somethingDifferent": "Autre chose",
   "commands.read": "Lire l’accueil du projet",
-  "commands.quotas": "Lire les quotas des agents",
-  "quotas.schedule": "Enregistrer l’historique des quotas"
+  "commands.quotaHistory": "Lire l’historique des quotas de l’accueil"
 }

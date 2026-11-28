@@ -37,7 +37,7 @@ If neither CLI installation can run, Claude Code shows as unavailable in the mod
 
 Prompt Studio asks Claude Code for its list of models, so the menu shows what your Claude Code account can use. The default model appears as **Opus**.
 
-The **Thinking** option sets how much effort Claude Code spends before it answers: Low, Medium, High, XHigh, or Max. The default is High. Models that do not support it hide the option, and some models offer fewer levels.
+The **Thinking** option sets how much effort Claude Code spends before it answers: Low, Medium, High, XHigh, or Max. New sessions use Medium when the model supports it. Models that do not support it hide the option, and some models offer fewer levels.
 
 ## How it runs
 

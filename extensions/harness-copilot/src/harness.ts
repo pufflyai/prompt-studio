@@ -15,7 +15,11 @@ const reasoningOptions = (efforts: readonly string[]) => [
 ];
 
 const reasoningParam = (efforts: readonly string[], defaultValue = "default") =>
-  params.select({ label: l10n("params.reasoning", "Reasoning"), defaultValue, options: reasoningOptions(efforts) });
+  params.select({
+    label: l10n("params.reasoning", "Reasoning"),
+    defaultValue: efforts.includes("medium") ? "medium" : defaultValue,
+    options: reasoningOptions(efforts),
+  });
 
 export const toAgentModel = (model: ModelInfo): AgentModel => ({
   id: model.id,

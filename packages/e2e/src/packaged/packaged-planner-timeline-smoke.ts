@@ -1,15 +1,9 @@
 import { expect } from "bun:test";
-import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
-import { commandRunner, configurePlannerWorkflow } from "./packaged-planner-helpers";
+import { commandRunner, configurePlannerWorkflow, type PackagedPlanner } from "./packaged-planner-helpers";
 import { expectPackagedPlannerMoves } from "./packaged-planner-moves-smoke";
 import { expectIndependentPlannerViews } from "./packaged-planner-views-smoke";
 
-export async function expectPackagedPlannerTimeline(input: {
-  baseUrl: string;
-  projectId: string;
-  headers: Record<string, string>;
-  metadata: WorkbenchExtensionMetadata;
-}) {
+export async function expectPackagedPlannerTimeline(input: PackagedPlanner) {
   const { metadata } = input;
   expect(metadata.pages).toContainEqual(
     expect.objectContaining({
@@ -27,14 +21,18 @@ export async function expectPackagedPlannerTimeline(input: {
   );
   const view = metadata.views.find((view) => view.extensionId === "pstdio.planner" && view.localId === "timeline");
   expect(view?.body.kind).toBe("webview");
-  const planningNavigation = metadata.navigationItems.filter((item) => {
-    if (item.extensionId !== "pstdio.planner" || item.action.kind !== "page") return false;
-    return ["tickets", "timeline"].includes(item.action.page.id);
-  });
-  expect(planningNavigation).toHaveLength(2);
-  expect(planningNavigation[0]?.group).toBeTruthy();
-  expect(planningNavigation[1]?.group).toBe(planningNavigation[0]?.group);
-  expect(planningNavigation.every((item) => item.icon)).toBe(true);
+  const planningView = metadata.views.find(
+    (view) => view.extensionId === "pstdio.planner" && view.localId === "planning-navigation",
+  );
+  expect(planningView?.body.kind).toBe("tree");
+  expect(metadata.navigationTrees).toContainEqual(
+    expect.objectContaining({
+      extensionId: "pstdio.planner",
+      owner: expect.objectContaining({ kind: "mode", id: "project" }),
+      slot: "content",
+      view: expect.objectContaining({ kind: "view", extensionId: "pstdio.planner", id: "planning-navigation" }),
+    }),
+  );
   const execute = commandRunner(input);
   const { statusId } = await configurePlannerWorkflow(execute);
   await expectIndependentPlannerViews({ ...input, execute });

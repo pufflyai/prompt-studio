@@ -82,14 +82,14 @@ The ticket's actions menu, in the page header, has these actions:
 
 | Action                 | What it does                                                                                                     |
 | ---------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Run attempt            | Starts a managed attempt in a new Git worktree. See [Attempts](0002-attempts.md#run-an-attempt).                 |
+| Implement ticket            | Starts a managed attempt in a new Git worktree. See [Attempts](0002-attempts.md#run-an-attempt).                 |
 | Refine ticket          | Starts an agent session that improves the ticket's description. You can pick a ticket template and add context. |
 | Break into sub-tickets | Starts an agent session that splits the ticket into smaller tickets.                                            |
 | Archive                | Archives the ticket. Shown on active tickets.                                                                    |
 | Unarchive              | Makes an archived ticket active again. Shown on archived tickets.                                                |
 | Delete                 | Deletes the ticket.                                                                                              |
 
-Run attempt, Refine ticket, and Break into sub-tickets let you choose the agent. Refine ticket and Break into sub-tickets open their new session when it starts.
+Implement ticket, Refine ticket, and Break into sub-tickets let you choose the agent. Refine ticket and Break into sub-tickets open their new session when it starts.
 
 Archiving or deleting a ticket deletes linked workspaces once no active ticket uses them and the project setting **Delete linked workspaces** (`tickets.deleteLinkedWorkspaces`) is on. The setting is on by default. Deletion removes the worktree, its branch, and any uncommitted changes. The default project workspace and providers without deletion support stay available. Unarchiving restores the ticket, but does not restore deleted workspaces.
 

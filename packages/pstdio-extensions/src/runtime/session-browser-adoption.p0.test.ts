@@ -22,6 +22,10 @@ test("the production Sessions provider normalizes native chat, shared Side and p
     region: "side",
     item: { kind: "binding", binding: { view: sessionBrowser.views.conversation } },
   });
-  expect(runtime.navigationItems).toHaveLength(1);
+  expect(runtime.navigationItems.map((item) => item.localId).sort()).toEqual(["quotas", "sessions"]);
+  expect(runtime.pages.find((page) => page.localId === "quotas")?.contribution.main).toMatchObject({
+    kind: "view",
+    view: { extensionId: sessionBrowserId, id: "quotas" },
+  });
   expect(runtime.commandPaletteResources).toHaveLength(1);
 });

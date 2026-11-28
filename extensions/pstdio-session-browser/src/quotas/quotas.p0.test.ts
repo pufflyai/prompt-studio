@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import type { CommandContext } from "@pstdio/sdk/extensions";
 import { readQuotas } from "./quotas";
 
-test("Home reads quota commands independently and leaves disabled providers out", async () => {
+test("Sessions reads quota commands independently and leaves disabled providers out", async () => {
   const seen: string[] = [];
   const context = {
     extensions: {
@@ -46,7 +46,7 @@ test("Home reads quota commands independently and leaves disabled providers out"
   expect(reports[2]?.status).toBe("unsupported");
 });
 
-test("Home rejects malformed quota results without losing other providers", async () => {
+test("Sessions rejects malformed quota results without losing other providers", async () => {
   const context = {
     commands: {
       execute: async () => ({ ok: true, value: { status: "available", limits: [{ remainingPercent: Infinity }] } }),
@@ -55,7 +55,7 @@ test("Home rejects malformed quota results without losing other providers", asyn
   expect((await readQuotas(context)).every((report) => report.status === "unavailable")).toBe(true);
 });
 
-test("Home still returns native quotas when optional icon metadata stalls", async () => {
+test("Sessions still returns native quotas when optional icon metadata stalls", async () => {
   const context = {
     extensions: { list: () => new Promise(() => {}) },
     commands: {
@@ -74,7 +74,7 @@ test("Home still returns native quotas when optional icon metadata stalls", asyn
   expect(reports[0]?.icon).toBeUndefined();
 });
 
-test("Home preserves cancellation during optional metadata lookup", async () => {
+test("Sessions preserves cancellation during optional metadata lookup", async () => {
   const controller = new AbortController();
   const context = {
     signal: controller.signal,

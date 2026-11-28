@@ -2,6 +2,20 @@ import { describe, expect, test } from "bun:test";
 import { parseCodexModels } from "./models";
 
 describe("parseCodexModels", () => {
+  test("prefers Medium for a fresh selection even when Low is listed first", () => {
+    const [model] = parseCodexModels({
+      data: [{ id: "gpt", supportedReasoningEfforts: ["low", "medium", "high"] }],
+    });
+    expect(model?.paramOverrides?.model_reasoning_effort).toMatchObject({ defaultValue: "medium" });
+  });
+
+  test("prefers Medium over a different provider default", () => {
+    const [model] = parseCodexModels({
+      data: [{ id: "gpt", defaultReasoningEffort: "low", supportedReasoningEfforts: ["low", "medium"] }],
+    });
+    expect(model?.paramOverrides?.model_reasoning_effort).toMatchObject({ defaultValue: "medium" });
+  });
+
   test("maps catalog metadata and each model's supported reasoning efforts", () => {
     expect(
       parseCodexModels({

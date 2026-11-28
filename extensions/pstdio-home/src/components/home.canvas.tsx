@@ -1,9 +1,9 @@
-import { Box, Stack, Text } from "@chakra-ui/react";
+import { Stack } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { recentProjectResources } from "../recent-resources";
+import { HomePromptCarousel } from "./home-prompt-carousel";
+import { HomeWelcome } from "./home-welcome";
 import { ProjectSetupStatus } from "./project-setup-status";
-import { StartAboutPanel } from "./start-about-panel";
-import { type StartAction, StartActionList } from "./start-action-list";
 import { StartRecentList } from "./start-recent-list";
 
 interface PreviewResource {
@@ -18,56 +18,47 @@ const resources: PreviewResource[] = [
   { id: "artifact-1", title: "Weekly activity summary", icon: "file-code" },
   { id: "workspace-1", title: "PS-231_A1", icon: "computer" },
 ];
-const actions: StartAction[] = [
-  { id: "new-conversation", label: "New conversation", icon: "message-square", run: () => undefined },
-  { id: "open-tool", label: "Open a tool", icon: "panels-top-left", run: () => undefined },
-  { id: "browse-extensions", label: "Browse extensions", icon: "blocks", run: () => undefined },
-];
 const missingGitError =
   "default extensions: Failed to clone https://github.com/pufflyai/prompt-studio.git at pstdio@0.40.0: spawn git ENOENT";
 interface StartPagePreviewProps {
   setupError?: string;
+  empty?: boolean;
+  buildFails?: boolean;
 }
 const StartPagePreview = (props: StartPagePreviewProps) => {
-  const { setupError } = props;
+  const { setupError, empty, buildFails } = props;
   return (
-    <Stack w="full" maxW="52rem" pt="4xl" pb="3xl" gap="3xl" position="relative">
-      <Stack gap="xs" minW="0">
-        <Text textStyle="heading/M">Prompt Studio</Text>
-        <Text textStyle="paragraph/M/regular" color="fg.muted">
-          Project home
-        </Text>
-      </Stack>
+    <Stack w="full" maxW="2xl" px="lg" pt="4xl" pb="3xl" gap="2xl" position="relative">
       {setupError && <ProjectSetupStatus error={setupError} onRetry={() => undefined} />}
-      <StartAboutPanel />
-      <Stack direction={{ base: "column", md: "row" }} gap={{ base: "3xl", md: "4xl" }} align="flex-start" minW="0">
-        <Box flex="1" minW="0" w="full">
-          <StartActionList actions={actions} />
-        </Box>
-        <Box flex="1" minW="0" w="full">
-          <StartRecentList
-            resources={recentProjectResources(
-              resources.map(({ id, title, icon, status }) => ({
-                resource: {
-                  id,
-                  type: status ? "session" : "example",
-                  label: title,
-                  icon,
-                  ...(status ? { metadata: { status } } : {}),
-                },
-                target: { kind: "page", page: { kind: "page", extensionId: "example", id: "detail" } },
-              })),
-            )}
-            onOpen={() => undefined}
-          />
-        </Box>
-      </Stack>
+      <HomeWelcome />
+      <StartRecentList
+        resources={recentProjectResources(
+          (empty ? [] : resources).map(({ id, title, icon, status }) => ({
+            resource: {
+              id,
+              type: status ? "session" : "example",
+              label: title,
+              icon,
+              ...(status ? { metadata: { status } } : {}),
+            },
+            target: { kind: "page", page: { kind: "page", extensionId: "example", id: "detail" } },
+          })),
+        )}
+        onOpen={() => undefined}
+      />
+      <HomePromptCarousel
+        onBuild={async () => {
+          if (buildFails) throw new Error("Build temporarily unavailable. Try again.");
+        }}
+      />
     </Stack>
   );
 };
 const meta: CanvasMeta<typeof StartPagePreview> = {
   title: "Extensions/Home/Project home",
   component: StartPagePreview,
+  args: { buildFails: false },
+  controls: { buildFails: { type: "boolean", label: "Fail session startup" } },
 };
 export default meta;
 type Story = CanvasFrame<typeof StartPagePreview>;
@@ -81,17 +72,5 @@ export const SetupDidNotFinish: Story = {
 };
 export const NoRecentResources: Story = {
   id: "start-startpage--no-recent-resources",
-  render: () => (
-    <Stack w="full" maxW="52rem" gap="3xl">
-      <StartAboutPanel />
-      <Stack direction={{ base: "column", md: "row" }} gap={{ base: "3xl", md: "4xl" }} align="flex-start" minW="0">
-        <Box flex="1" minW="0" w="full">
-          <StartActionList actions={actions} />
-        </Box>
-        <Box flex="1" minW="0" w="full">
-          <StartRecentList resources={[]} onOpen={() => undefined} />
-        </Box>
-      </Stack>
-    </Stack>
-  ),
+  args: { empty: true },
 };
