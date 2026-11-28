@@ -36,9 +36,11 @@ const WorkbenchBreadcrumbTitle = (props: { item: WorkbenchBreadcrumbItem; dragga
   const [clippedByTrail, setClippedByTrail] = useState(false);
 
   useEffect(() => {
-    const label = labelRef.current;
-    const trail = label?.closest("nav");
-    if (!label || !trail) return;
+    // Observe the icon-and-label row: the label's optical offset lets its overflow-hidden ancestors crop it
+    // vertically, so the label alone never becomes fully visible and its observer would never update.
+    const row = labelRef.current?.parentElement;
+    const trail = row?.closest("nav");
+    if (!row || !trail) return;
 
     // The trail can crop an ancestor label that still fits inside its own element.
     const observer = new IntersectionObserver(
@@ -47,7 +49,7 @@ const WorkbenchBreadcrumbTitle = (props: { item: WorkbenchBreadcrumbItem; dragga
       },
       { root: trail, threshold: [0, 1] },
     );
-    observer.observe(label);
+    observer.observe(row);
     return () => observer.disconnect();
   }, []);
 
