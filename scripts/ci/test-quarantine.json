@@ -80,5 +80,19 @@
     "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/44880763815"],
     "removalCriteria": "One-off in release run 44880763815: the visible terminal text stayed empty for the 2 s poll at extension-webviews.p2.spec.ts:80, after passing on the first attempt in the seven preceding release runs. Find why the host terminal sometimes paints no output within 2 s (late shell prompt, missed resize or a missed first frame), fix it, then restore this unchanged case to the stable lane with first-attempt evidence. Keep every assertion.",
     "failureMessageIncludes": ["Expected pattern: /\\S/"]
+  },
+  {
+    "runner": "bun",
+    "file": "packages/pstdio-api/src/features/automation/automation-runs.p1.test.ts",
+    "name": "automation run cancellation and credentials > cancels remote provisioning before a session is created and cleans up an accepted workspace",
+    "platforms": ["linux"],
+    "arch": "x64",
+    "owner": "PS-1371",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/46151364158/job/140998988601",
+      "https://github.com/pufflyai/prompt-studio/pull/2616"
+    ],
+    "removalCriteria": "Merge #2616, which makes a cancelled command wait for the accepted-workspace cleanup it started before the run reports cancelled (reproduced 3/3 with a 100 ms provider cancel delay before the fix). Then restore this unchanged case to the stable lane with first-attempt evidence. Keep every assertion.",
+    "failureMessageIncludes": ["providerCancelCount"]
   }
 ]
