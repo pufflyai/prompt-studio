@@ -1,9 +1,50 @@
 import { expect, test } from "bun:test";
 import { type EventRef, type ExtensionSession, viewDataEvents } from "@pstdio/sdk/extensions";
 import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
+import extension from "../extension";
 import { browse, browsePage } from "./browse";
 import { nativeSubmissionIndex, readNativeSubmissions, saveNativeSubmission } from "./native-submission";
 import { pinSession, readSessionPins, sessionPinsIndex } from "./session-pins";
+
+test("dropping onto Pinned persists the first pin and dropping onto a pinned row saves another", async () => {
+  const sessions = ["first", "second"].map(
+    (id) => ({ id, title: id, updatedAt: "2026-11-10T10:00:00Z", status: "completed" }) as ExtensionSession,
+  );
+  const ctx = makeCommandContext({
+    storage: createMemoryStorage({ indexes: [sessionPinsIndex] }),
+    params: {},
+    overrides: {
+      sessions: {
+        get: async (id) => sessions.find((session) => session.id === id) as never,
+        query: async () => ({ items: sessions as never, nextCursor: null }),
+      },
+    },
+  });
+  const view = extension.views?.find((view) => view.id === "list")?.body;
+  if (view?.kind !== "tree" || !view.onMove) throw new Error("Sessions must accept tree drops.");
+  const renderer = { rendererId: "sessions" };
+  const firstRead = await view.body(ctx, { renderer });
+  const group = firstRead.find((section) => section.id === "pinned")?.nodes[0];
+  expect(group).toMatchObject({ canDrop: true });
+  const history = firstRead.find((section) => section.id === "sessions")!.nodes;
+  const first = history.find((node) => node.resource?.id === "first")!;
+  const second = history.find((node) => node.resource?.id === "second")!;
+  expect(first.canDrag).toBe(true);
+  await view.onMove(ctx, { renderer, source: first, position: "inside" });
+  expect((await readSessionPins(ctx, sessions)).get("first")).toBe(false);
+
+  await view.onMove(ctx, { renderer, source: first, target: group, position: "inside" });
+  const pinned = (await view.body(ctx, { renderer })).find((section) => section.id === "pinned")!.nodes;
+  expect(pinned).toMatchObject([{ id: "first", canDrop: true }]);
+  await view.onMove(ctx, { renderer, source: second, target: pinned[0], position: "after" });
+  await view.onMove(ctx, { renderer, source: pinned[0], target: group, position: "inside" });
+  const sections = await view.body(ctx, { renderer });
+  expect(sections.find((section) => section.id === "pinned")!.nodes.map((node) => node.id)).toEqual([
+    "first",
+    "second",
+  ]);
+  expect(sections.find((section) => section.id === "sessions")?.nodes.filter((node) => node.resource)).toHaveLength(0);
+});
 
 test("a pinned older session appears above recent results and can be unpinned", async () => {
   const old = { id: "old", title: "Old", updatedAt: "2026-10-01T10:00:00Z", status: "completed" } as ExtensionSession;
@@ -20,7 +61,7 @@ test("a pinned older session appears above recent results and can be unpinned", 
   expect(sections[0]?.nodes[0]?.resource?.id).toBe("old");
   expect(sections[1]?.nodes.find((n) => n.resource)?.resource?.id).toBe("recent");
   await pinSession.run(ctx, { sessionId: "old", pinned: false });
-  expect((await browse(ctx, { renderer: { rendererId: "sessions" } }))[0]?.id).toBe("sessions");
+  expect((await browse(ctx, { renderer: { rendererId: "sessions" } }))[0]?.nodes[0]?.resource).toBeUndefined();
 });
 
 test("pinned sessions paginate and respect workspace search", async () => {
@@ -48,17 +89,20 @@ test("pinned sessions paginate and respect workspace search", async () => {
   for (const session of sessions) await pinSession.run(ctx, { sessionId: session.id, pinned: true });
   const renderer = { rendererId: "sessions" };
   const sections = await browse(ctx, { renderer });
-  expect(sections[0].nodes).toHaveLength(50);
+  const group = sections[0];
+  expect(group.nodes).toHaveLength(50);
   const second = await browsePage(ctx, {
     renderer,
-    parent: { kind: "section", id: "pinned" },
-    cursor: sections[0].nextCursor!,
+    parent: { kind: "section", id: group.id },
+    cursor: group.nextCursor!,
   });
   expect(second.nodes).toHaveLength(5);
   expect(second.nextCursor).toBeUndefined();
   expect((await browse(ctx, { renderer, filter: "Session 10" }))[0].nodes[0].resource?.id).toBe("10");
   expect(
-    (await browse(ctx, { renderer: { ...renderer, resource: { type: "workspace", id: "another" } } }))[0].nodes,
+    (await browse(ctx, { renderer: { ...renderer, resource: { type: "workspace", id: "another" } } }))[0].nodes.filter(
+      (node) => node.resource,
+    ),
   ).toEqual([]);
   await pinSession.run(ctx, { sessionId: sessions[0].id, pinned: false });
   expect((await readSessionPins(ctx, [sessions[0]])).get(sessions[0].id)).toBe(false);

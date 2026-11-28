@@ -29,7 +29,7 @@ test("activity-ordered sessions keep date headings unique when older requests fi
     overrides: { sessions: { query: async () => ({ items: items as never, nextCursor: null }) } },
   });
   const sections = await browse(ctx, { renderer: { rendererId: "list" } });
-  const nodes = sections[0]!.nodes;
+  const nodes = sections.find((section) => section.id === "sessions")!.nodes;
   expect(new Set(nodes.map((node) => node.id)).size).toBe(nodes.length);
   expect(nodes.map((node) => node.resource?.id ?? node.label)).toEqual([
     { $l10n: "sessions.today", default: "Today" },
@@ -58,7 +58,7 @@ test("browsing and search use bounded public queries, workspace scope and cursor
   const renderer = { rendererId: "list", resource: { type: "workspace", id: "workspace" } };
   const sections = await browse(ctx, { renderer, filter: "needle" });
   expect(queries).toEqual([{ limit: 50, orderBy: "lastActivity", workspaceId: "workspace", search: "needle" }]);
-  const group = sections[0]!.nodes[0]!;
+  const group = sections.find((section) => section.id === "sessions")!.nodes[0]!;
   expect(group.nextCursor).toBe("next");
   const page = await browsePage(ctx, {
     renderer,
@@ -95,7 +95,9 @@ test("workspace sessions keep the contextual page and open chat in shared Side p
     },
   });
   const sections = await browse(ctx, { renderer: { rendererId: "list", resource: { type: "workspace", id: "w" } } });
-  const group = sections[0]!.nodes.find((node) => node.id === "workspace-sessions");
+  const group = sections
+    .find((section) => section.id === "sessions")!
+    .nodes.find((node) => node.id === "workspace-sessions");
   expect(group).toMatchObject({ collapsible: true, canHide: true });
   expect(group?.children?.find((node) => node.resource?.id === "s")).toMatchObject({
     target: { kind: "panel", open: "preview", resource: { extensionId: "pstdio", id: "s" } },
@@ -126,7 +128,7 @@ test("project history pages preserve ordering and date identities through exhaus
     },
   });
   const renderer = { rendererId: "list" };
-  const first = (await browse(ctx, { renderer }))[0]!;
+  const first = (await browse(ctx, { renderer })).find((section) => section.id === "sessions")!;
   expect(first.nextCursor).toBe("50");
   const second = await browsePage(ctx, {
     renderer,
@@ -211,7 +213,7 @@ test("session rows distinguish running sessions from drafts and preserve resourc
     },
   });
   const sections = await browse(ctx, { renderer: { rendererId: "list" } });
-  const rows = sections[0].nodes.filter((row) => row.resource);
+  const rows = sections.find((section) => section.id === "sessions")!.nodes.filter((row) => row.resource);
   expect(rows.map((row) => [row.icon, row.iconColor])).toEqual([
     ["circle-check", "fg.success"],
     ["circle-alert", "fg.error"],

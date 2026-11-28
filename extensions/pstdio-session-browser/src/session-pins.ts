@@ -31,6 +31,22 @@ export const readSessionPins = async (ctx: ExtensionContextBase, sessions: Exten
     sessions.map((session) => [session.id, recordValue(byId.get(pinKey(storage, session.id))?.value).pinned === true]),
   );
 };
+export const setSessionPinned = async (ctx: ExtensionContextBase, input: { sessionId: string; pinned: boolean }) => {
+  const storage = ctx.storage.scope({ type: "project" });
+  const session = await ctx.sessions.get(input.sessionId);
+  if (!session || session.archived) throw new Error("Session not found.");
+  await storage.records.commit({
+    operationId: storage.ids.create(),
+    edits: [
+      {
+        recordId: pinKey(storage, session.id),
+        replace: { pinnedSessionId: session.id, pinned: input.pinned },
+      },
+    ],
+  });
+  await ctx.events.emit(sessionPinsChanged, { projectId: ctx.projectId });
+};
+
 export const pinSession = defineCommand({
   id: "pin",
   title: l10n("commands.pin", "Pin session"),
@@ -39,21 +55,7 @@ export const pinSession = defineCommand({
     sessionId: params.text({ required: true, resolvedFrom: "resource" }),
     pinned: params.boolean({ required: true }),
   },
-  async run(ctx, input) {
-    const storage = ctx.storage.scope({ type: "project" });
-    const session = await ctx.sessions.get(input.sessionId);
-    if (!session || session.archived) throw new Error("Session not found.");
-    await storage.records.commit({
-      operationId: storage.ids.create(),
-      edits: [
-        {
-          recordId: pinKey(storage, session.id),
-          replace: { pinnedSessionId: session.id, pinned: input.pinned },
-        },
-      ],
-    });
-    await ctx.events.emit(sessionPinsChanged, { projectId: ctx.projectId });
-  },
+  run: setSessionPinned,
 });
 export const readPinnedSessions = async (
   ctx: ExtensionContextBase,

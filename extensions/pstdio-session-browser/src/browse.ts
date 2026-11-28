@@ -4,6 +4,7 @@ import {
   type ExtensionSession,
   l10n,
   type TreeNode,
+  type TreeRendererMoveParams,
   type TreeRendererPageParams,
   type TreeRendererQueryParams,
   type TreeViewSection,
@@ -12,8 +13,10 @@ import {
 } from "@pstdio/sdk/extensions";
 import { sessionBrowser } from "../refs";
 import { create } from "./navigation";
-import { sessionResource, sessionTarget } from "./resource";
-import { pinSession, readPinnedSessions, readSessionPins } from "./session-pins";
+import { sessionId, sessionResource, sessionTarget } from "./resource";
+import { pinSession, readPinnedSessions, readSessionPins, setSessionPinned } from "./session-pins";
+
+const pinnedSessionsGroupId = "pinned-sessions";
 
 const sessionDayLabel = (date: Date) => {
   const now = new Date();
@@ -67,6 +70,8 @@ const sessionNodes = async (
       icon: resource.icon,
       iconColor: resource.iconColor,
       resource,
+      canDrag: !pinned,
+      canDrop: pinned,
       contextMenuActions: [
         {
           id: "pin",
@@ -107,13 +112,20 @@ export const browsePage = async (ctx: ExtensionContextBase, input: TreeRendererP
   const { nodes, nextCursor } = await queryPage(ctx, input, input.cursor);
   return { nodes, nextCursor };
 };
+export const pinDroppedSession = async (ctx: ExtensionContextBase, { source, target }: TreeRendererMoveParams) => {
+  const id = sessionId(source.resource);
+  if (!id || !source.canDrag || !target?.canDrop || source.id === target.id) return;
+  if (target.id !== pinnedSessionsGroupId && !sessionId(target.resource)) return;
+  await setSessionPinned(ctx, { sessionId: id, pinned: true });
+};
 export const browse = async (ctx: ExtensionContextBase, input: TreeRendererQueryParams): Promise<TreeViewSection[]> => {
   const { nodes, workspaceId, nextCursor } = await queryPage(ctx, input);
   const pinned = await readPinnedSessions(ctx, workspaceId, input.filter?.trim());
-  let visibleNodes: TreeNode[] =
-    nodes.length || nextCursor || pinned.items.length || pinned.nextCursor
-      ? nodes
-      : [{ id: "empty", label: l10n("sessions.empty", "No sessions yet"), disabled: true }];
+  const pinnedNodes = await sessionNodes(ctx, pinned.items, workspaceId, true);
+  const hasHistory = Boolean(nodes.length || nextCursor || pinnedNodes.length || pinned.nextCursor);
+  let visibleNodes: TreeNode[] = hasHistory
+    ? nodes
+    : [{ id: "empty", label: l10n("sessions.empty", "No sessions yet"), disabled: true }];
   if (workspaceId)
     visibleNodes = [
       {
@@ -135,13 +147,23 @@ export const browse = async (ctx: ExtensionContextBase, input: TreeRendererQuery
       },
     ];
   return [
-    ...(pinned.items.length || pinned.nextCursor
+    ...(hasHistory
       ? [
           {
             id: "pinned",
             label: l10n("sessions.pinned", "Pinned"),
             collapsible: false,
-            nodes: await sessionNodes(ctx, pinned.items, workspaceId, true),
+            nodes: pinnedNodes.length
+              ? pinnedNodes
+              : [
+                  {
+                    id: pinnedSessionsGroupId,
+                    label: l10n("sessions.pinDropTarget", "Drop a session here"),
+                    icon: "pin",
+                    tone: "muted" as const,
+                    canDrop: true,
+                  },
+                ],
             nextCursor: pinned.nextCursor ? `pinned:${pinned.nextCursor}` : undefined,
           },
         ]
