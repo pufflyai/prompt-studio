@@ -5,7 +5,7 @@ import type {
   WorkspaceProviderRef,
 } from "pstdio-api-contracts/extension-kernel";
 import { legacyResourceOwner } from "pstdio-db";
-import { type CommandRunnerEnvironment, createReadBoundary } from "pstdio-extensions";
+import { type CommandRunnerEnvironment, createReadBoundary, type InvocationScope } from "pstdio-extensions";
 import { queryReadableWorkspaces, readableWorkspaces } from "../../../services/personal-history/queries";
 import { readDeviceWorkspaceCapacity } from "../../workspaces/device-capacity";
 import { toExtensionWorkspace } from "../../workspaces/extension-workspace";
@@ -90,10 +90,18 @@ export const createExtensionWorkspace = async (
 
 export const createWorkspacesApi = (
   deps: ExtensionsRouteDeps,
-  input: { projectId: string; signal?: AbortSignal },
+  input: { projectId: string; signal?: AbortSignal; scope?: InvocationScope },
   runtimeDeps: CommandEnvironmentRuntimeDeps,
 ): CommandRunnerEnvironment["workspaces"] => {
   const read = createReadBoundary(input.signal);
+  // Cancelling a create makes the host clean up a workspace its provider already accepted. The
+  // invocation's caller can stop waiting for extension code at once, so a cancelled invocation
+  // ends only after the creates it started, and that cleanup, have settled.
+  const creating = new Set<Promise<unknown>>();
+  const scope = input.scope;
+  scope?.register(async () => {
+    if (scope.signal.aborted) await Promise.allSettled(creating);
+  });
   const getScopedWorkspace = async (id: string) => {
     const workspace = await deps.workspaceService.get(id);
     return workspace?.project_id === input.projectId ? workspace : null;
@@ -144,13 +152,19 @@ export const createWorkspacesApi = (
       ),
     create: async (workspaceInput) => {
       input.signal?.throwIfAborted();
-      const workspace = await createExtensionWorkspace(
+      const creation = createExtensionWorkspace(
         deps,
         { projectId: input.projectId, workspaceInput, signal: input.signal },
         runtimeDeps,
       );
-      input.signal?.throwIfAborted();
-      return workspace;
+      creating.add(creation);
+      try {
+        const workspace = await creation;
+        input.signal?.throwIfAborted();
+        return workspace;
+      } finally {
+        creating.delete(creation);
+      }
     },
     addAnchors: async (id, anchors) => {
       await requireScopedWorkspace(id);

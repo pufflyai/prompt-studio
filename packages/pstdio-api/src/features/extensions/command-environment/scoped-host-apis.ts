@@ -90,7 +90,7 @@ export const createScopedHostApis = (
       scope,
       workbenchOrigin: input.workbenchOrigin,
     }),
-    workspaces: createWorkspacesApi(deps, { projectId: input.projectId, signal }, runtimeDeps),
+    workspaces: createWorkspacesApi(deps, { projectId: input.projectId, signal, scope }, runtimeDeps),
     connections: signal ? withConnectionSignal(hosts.connections, signal) : hosts.connections,
     process: createProcessApi({
       scope,
