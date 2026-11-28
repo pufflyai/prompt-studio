@@ -25,7 +25,6 @@ import { MarketplaceExtensionRow } from "./marketplace-extension-row";
 export interface ExtensionsPanelViewProps {
   projectId?: string;
   header?: ReactNode;
-  savedSignIns?: ReactNode;
   filters?: ExtensionFilters;
   onFiltersChange?: (filters: ExtensionFilters) => void;
   rowRef?: (id: string, node: HTMLDivElement | null) => void;
@@ -211,8 +210,6 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
               )),
             ])}
         </Stack>
-
-        {props.savedSignIns}
 
         <Text paddingX="lg" paddingTop="md" paddingBottom="2xs" textStyle="label/XS/medium" color="fg.subtle">
           {t("projectSettings.extensionsPanel.marketplace.group", { count: availableMarketplace.length })}

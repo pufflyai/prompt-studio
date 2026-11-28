@@ -111,7 +111,6 @@
         "disconnectProject": "中斷專案連線",
         "revokeSignIn": "撤銷登入",
         "revokeSharedSignIn": "撤銷共用登入",
-        "savedSignIns": "已儲存的登入資訊",
         "saved": "連線已儲存",
         "actionFailed": "連線操作失敗"
       },

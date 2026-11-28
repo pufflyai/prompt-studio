@@ -113,7 +113,6 @@
         "disconnectProject": "Déconnecter le projet",
         "revokeSignIn": "Révoquer l’accès",
         "revokeSharedSignIn": "Révoquer l’accès partagé",
-        "savedSignIns": "Connexions enregistrées",
         "saved": "Connexion enregistrée",
         "actionFailed": "Échec de l’action sur la connexion"
       },
