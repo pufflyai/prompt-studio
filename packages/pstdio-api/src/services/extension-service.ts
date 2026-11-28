@@ -19,6 +19,7 @@ export { ExtensionNameConflictError, ProjectNotFoundError } from "./extension-se
 
 import { existsSync } from "node:fs";
 import { dirname, relative } from "node:path";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import { pstdioExtensionsRoot, withRequestedPreparation } from "pstdio-extensions";
 import { isAlwaysEnabledExtensionSource } from "../features/extensions/always-on-extensions";
 import { settlePreparedInstall } from "../features/extensions/extension-install-transaction";
@@ -65,13 +66,18 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
     deps.eventBus?.emit("extension_instances", "set", instance);
   };
 
-  const { adoptDefaultSourceForProject, assertOptional, claimExtensionId, setProjectExtensionEnabled } =
-    createExtensionEnablement({
-      ...deps,
-      assertProjectChoice,
-      emitExtensionInstance,
-      onDefaultAdopted: (sourcePath) => withRequestedPreparation(() => notifyInstalledSourcesChanged(sourcePath)),
-    });
+  const {
+    adoptDefaultSourceForProject,
+    assertOptional,
+    assertProviderAllowed,
+    claimExtensionId,
+    setProjectExtensionEnabled,
+  } = createExtensionEnablement({
+    ...deps,
+    assertProjectChoice,
+    emitExtensionInstance,
+    onDefaultAdopted: (sourcePath) => withRequestedPreparation(() => notifyInstalledSourcesChanged(sourcePath)),
+  });
 
   const notifyInstalledSourcesChanged = async (sourcePath?: string, validatedSource?: LoadedExtensionSnapshot) => {
     await deps.onInstalledSourcesChanged?.(sourcePath, validatedSource);
@@ -99,15 +105,7 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
   const getInstalledSource = (installName: string) =>
     deps.installedExtensionSourcesService.getByInstallName(installName);
 
-  const findProjectInstanceForSource = async (
-    input: Pick<EnableInstalledSourceInput, "projectId">,
-    installedSource: Awaited<ReturnType<typeof registerInstalledSource>>,
-  ) => {
-    return deps.extensionInstancesService.findByScopeInstalledSource("project", input.projectId, installedSource.id);
-  };
-
-  // Discovery must never adopt. A folder that changed on disk is an offer the user takes from the
-  // extension panel; until then the project keeps running the source it already accepted.
+  // Discovery leaves source selection to explicit user actions and keeps the accepted registration.
   const attachInstalledSource = async (
     input: RegisterInstalledSourceInput,
     notify: Parameters<typeof registerSource>[1],
@@ -124,22 +122,44 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
     if (!(await deps.projectService.get(projectId))) throw new ProjectNotFoundError(projectId);
   };
 
-  const createProjectInstance = async (
-    input: Pick<EnableInstalledSourceInput, "projectId">,
+  const activateSources = (inputs: Parameters<typeof activatePublishedExtensions>[1]) =>
+    activatePublishedExtensions(
+      {
+        sources: deps.installedExtensionSourcesService,
+        instances: deps.extensionInstancesService,
+        emitRemoved: (row) => deps.eventBus?.emit("installed_extension_sources", "delete", row),
+        emitInstance: emitExtensionInstance,
+        emitInstanceRemoved: (row) => deps.eventBus?.emit("extension_instances", "delete", row),
+        refresh: notifyInstalledSourcesChanged,
+        emit: emitInstalledSource,
+      },
+      inputs,
+    );
+
+  const activateRegisteredSource = async (
+    projectId: string,
     installedSource: Awaited<ReturnType<typeof registerInstalledSource>>,
   ) => {
-    try {
-      return await deps.extensionInstancesService.create({
-        installed_extension_id: installedSource.id,
-        scope_id: input.projectId,
-        scope_type: "project",
-        enabled: false,
-      });
-    } catch (error) {
-      const raced = await findProjectInstanceForSource(input, installedSource);
-      if (!raced) throw error;
-      return raced;
-    }
+    const existing = (await listProjectInstances(projectId)).find(
+      ({ installedSource: source }) => canonicalExtensionId(source.extension_id) === installedSource.extension_id,
+    );
+    await assertProviderAllowed(installedSource);
+    const [activated] = await activateSources([
+      {
+        projectId,
+        instanceId: existing?.instance.id,
+        source: { kind: "existing", id: installedSource.id },
+        enabled: true,
+        keepReplacedFolder: true,
+        beforeActivate: async () => {},
+      },
+    ]);
+    // Registration precedes the first enabled owner, so its execution-gated
+    // notification cannot finish the frontend until the activation commits.
+    if (!existing?.instance.enabled || existing.installedSource.id !== installedSource.id)
+      await withRequestedPreparation(() => notifyInstalledSourcesChanged(installedSource.source_path));
+
+    return activated!;
   };
 
   const enableInstalledSourceForProject = async (
@@ -159,16 +179,7 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
       });
       await assertProjectExists(input.projectId);
       const installedSource = await registerInstalledSource(input);
-      const existing = await findProjectInstanceForSource(input, installedSource);
-      const candidate = existing ?? (await createProjectInstance(input, installedSource));
-      const instance = await claimExtensionId(candidate, installedSource, options.expectedProvider);
-      if (!instance) throw new Error(`Failed to enable extension: ${input.name}`);
-      // Registration precedes the first enabled owner, so its execution-gated
-      // notification cannot finish this source's frontend until the claim exists.
-      if (!existing?.enabled)
-        await withRequestedPreparation(() => notifyInstalledSourcesChanged(installedSource.source_path));
-
-      return { installedSource, instance };
+      return await activateRegisteredSource(input.projectId, installedSource);
     } catch (error) {
       if (input.installation) await settlePreparedInstall(input.installation, false);
       throw error;
@@ -181,9 +192,19 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
     projectId: string,
     installedSource: Awaited<ReturnType<typeof registerInstalledSource>>,
   ) => {
-    const existing = await findProjectInstanceForSource({ projectId }, installedSource);
-    const candidate = existing ?? (await createProjectInstance({ projectId }, installedSource));
-    if (!existing) emitExtensionInstance(candidate);
+    const attached = await deps.extensionInstancesService.attach({
+      installed_extension_id: installedSource.id,
+      scope_id: projectId,
+      scope_type: "project",
+      enabled: false,
+    });
+    if (!attached) {
+      if (!(await isAlwaysEnabledExtensionSource(installedSource))) return null;
+      await deps.validateResourcePrefixes?.(projectId, installedSource);
+      return activateRegisteredSource(projectId, installedSource);
+    }
+    const { instance: candidate, created } = attached;
+    if (created) emitExtensionInstance(candidate);
     if (candidate.enabled || !(await isAlwaysEnabledExtensionSource(installedSource)))
       return { installedSource, instance: candidate };
     await deps.validateResourcePrefixes?.(projectId, installedSource);
@@ -236,19 +257,7 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
       assertInstalledSourceChoice,
       adoptDefaultSourceForProject,
       hasDefaultSourceChoice: deps.extensionInstancesService.hasProjectDefaultChoice,
-      activatePublishedExtensions: (inputs: Parameters<typeof activatePublishedExtensions>[1]) =>
-        activatePublishedExtensions(
-          {
-            sources: deps.installedExtensionSourcesService,
-            instances: deps.extensionInstancesService,
-            emitRemoved: (row) => deps.eventBus?.emit("installed_extension_sources", "delete", row),
-            emitInstance: emitExtensionInstance,
-            emitInstanceRemoved: (row) => deps.eventBus?.emit("extension_instances", "delete", row),
-            refresh: notifyInstalledSourcesChanged,
-            emit: emitInstalledSource,
-          },
-          inputs,
-        ),
+      activatePublishedExtensions: activateSources,
       enableInstalledSourceForProject,
       attachRegisteredSourceForProject,
       getInstalledSource,

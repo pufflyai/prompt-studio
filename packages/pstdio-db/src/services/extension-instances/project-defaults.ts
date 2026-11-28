@@ -6,6 +6,7 @@ import { installed_extension_sources, project_extensions } from "../../db/schema
 import { ensureFileDocument, saveFileDocumentState } from "../extension-storage/document-file-persistence";
 import { documentFilesFor, withDocumentFileTransaction } from "../extension-storage/document-files";
 import { storageOwnerKey } from "../extension-storage/storage-owner-key";
+import { findProjectExtension } from "./activate-project-sources";
 import { projectExtensionRow } from "./project-extension-row";
 
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
@@ -65,17 +66,8 @@ export const adoptProjectDefault = (
       );
     if (!source) throw new Error("Default extension source is unavailable");
     if (!(await recordProjectDefaultChoice(tx, input.projectId, input.extensionId)).length) return null;
-    const providers = await tx
-      .select({ instance: project_extensions })
-      .from(project_extensions)
-      .innerJoin(installed_extension_sources, eq(project_extensions.extension_ref, installed_extension_sources.id))
-      .where(
-        and(
-          eq(project_extensions.project_id, input.projectId),
-          eq(installed_extension_sources.extension_id, input.extensionId),
-        ),
-      );
-    if (providers.some(({ instance }) => instance.enabled)) return null;
+    const existing = await findProjectExtension(tx, input.projectId, input.extensionId);
+    if (existing && (existing.enabled || existing.installed_extension_id !== source.id)) return null;
     const timestamp = new Date().toISOString();
     const [instance] = await tx
       .insert(project_extensions)

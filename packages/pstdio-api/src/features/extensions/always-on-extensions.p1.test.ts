@@ -43,21 +43,30 @@ test("host-marked extensions stay enabled in existing and new projects", async (
     await syncInstalledExtensionsForProject({ extensionService: deps.extensionService, projectId: project.id });
     const [before] = await deps.extensionService.listProjectExtensionInstances(project.id);
     expect(before?.instance.enabled).toBe(false);
-    writeExtension(join(process.env.PSTDIO_HOME, "extensions", "optional-copy"), "app-tools", "user");
+    const optionalPath = join(process.env.PSTDIO_HOME, "extensions", "optional-copy");
+    writeExtension(optionalPath, "app-tools", "user");
     await syncInstalledExtensionsForProject({ extensionService: deps.extensionService, projectId: project.id });
-    const optional = (await deps.extensionService.listProjectExtensionInstances(project.id)).find(
-      (copy) => copy.installedSource.install_name === "optional-copy",
-    );
+    expect(await deps.extensionService.listProjectExtensionInstances(project.id)).toEqual([before!]);
+    const enableOptional = () =>
+      deps.extensionService.enableInstalledSourceForProject({
+        projectId: project.id,
+        displayName: "App Tools",
+        extensionId: "pstdio.app-tools",
+        installName: "optional-copy",
+        manifest: {},
+        name: "app-tools",
+        sourcePath: optionalPath,
+      });
     // The host reads each catalog source once, so the new policy comes from a new catalog source.
     catalog.extensions[0]!.alwaysEnabled = true;
     process.env.PSTDIO_EXTENSION_CATALOG = join(root, "catalog-required.json");
     writeFileSync(process.env.PSTDIO_EXTENSION_CATALOG, JSON.stringify(catalog));
     // A required provider also wins while discovery is restoring a disabled instance.
-    await expectRejection(deps.extensionService.setProjectExtensionEnabled(optional!.instance.id, true)).toMatchObject({
+    await expectRejection(enableOptional()).toMatchObject({
       name: "AlwaysEnabledExtensionError",
     });
     const claims = await Promise.allSettled([
-      deps.extensionService.setProjectExtensionEnabled(optional!.instance.id, true),
+      enableOptional(),
       syncInstalledExtensionsForProject({ extensionService: deps.extensionService, projectId: project.id }),
     ]);
     expect(claims[0]?.status).toBe("rejected");
@@ -78,7 +87,7 @@ test("host-marked extensions stay enabled in existing and new projects", async (
     const [enabled] = await deps.extensionService.listEnabledSourcesForProject(newProject.id);
     expect(enabled?.installedSource.extension_id).toBe("pstdio.app-tools");
     const copies = await deps.extensionService.listProjectExtensionInstances(newProject.id);
-    expect(copies.find((copy) => copy.installedSource.install_name === "optional-copy")?.instance.enabled).toBe(false);
+    expect(copies.filter((copy) => copy.installedSource.extension_id === "pstdio.app-tools")).toEqual([enabled!]);
     const url = `/v1/projects/${newProject.id}/extensions/${enabled!.instance.id}`;
     const disabled = await app.request(url, {
       method: "PATCH",

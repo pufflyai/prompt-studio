@@ -1,4 +1,5 @@
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
+import { canonicalExtensionId, historicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { DbClient } from "../../db/connection.pglite";
 import { installed_extension_sources, project_extensions } from "../../db/schemas.pg";
 import { rekeyInstancePreferences } from "../extension-preferences/instance-preferences";
@@ -13,21 +14,27 @@ export type ActivationInput = {
   expectedSourceId?: string;
   enabled?: boolean;
 };
-const assertExpectedProvider = async (tx: Tx, input: ActivationInput) => {
-  const candidates = await tx
+export const matchingExtensionIds = (extensionId: string) => [
+  canonicalExtensionId(extensionId),
+  historicalExtensionId(extensionId),
+];
+
+export const findProjectExtension = async (db: Pick<DbClient, "select">, projectId: string, extensionId: string) => {
+  const [row] = await db
     .select({ instance: project_extensions })
     .from(project_extensions)
     .innerJoin(installed_extension_sources, eq(project_extensions.extension_ref, installed_extension_sources.id))
     .where(
       and(
-        eq(project_extensions.project_id, input.projectId),
-        eq(installed_extension_sources.extension_id, input.extensionId),
+        eq(project_extensions.project_id, projectId),
+        inArray(installed_extension_sources.extension_id, matchingExtensionIds(extensionId)),
       ),
     );
-  const rows = candidates.map(({ instance }) => projectExtensionRow(instance));
-  const selected =
-    rows.find((row) => row.enabled) ??
-    rows.sort((a, b) => b.updated_at.localeCompare(a.updated_at) || b.created_at.localeCompare(a.created_at))[0];
+  return row ? projectExtensionRow(row.instance) : null;
+};
+
+const assertExpectedProvider = async (tx: Tx, input: ActivationInput) => {
+  const selected = await findProjectExtension(tx, input.projectId, input.extensionId);
   if (selected?.id !== input.instanceId) throw new Error("Project extension changed during activation; retry");
   return selected;
 };
@@ -39,7 +46,7 @@ const activateSource = async (tx: Tx, input: ActivationInput) => {
     .where(
       and(
         eq(installed_extension_sources.id, input.installedSourceId),
-        eq(installed_extension_sources.extension_id, input.extensionId),
+        inArray(installed_extension_sources.extension_id, matchingExtensionIds(input.extensionId)),
       ),
     );
   if (!source) throw new Error("Project extension source identity does not match.");
@@ -76,28 +83,12 @@ const activateSource = async (tx: Tx, input: ActivationInput) => {
       .returning();
     instance = created!;
   }
-  const sources = tx
-    .select({ id: installed_extension_sources.id })
-    .from(installed_extension_sources)
-    .where(eq(installed_extension_sources.extension_id, input.extensionId));
-  const changed = instance.enabled
-    ? await tx
-        .update(project_extensions)
-        .set({
-          enabled: sql`case when ${project_extensions.extension_ref} = ${instance.extension_ref} then true else false end`,
-          updated_at: timestamp,
-        })
-        .where(
-          and(eq(project_extensions.project_id, input.projectId), inArray(project_extensions.extension_ref, sources)),
-        )
-        .returning()
-    : [instance];
   const current = projectExtensionRow(instance);
   if (previous && previous.id !== current.id)
     await rekeyInstancePreferences(tx, input.projectId, previous.id, current.id);
   return {
-    instance: projectExtensionRow(changed.find((row) => row.extension_ref === instance.extension_ref)!),
-    changed: changed.map(projectExtensionRow),
+    instance: current,
+    changed: [current],
     removed: previous && previous.id !== current.id ? [previous] : [],
   };
 };

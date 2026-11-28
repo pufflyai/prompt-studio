@@ -174,7 +174,7 @@ test("consolidation preserves the selected private Workspaces copy and does not 
   ]);
   const instances = await handle.deps.extensionService.listProjectExtensionInstances(project.id);
   expect(instances.find(({ instance }) => instance.enabled)?.instance.id).toBe(selected.instance.id);
-  expect(instances.find(({ instance }) => instance.id === global.instance.id)?.instance.enabled).toBe(false);
+  expect(instances.find(({ instance }) => instance.id === global.instance.id)).toBeUndefined();
   const shared = await catalog.read("pstdio.workspaces");
   expect(shared.value).toMatchObject({ enabled: true });
   const bytes = await new Response(

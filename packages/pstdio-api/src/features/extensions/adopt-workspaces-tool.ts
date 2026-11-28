@@ -10,7 +10,7 @@ import { combinedWorkspacesSource } from "./workspace-tool-source";
 export { combinedWorkspacesSource } from "./workspace-tool-source";
 
 import { withProjectExtensionChoices } from "./project-extension-choices";
-import { openPublishedCatalog, publishExtension, publishedOwner } from "./publication/catalog";
+import { openPublishedCatalog, publishExtensionSource, publishedOwner } from "./publication/catalog";
 import { preparePublishedExtension } from "./publication/prepare";
 import { selectPublicationSource } from "./publication/prepare-activation";
 
@@ -125,13 +125,9 @@ const adopt = async (deps: ExtensionsRouteDeps, projectId: string, fresh: FreshW
   if (enabled && !successor.instance.enabled)
     await deps.extensionService.setProjectExtensionEnabled(successor.instance.id, true);
   await requireActiveSuccessor(deps, projectId, legacy);
-  let publicationSource = successor;
-  if (oldSelection.value && privateSuccessor && !previous.value) {
-    if (!defaultReady) return;
-    publicationSource =
-      (await deps.extensionService.attachRegisteredSourceForProject({ projectId, installedSourceId: source!.id })) ??
-      successor;
-  }
+  const needsDefaultPublication = oldSelection.value && privateSuccessor && !previous.value;
+  if (needsDefaultPublication && !defaultReady) return;
+  const publicationSource = needsDefaultPublication ? source! : successor.installedSource;
   const expectedSuccessor = token(
     await deps.extensionService.listProjectExtensionInstances(projectId),
     "pstdio.workspaces",
@@ -151,7 +147,7 @@ const adopt = async (deps: ExtensionsRouteDeps, projectId: string, fresh: FreshW
       enabled,
       beforeCommit,
     };
-    const accepted = await findFreshSource(fresh, publicationSource.installedSource.source_path);
+    const accepted = await findFreshSource(fresh, publicationSource.source_path);
     if (accepted) {
       const checkChoices = replacement.beforeCommit;
       replacement.beforeCommit = async () => {
@@ -159,9 +155,10 @@ const adopt = async (deps: ExtensionsRouteDeps, projectId: string, fresh: FreshW
         if ((await hashExtensionSourceAsync(accepted.path)) !== accepted.hash)
           throw new Error("Workspaces source changed during consolidation. Try again.");
       };
-      await publishExtension(deps, {
+      await publishExtensionSource(deps, {
         projectId,
-        instanceId: publicationSource.instance.id,
+        installedSource: publicationSource,
+        enabled,
         expectedRevision: previous.revision,
         replacement,
       });

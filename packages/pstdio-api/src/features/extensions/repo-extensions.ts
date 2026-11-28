@@ -43,7 +43,7 @@ type SyncRepoExtensionsForProjectFolderInput = Omit<SyncRepoExtensionsForProject
 };
 
 export type SyncRepoExtensionsResult = {
-  /** Folders another enabled source already provides. They are registered, but left disabled. */
+  /** Folders whose extension is already installed from another source. */
   conflicting: string[];
   /** New folders the caller chose not to enable. They are registered, but left disabled. */
   disabled: string[];
@@ -137,9 +137,6 @@ export const syncRepoExtensionsForProject = async (input: SyncRepoExtensionsForP
   const presentSourcePaths = new Set<string>();
   const instances = await input.extensionService.listProjectExtensionInstances(input.projectId);
   const instancesBySourcePath = new Map(instances.map((record) => [record.installedSource.source_path, record]));
-  const providedExtensionIds = new Set(
-    instances.filter((record) => record.instance.enabled).map((record) => record.installedSource.extension_id),
-  );
 
   const paths = input.discover === false ? [] : (await listExtensionSources(root)).paths;
   for (const path of paths) {
@@ -158,19 +155,15 @@ export const syncRepoExtensionsForProject = async (input: SyncRepoExtensionsForP
     const sourceHash = await hash(sourcePath);
     const source = sourceInputFor(loaded, { name, projectId: input.projectId, sourceHash, sourcePath }, existing);
     const synced = await input.extensionService.syncInstalledSourceForProject(source);
-    if (!synced) continue;
+    if (!synced) {
+      conflicting.push(name);
+      continue;
+    }
     if (existing) {
       enabled.push(...(existing.instance.enabled ? [name] : []));
       continue;
     }
 
-    // Discovery never takes an extension id away from a source the project already runs. A new
-    // folder that claims one is registered disabled, and the extension panel is where a user
-    // decides which copy provides it.
-    if (providedExtensionIds.has(loaded.metadata.id)) {
-      conflicting.push(name);
-      continue;
-    }
     if (register) {
       disabled.push(name);
       continue;
@@ -179,7 +172,6 @@ export const syncRepoExtensionsForProject = async (input: SyncRepoExtensionsForP
       conflicting.push(name);
       continue;
     }
-    providedExtensionIds.add(loaded.metadata.id);
     enabled.push(name);
   }
 

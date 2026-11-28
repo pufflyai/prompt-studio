@@ -153,13 +153,14 @@ describe("extensionService extension id ownership", () => {
     sourcePath,
   });
 
-  test("enabling a second source for the same extension id disables the previous provider", async () => {
+  test("switching sources replaces the existing installation and keeps its configuration", async () => {
     const project = await projectService.create({ name: "Extension Project" });
     const previous = await service.enableInstalledSourceForProject({
       projectId: project.id,
       ...fontEditorSource("/old-worktree/.pstdio/extensions/font-editor"),
     });
 
+    await extensionInstancesService.update(previous.instance.id, { config_json: { theme: "dark" } });
     const current = await service.enableInstalledSourceForProject({
       projectId: project.id,
       ...fontEditorSource("/repo/.pstdio/extensions/font-editor"),
@@ -170,29 +171,25 @@ describe("extensionService extension id ownership", () => {
       "/repo/.pstdio/extensions/font-editor",
     ]);
     expect(current.instance.id).not.toBe(previous.instance.id);
-    expect((await service.getProjectExtensionInstance(project.id, previous.instance.id))?.instance.enabled).toBe(false);
+    expect(current.instance.config_json).toEqual({ theme: "dark" });
+    expect(await service.getProjectExtensionInstance(project.id, previous.instance.id)).toBeNull();
+    expect(await service.listProjectExtensionInstances(project.id)).toEqual([current]);
   });
 
-  test("enabling a conflicting instance from the panel disables the running provider", async () => {
+  test("discovery cannot attach a second source for the same extension id", async () => {
     const project = await projectService.create({ name: "Extension Project" });
-    const running = await service.enableInstalledSourceForProject({
+    const incumbent = await service.enableInstalledSourceForProject({
       projectId: project.id,
       ...fontEditorSource("/repo-one/.pstdio/extensions/font-editor"),
     });
-    // Discovery registers a second checkout disabled, so the panel toggle is how a user switches.
-    const discovered = await service.syncInstalledSourceForProject({
-      projectId: project.id,
-      ...fontEditorSource("/repo-two/.pstdio/extensions/font-editor"),
-    });
-    expect(discovered!.instance.enabled).toBe(false);
 
-    await service.setProjectExtensionEnabled(discovered!.instance.id, true);
-
-    const enabled = await service.listEnabledSourcesForProject(project.id);
-    expect(enabled.map(({ installedSource }) => installedSource.source_path)).toEqual([
-      "/repo-two/.pstdio/extensions/font-editor",
-    ]);
-    expect((await service.getProjectExtensionInstance(project.id, running.instance.id))?.instance.enabled).toBe(false);
+    expect(
+      await service.syncInstalledSourceForProject({
+        projectId: project.id,
+        ...fontEditorSource("/repo-two/.pstdio/extensions/font-editor"),
+      }),
+    ).toBeNull();
+    expect(await service.listProjectExtensionInstances(project.id)).toEqual([incumbent]);
   });
 
   test("re-enabling the same source keeps it enabled and leaves other extensions alone", async () => {
@@ -335,7 +332,7 @@ describe("extensionService", () => {
     ).toBeInstanceOf(ProjectNotFoundError);
   });
 
-  test("allows a project to enable same-namespace extensions from different sources", async () => {
+  test("allows different publishers to use the same extension name", async () => {
     const project = await projectService.create({ name: "Extension Project" });
 
     await service.enableInstalledSourceForProject({
@@ -352,7 +349,7 @@ describe("extensionService", () => {
     await service.enableInstalledSourceForProject({
       projectId: project.id,
       installName: "planner",
-      extensionId: "pstdio.planner",
+      extensionId: "another.planner",
       name: "planner",
       displayName: "Planner Fork",
       sourceKind: "local_path",

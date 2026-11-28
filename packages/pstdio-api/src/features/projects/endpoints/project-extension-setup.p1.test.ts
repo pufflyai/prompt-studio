@@ -77,17 +77,18 @@ test("setup retry preserves a disabled provider when its default moves to user s
   expect(await retryProjectExtensions(handle.deps, project.id)).toEqual([]);
 
   const instances = await handle.deps.extensionService.listProjectExtensionInstances(project.id);
-  expect(instances).toHaveLength(2);
-  expect(instances.every(({ instance }) => !instance.enabled)).toBe(true);
-  expect(instances.find(({ instance }) => instance.id === previous.instance.id)).toBeDefined();
-  const shared = instances.find(
-    ({ installedSource }) => installedSource.source_path === join(root, "home/extensions/shared-fixture"),
-  )!;
-  expect(shared).toBeDefined();
-  await handle.deps.extensionService.setProjectExtensionEnabled(shared.instance.id, true);
-  expect(
-    (await handle.deps.extensionService.getProjectExtensionInstance(project.id, shared.instance.id))?.instance.enabled,
-  ).toBe(true);
+  expect(instances.map(({ instance }) => [instance.id, instance.enabled])).toEqual([[previous.instance.id, false]]);
+  const shared = await handle.deps.extensionService.enableInstalledSourceForProject({
+    displayName: "Shared fixture",
+    extensionId: "example.shared-fixture",
+    installName: "shared-fixture",
+    manifest: { id: "example.shared-fixture" },
+    name: "shared-fixture",
+    projectId: project.id,
+    sourcePath: join(root, "home/extensions/shared-fixture"),
+  });
+  expect(shared.instance.enabled).toBe(true);
+  expect(await handle.deps.extensionService.listProjectExtensionInstances(project.id)).toEqual([shared]);
 });
 
 test("an interrupted restored folder still registers copied tools as disabled when setup is retried", async () => {

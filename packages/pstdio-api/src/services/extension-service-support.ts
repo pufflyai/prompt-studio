@@ -97,7 +97,7 @@ export const attachUnlessRemoved = async <Source extends { id: string }, Attache
   deps: ExtensionServiceDeps,
   projectId: string,
   installedSource: Source,
-  attach: (projectId: string, installedSource: Source) => Promise<Attached>,
+  attach: (projectId: string, installedSource: Source) => Promise<Attached | null>,
   preserveSource: boolean,
 ) => {
   const installedSourceId = installedSource.id;
@@ -105,7 +105,7 @@ export const attachUnlessRemoved = async <Source extends { id: string }, Attache
     if (await deps.projectService.get(projectId)) throw error;
     return null;
   });
-  if (attached && (await deps.projectService.get(projectId))) return attached;
+  if (await deps.projectService.get(projectId)) return attached;
   // A failed attach may already have added the instance, so it is found by project and source.
   const instance =
     attached?.instance ??

@@ -53,58 +53,15 @@ afterEach(async () => {
   await close?.();
 });
 
-test("concurrent ownership claims leave one provider enabled", async () => {
+test("concurrent installs leave a single project installation", async () => {
   const project = await projectService.create({ name: "Extension Project" });
-  const first = await service.syncInstalledSourceForProject({
-    projectId: project.id,
-    ...fontEditorSource("/repo-one/.pstdio/extensions/font-editor"),
-  });
-  const second = await service.syncInstalledSourceForProject({
-    projectId: project.id,
-    ...fontEditorSource("/repo-two/.pstdio/extensions/font-editor"),
-  });
+  const installs = ["repo-one", "repo-two"].map((repo) =>
+    service.enableInstalledSourceForProject({
+      projectId: project.id,
+      ...fontEditorSource(`/${repo}/.pstdio/extensions/font-editor`),
+    }),
+  );
+  const [, last] = await Promise.all(installs);
 
-  let enabledUpdateCount = 0;
-  let releaseEnabledUpdates = () => {};
-  const enabledUpdatesFinished = new Promise<void>((resolve) => {
-    releaseEnabledUpdates = resolve;
-  });
-  let snapshotCount = 0;
-  let releaseSnapshots = () => {};
-  const snapshotsFinished = new Promise<void>((resolve) => {
-    releaseSnapshots = resolve;
-  });
-  const concurrentService = createExtensionService({
-    extensionInstancesService: {
-      ...extensionInstancesService,
-      update: async (...args: Parameters<typeof extensionInstancesService.update>) => {
-        const updated = await extensionInstancesService.update(...args);
-        if (args[1].enabled !== true) return updated;
-
-        enabledUpdateCount += 1;
-        if (enabledUpdateCount === 2) releaseEnabledUpdates();
-        await enabledUpdatesFinished;
-        return updated;
-      },
-      list: async (...args: Parameters<typeof extensionInstancesService.list>) => {
-        const instances = await extensionInstancesService.list(...args);
-        snapshotCount += 1;
-        if (snapshotCount === 2) releaseSnapshots();
-        await snapshotsFinished;
-        return instances;
-      },
-    },
-    installedExtensionSourcesService,
-    extensionUserDataService,
-    recovery: { exclusive: <T>(_projectId: string, run: () => Promise<T>) => run() },
-    projectService,
-  });
-
-  await Promise.all([
-    concurrentService.setProjectExtensionEnabled(first!.instance.id, true),
-    concurrentService.setProjectExtensionEnabled(second!.instance.id, true),
-  ]);
-
-  const enabled = await service.listEnabledSourcesForProject(project.id);
-  expect(enabled).toHaveLength(1);
+  expect(await service.listProjectExtensionInstances(project.id)).toEqual([last]);
 });

@@ -51,23 +51,34 @@ export const publishedEntries = (
     return { publication: publication.data, asset: record.asset };
   });
 
-export const publishExtension = async (
-  deps: ExtensionsRouteDeps,
-  input: {
-    projectId: string;
-    instanceId: string;
+interface PublishSelection {
+  projectId: string;
+  expectedRevision: string;
+  replacement?: {
+    extensionId: string;
     expectedRevision: string;
-    replacement?: {
-      extensionId: string;
-      expectedRevision: string;
-      enabled: boolean;
-      beforeCommit: () => Promise<void>;
-    };
-  },
-) => {
+    enabled: boolean;
+    beforeCommit: () => Promise<void>;
+  };
+}
+
+export const publishExtension = async (deps: ExtensionsRouteDeps, input: PublishSelection & { instanceId: string }) => {
   const source = await deps.extensionService.getProjectExtensionInstance(input.projectId, input.instanceId);
   if (!source) throw new Error("Extension instance not found");
-  const { installedSource } = source;
+  return publishExtensionSource(deps, {
+    ...input,
+    installedSource: source.installedSource,
+    enabled: source.instance.enabled,
+  });
+};
+
+// A host-managed publication can package a verified distribution source without
+// attaching it to a project that is already running a private checkout.
+export const publishExtensionSource = async (
+  deps: ExtensionsRouteDeps,
+  input: PublishSelection & { installedSource: { extension_id: string; source_path: string }; enabled: boolean },
+) => {
+  const { installedSource } = input;
   if (installedSource.extension_id === publishedExtensionsId) throw new Error("Reserved platform extension identity");
   const catalog = await openPublishedCatalog(deps, input.projectId);
   await catalog.requireWrite([
@@ -90,7 +101,7 @@ export const publishExtension = async (
     extensionId: installedSource.extension_id,
     revision: asset.sha256,
     version: prepared.loaded.metadata.version,
-    enabled: input.replacement?.enabled ?? (previous.success ? previous.data.enabled : source.instance.enabled),
+    enabled: input.replacement?.enabled ?? (previous.success ? previous.data.enabled : input.enabled),
   };
   return catalog.select(value, asset, input.expectedRevision, input.replacement);
 };

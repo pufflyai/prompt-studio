@@ -107,14 +107,25 @@ test("a required provider wins when it appears while an optional copy is being e
 
   const optionalClaim = enablement.setProjectExtensionEnabled(optional.id, true);
   await optionalChecked.promise;
-  const required = await createInstance(await register("tools", join(root, "home", "extensions", "tools")));
-  const requiredClaim = enablement.setProjectExtensionEnabled(required.id, true);
-  await Promise.race([requiredClaim, Bun.sleep(100)]);
-  release.resolve();
-  await Promise.all([optionalClaim, requiredClaim]);
+  try {
+    const required = await extensionService.enableInstalledSourceForProject({
+      projectId: project.id,
+      displayName: "Tools",
+      extensionId: "pstdio.tools",
+      installName: "tools",
+      manifest: {},
+      name: "tools",
+      sourcePath: join(root, "home", "extensions", "tools"),
+    });
+    release.resolve();
+    await optionalClaim;
 
-  expect((await instances.get(required.id))?.enabled).toBe(true);
-  expect((await instances.get(optional.id))?.enabled).toBe(false);
+    expect((await instances.get(required.instance.id))?.enabled).toBe(true);
+    expect(await instances.get(optional.id)).toBeNull();
+  } finally {
+    release.resolve();
+    await optionalClaim;
+  }
 });
 
 test("a saved disable skips default adoption before resource-prefix validation", async () => {

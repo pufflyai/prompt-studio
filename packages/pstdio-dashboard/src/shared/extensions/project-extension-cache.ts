@@ -1,6 +1,7 @@
 import type { ProjectExtensionInstance, WorkbenchExtensionAutomationRecord } from "@pstdio/sdk/api";
 import { viewDataEvents } from "@pstdio/sdk/extensions";
 import type { QueryClient } from "@tanstack/react-query";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import { getDashboardScopedQueries } from "@/lib/scoped-queries";
 import { invalidateWorkspaceProviders, workspaceProvidersQueryKey } from "@/shared/workspaces/workspace-providers";
 import { getProjectExtensionQueries } from "./project-extension-queries";
@@ -51,6 +52,17 @@ const retainRestrictions = (extension: ProjectExtensionInstance, current?: Proje
     }),
   };
 };
+
+const sameExtension = (left: ProjectExtensionInstance, right: ProjectExtensionInstance) =>
+  canonicalExtensionId(left.extensionId) === canonicalExtensionId(right.extensionId);
+
+const marketplaceMatches = (
+  entry: { extensionId?: string; installName: string },
+  extension: ProjectExtensionInstance,
+) =>
+  entry.extensionId
+    ? canonicalExtensionId(entry.extensionId) === canonicalExtensionId(extension.extensionId)
+    : entry.installName === extension.installName;
 
 export const createProjectExtensionCache = (
   queryClient: QueryClient,
@@ -111,18 +123,18 @@ export const createProjectExtensionCache = (
       if (!valid()) return;
       extensionsQuery.cancel();
       const current = extensionsQuery.getSnapshot().data;
-      if (current)
+      if (current && (!input.instanceId || current.extensions.some((row) => row.id === input.instanceId)))
         extensionsQuery.accept({
           ...current,
           extensions: [
-            ...current.extensions.filter((entry) => entry.id !== extension.id),
+            ...current.extensions.filter((entry) => !sameExtension(entry, extension)),
             retainRestrictions(
               extension,
               current.extensions.find((entry) => entry.id === extension.id),
             ),
           ],
           marketplace: current.marketplace.map((entry) =>
-            entry.installName === extension.installName ? { ...entry, installed: true } : entry,
+            marketplaceMatches(entry, extension) ? { ...entry, installed: true } : entry,
           ),
         });
       refresh();
@@ -136,12 +148,13 @@ export const createProjectExtensionCache = (
       const removed = current?.extensions.find((extension) => extension.id === instanceId);
       if (current && removed) {
         const extensions = current.extensions.filter((extension) => extension.id !== instanceId);
-        const stillInstalled = extensions.some((extension) => extension.installName === removed.installName);
         extensionsQuery.accept({
           ...current,
           extensions,
           marketplace: current.marketplace.map((entry) =>
-            entry.installName === removed.installName ? { ...entry, installed: stillInstalled } : entry,
+            marketplaceMatches(entry, removed)
+              ? { ...entry, installed: extensions.some((extension) => marketplaceMatches(entry, extension)) }
+              : entry,
           ),
         });
       }

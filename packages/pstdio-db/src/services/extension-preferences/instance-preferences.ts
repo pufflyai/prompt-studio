@@ -44,3 +44,19 @@ export const rekeyInstancePreferences = (
         ),
       ),
     );
+
+// Startup collapse keeps the selected installation's values and fills in missing choices.
+// The caller archives every retired preference before removing its original row.
+export const mergeInstancePreferences = async (
+  db: Pick<DbClient, "execute">,
+  projectId: string,
+  previousId: string,
+  nextId: string,
+) => {
+  const condition = sql`scope='project' AND project_id=${projectId} AND scope_id=${previousId}
+    AND (starts_with(key,'skill:') OR starts_with(key,'automation:') OR starts_with(key,'setting:'))`;
+  await db.execute(sql`INSERT INTO preferences (scope,scope_id,extension_id,key,sync,value,project_id,updated_at)
+    SELECT scope,${nextId},extension_id,key,sync,value,project_id,updated_at FROM preferences WHERE ${condition}
+    ON CONFLICT DO NOTHING`);
+  await db.execute(sql`DELETE FROM preferences WHERE ${condition}`);
+};

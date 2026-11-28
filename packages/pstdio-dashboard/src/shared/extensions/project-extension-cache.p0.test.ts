@@ -77,6 +77,33 @@ describe("project extension cache", () => {
     expect(catalog.extensions.getSnapshot().data?.extensions[0]).not.toHaveProperty("sourceRestriction");
   });
 
+  test("replaces the installed row and keeps its Marketplace listing marked installed", async () => {
+    const { catalog, cache, client, queries } = harness();
+    const current = response(true);
+    catalog.extensions.accept({
+      ...current,
+      marketplace: [{ ...current.marketplace[0]!, extensionId: "test.example", installed: false }],
+    });
+    const next = {
+      ...extension(true),
+      id: "instance-2",
+      installedExtensionId: "source-2",
+      installName: "published-example",
+      version: "2.0.0",
+    };
+    await cache.storeExtension(next);
+    expect(catalog.extensions.getSnapshot().data?.extensions).toEqual([next]);
+    expect(catalog.extensions.getSnapshot().data?.marketplace[0]?.installed).toBe(true);
+
+    const lateEnablement = createProjectExtensionCache(client, "project-1", queries, { instanceId: "instance-1" });
+    await lateEnablement.storeExtension(extension(false));
+    expect(catalog.extensions.getSnapshot().data?.extensions).toEqual([next]);
+    lateEnablement.dispose();
+
+    await cache.removeExtension(next.id);
+    expect(catalog.extensions.getSnapshot().data?.marketplace[0]?.installed).toBe(false);
+  });
+
   test("keeps all known automations when metadata refresh is pending after re-enabling", async () => {
     const { catalog, cache } = harness();
     const automations = ["refine", "implement", "review", "merge"].map((id) => ({

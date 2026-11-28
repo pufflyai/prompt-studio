@@ -119,7 +119,7 @@ describe("extensionInstancesService", () => {
     expect(projectInstances).toHaveLength(1);
   });
 
-  test("allows multiple instances for the same scope when installed sources differ", async () => {
+  test("rejects a second source for the same extension in a project", async () => {
     const secondSource = await sourcesSvc.register({
       install_name: "pstdio.core-templates-local",
       extension_id: "pstdio.core-templates",
@@ -133,16 +133,32 @@ describe("extensionInstancesService", () => {
       scope_type: "project",
       scope_id: projectId,
     });
-    const second = await svc.create({
-      installed_extension_id: secondSource.id,
-      scope_type: "project",
-      scope_id: projectId,
+    await expect(
+      svc.create({
+        installed_extension_id: secondSource.id,
+        scope_type: "project",
+        scope_id: projectId,
+      }),
+    ).rejects.toThrow("already installed");
+    expect(await svc.list({ scope_id: projectId })).toEqual([first]);
+  });
+
+  test("rejects a source identity change that would duplicate another installation", async () => {
+    const secondSource = await sourcesSvc.register({
+      install_name: "new-identity",
+      extension_id: "example.alternate",
+      display_name: "Alternate",
+      source_kind: "local_path",
+      source_path: "/extensions/alternate",
     });
+    const scope = { scope_type: "project", scope_id: projectId };
+    await svc.create({ ...scope, installed_extension_id: installedId });
+    await svc.create({ ...scope, installed_extension_id: secondSource.id });
 
-    const bySource = await svc.findByScopeInstalledSource("project", projectId, secondSource.id);
-
-    expect(second.id).not.toBe(first.id);
-    expect(bySource?.id).toBe(second.id);
+    await expect(
+      sourcesSvc.updateRegistration(secondSource.id, { extension_id: "pstdio.core-templates" }),
+    ).rejects.toThrow("already installed");
+    expect((await sourcesSvc.get(secondSource.id))?.extension_id).toBe("example.alternate");
   });
 
   test("update toggles enabled and config", async () => {

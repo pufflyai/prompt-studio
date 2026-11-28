@@ -47,27 +47,26 @@ export const createExtensionEnablement = (deps: {
     if (await isAlwaysEnabledExtensionSource(source)) throw new AlwaysEnabledExtensionError();
   };
 
+  const assertProviderAllowed = async (source: InstalledSource) => {
+    for (const existing of await deps.installedExtensionSourcesService.list()) {
+      if (existing.id !== source.id && canonicalExtensionId(existing.extension_id) === source.extension_id)
+        await assertOptional(existing);
+    }
+  };
+
   // Check policy and claim as one serialized operation. Discovery and explicit
   // enablement cannot race an optional provider over a required one.
-  const claimExtensionId = (
-    instance: { id: string; scope_id: string },
-    source: InstalledSource,
-    expectedProvider?: string,
-  ) => {
+  const claimExtensionId = (instance: { id: string; scope_id: string }, source: InstalledSource) => {
     const key = JSON.stringify([instance.scope_id, source.extension_id]);
     const claim = (pendingClaims.get(key) ?? Promise.resolve())
       .catch(() => {})
       .then(async () => {
         await deps.assertProjectChoice?.(instance.scope_id, source.extension_id);
-        for (const existing of await deps.installedExtensionSourcesService.list()) {
-          if (existing.id !== source.id && existing.extension_id === source.extension_id)
-            await assertOptional(existing);
-        }
+        await assertProviderAllowed(source);
         const changed = await deps.extensionInstancesService.claimProjectExtensionProvider({
           extensionId: source.extension_id,
           instanceId: instance.id,
           projectId: instance.scope_id,
-          expectedProvider,
         });
         for (const item of changed) deps.emitExtensionInstance(item);
         return changed.find((item) => item.id === instance.id) ?? null;
@@ -117,5 +116,11 @@ export const createExtensionEnablement = (deps: {
     return instance;
   };
 
-  return { adoptDefaultSourceForProject, assertOptional, claimExtensionId, setProjectExtensionEnabled };
+  return {
+    adoptDefaultSourceForProject,
+    assertOptional,
+    assertProviderAllowed,
+    claimExtensionId,
+    setProjectExtensionEnabled,
+  };
 };

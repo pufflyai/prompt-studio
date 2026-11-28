@@ -1,5 +1,5 @@
 import { sep } from "node:path";
-import { and, eq, gte, lt } from "drizzle-orm";
+import { and, eq, gte, inArray, lt } from "drizzle-orm";
 import {
   canonicalExtensionId,
   canonicalInstallName,
@@ -7,8 +7,9 @@ import {
   matchesExtensionInstallName,
 } from "pstdio-api-contracts/extension-host";
 import type { DbClient } from "../../db/connection.pglite";
-import { installed_extension_sources } from "../../db/schemas.pg";
+import { installed_extension_sources, project_extensions } from "../../db/schemas.pg";
 import { migrateExtensionIdentities } from "../extension-identity-migration";
+import { matchingExtensionIds } from "../extension-instances/activate-project-sources";
 
 type InstalledSourceRow = typeof installed_extension_sources.$inferSelect;
 type InstalledSourceInsert = typeof installed_extension_sources.$inferInsert;
@@ -138,10 +139,11 @@ export const createInstalledExtensionSourcesDBService = (
     const current = await get(id);
     if (input.extension_id || current?.last_error_json?.code === "extension_identity_conflict")
       await migrateIdentity(input.extension_id ?? current!.extension_id);
-    const owner = input.extension_id ?? current?.extension_id;
+    const requestedId = input.extension_id;
+    const owner = requestedId ?? current?.extension_id;
     if (owner) {
       const extension_id = canonicalExtensionId(owner);
-      input = { ...input, extension_id };
+      if (requestedId) input = { ...input, extension_id };
       if (
         input.manifest_json &&
         typeof input.manifest_json.name === "string" &&
@@ -153,13 +155,36 @@ export const createInstalledExtensionSourcesDBService = (
       )
         input.manifest_json = { ...input.manifest_json, name: canonicalInstallName(owner) };
     }
-    const timestamp = nowTimestamp();
-    const [updated] = await db
-      .update(installed_extension_sources)
-      .set({ ...input, updated_at: timestamp })
-      .where(eq(installed_extension_sources.id, id))
-      .returning();
-    return updated ?? null;
+    const update = async (writer: Pick<DbClient, "update">) => {
+      const [updated] = await writer
+        .update(installed_extension_sources)
+        .set({ ...input, updated_at: nowTimestamp() })
+        .where(eq(installed_extension_sources.id, id))
+        .returning();
+      return updated ?? null;
+    };
+    if (!requestedId) return update(db);
+    const competingIds = matchingExtensionIds(requestedId);
+    return db.transaction(async (tx) => {
+      const [existing] = await tx
+        .select({ extensionId: installed_extension_sources.extension_id })
+        .from(installed_extension_sources)
+        .where(eq(installed_extension_sources.id, id));
+      if (!existing) return null;
+      if (competingIds.includes(existing.extensionId)) return update(tx);
+      const targetProjects = tx
+        .select({ projectId: project_extensions.project_id })
+        .from(project_extensions)
+        .innerJoin(installed_extension_sources, eq(project_extensions.extension_ref, installed_extension_sources.id))
+        .where(inArray(installed_extension_sources.extension_id, competingIds));
+      const [collision] = await tx
+        .select({ projectId: project_extensions.project_id })
+        .from(project_extensions)
+        .where(and(eq(project_extensions.extension_ref, id), inArray(project_extensions.project_id, targetProjects)))
+        .limit(1);
+      if (collision) throw new Error("An extension with this ID is already installed in the project.");
+      return update(tx);
+    });
   };
 
   const updateLoadStateIfUnchanged = async (id: string, updatedAt: string, input: UpdateLoadStateInput) => {

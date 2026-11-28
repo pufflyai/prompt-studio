@@ -48,6 +48,7 @@ import { prepareOwnerIndexUpgrade } from "./owner-index-upgrade";
 import { prepareOwnerProjectionUpgrade } from "./owner-projection-upgrade";
 import { type PgliteRetirementPhase, prepareCurrentPgliteHome } from "./pglite-current-home";
 import { pgliteIdentity } from "./pglite-identity";
+import { collapseDuplicateProjectExtensions } from "./project-extension-duplicates";
 import { prepareProjectExtensionsUpgrade } from "./project-extensions-upgrade";
 import { prepareRecordRowFinalization } from "./record-row-upgrade";
 import { prepareRecoveryOwnerUpgrade } from "./recovery-owner-upgrade";
@@ -281,6 +282,7 @@ export const openLockedDatabase = async (dbPath: string, releaseLock: () => void
       finishArtifactProjectionUpgrade,
       current: current && !releasedJournal && proof?.matched === true,
     });
+    const collapsedExtensions = await collapseDuplicateProjectExtensions(db, dbPath);
     const admissionEvidence = storage.complete ? await proof?.evidence() : undefined;
     let cleanupFiles = collectUnreferencedFiles(db, indexNodes);
     const collectWhileIdle = async (stopped: () => boolean) => {
@@ -298,7 +300,8 @@ export const openLockedDatabase = async (dbPath: string, releaseLock: () => void
     await cleanup.prepare();
     // Foreground writes still collect their own superseded files after commit.
     attachDocumentCollector(db, (projectId, ids) => pruneDocumentFiles(db, projectId, ids));
-    if (migrated && !deferCleanup) await maintainDatabase(openedPglite, db, dbPath, fresh, onPhase, storage.changed);
+    if (migrated && !deferCleanup)
+      await maintainDatabase(openedPglite, db, dbPath, fresh, onPhase, storage.changed || collapsedExtensions);
     if (reimport) await fs.promises.rm(payload, { recursive: true, force: true });
     onPhase("database_migrated");
 

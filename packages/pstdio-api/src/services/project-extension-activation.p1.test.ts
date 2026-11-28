@@ -149,14 +149,13 @@ test("provider activation replaces the old sync identity and retains stable owne
         })
       ).map((file) => file.id),
     ).toEqual(["saved-file"]);
-    const retained = await instances.create({
-      installed_extension_id: before.id,
-      scope_type: "project",
-      scope_id: project.id,
-      enabled: false,
-    });
-    await skill.set({ project_id: project.id, extension_instance_id: retained.id, skill_key: "choice", enabled: true });
-    await instances.remove(retained.id);
+    // Older hosts could leave preferences under a since-retired installation ID.
+    await store.pglite.query(
+      `INSERT INTO preferences (scope,scope_id,extension_id,key,sync,value,project_id,updated_at)
+       SELECT scope,$1,extension_id,key,sync,value || '{"enabled":true}'::jsonb,project_id,updated_at
+       FROM preferences WHERE project_id=$2 AND scope_id=$3 AND key='skill:choice'`,
+      [original.id, project.id, result!.instance.id],
+    );
     const eventCount = eventBus.seq;
     await expect(
       service.activatePublishedExtensions([
@@ -169,7 +168,7 @@ test("provider activation replaces the old sync identity and retains stable owne
         },
       ]),
     ).rejects.toThrow("Failed query");
-    expect((await skill.get(project.id, retained.id, "choice"))?.enabled).toBe(true);
+    expect((await skill.get(project.id, original.id, "choice"))?.enabled).toBe(true);
     expect((await skill.get(project.id, result!.instance.id, "choice"))?.enabled).toBe(false);
     expect(await instances.get(result!.instance.id)).toEqual(result!.instance);
     expect(await sources.get(before.id)).not.toBeNull();
