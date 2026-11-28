@@ -217,6 +217,7 @@ export const KanbanRenderer = <TRow extends KanbanRendererRow>(props: KanbanRend
         <KanbanRendererToolbar
           itemLabel={props.itemLabel}
           rows={rows}
+          page={props.page}
           storageKey={storageKey}
           attributes={attributes}
           defaultSettings={defaultSettings}

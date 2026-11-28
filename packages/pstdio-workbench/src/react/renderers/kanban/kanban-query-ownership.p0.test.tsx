@@ -198,7 +198,10 @@ test("status moves keep loaded pages visible and the next scroll still appends",
   expect(board.rows.map(({ id }) => id)).toEqual(["0", "1", "2", "3", "4", "5"]);
 });
 
-test("returning to a hidden board keeps an acknowledged status move visible during the fresh read", async () => {
+test.each([
+  false,
+  true,
+])("returning to a hidden board keeps an acknowledged move visible (pending schema refresh: %s)", async (schemaRefresh) => {
   environment.IS_REACT_ACT_ENVIRONMENT = true;
   core = createWorkbench();
   const renderers = getWorkbenchRenderers(core);
@@ -212,11 +215,17 @@ test("returning to a hidden board keeps an acknowledged status move visible duri
     title: "Tickets",
     attributes: [],
     executeQuery: () => [],
-    executePage: async () => {
+    executePage: async (_state, signal) => {
       reads++;
-      if (reads > 1) await refresh.promise;
+      if (reads > 1) {
+        const aborted = new Promise<never>((_resolve, reject) =>
+          signal.addEventListener("abort", () => reject(signal.reason), { once: true }),
+        );
+        await Promise.race([refresh.promise, aborted]);
+      }
       return {
         rows: [{ id: "ticket", title: "Ticket", attributes: { status } }, unchanged],
+        attributes: schemaRefresh ? [{ id: "status", label: "Status", type: { kind: "string" as const } }] : undefined,
         page: { revision: String(reads), cursor: null, total: 2, filteredTotal: 2, groups: [] },
       };
     },
@@ -256,16 +265,16 @@ test("returning to a hidden board keeps an acknowledged status move visible duri
     save.resolve();
     await move;
   });
-  expect(reads).toBe(1);
+  expect(reads).toBe(schemaRefresh ? 2 : 1);
   await act(async () => tree?.update(content(true)));
-  expect(reads).toBe(2);
+  expect(reads).toBe(schemaRefresh ? 3 : 2);
   const returning = board.rows;
   await act(async () => refresh.resolve());
   expect(returning[0].attributes.status).toBe("blocked");
   expect(returning[1]).toBe(stableRow);
   expect(board.rows[0].attributes.status).toBe("blocked");
   expect(board.rows[1]).toBe(stableRow);
-  expect(board.page?.result?.revision).toBe("2");
+  expect(board.page?.result?.revision).toBe(schemaRefresh ? "3" : "2");
 });
 
 test("create and open leaves the departing board stale until it is visible again", async () => {

@@ -2,9 +2,11 @@ import type {
   QueryChangeEnvelope,
   QueryDependency,
   QueryScope,
+  ResourceRef,
   ScopedQuery,
   ScopedQueryClient,
 } from "@pstdio/sdk/extensions";
+import type { ResourceChange } from "../resources/resource-preview";
 import { createRendererQueryCache } from "./renderer-query-cache";
 import type { createRendererQueryLease } from "./renderer-query-lease";
 export interface RendererReadRequest<T> {
@@ -15,6 +17,8 @@ export interface RendererReadRequest<T> {
   dependency?: QueryDependency;
   subscribe?(invalidate: () => void): () => void;
   load(signal: AbortSignal, publish: (value: T) => void): Promise<T> | T;
+  projectResourceChange?(value: T, resource: ResourceRef, change: ResourceChange): T;
+  projectionKey?: string;
   onProgress?(value: T): void;
   onRetire?(): void;
   /** Replace pagination parameters before the old query can admit another read. */

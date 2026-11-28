@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
+import { putTag } from "../data/collections";
 import { putTicket } from "../data/ticket-context.fixture";
 import { createDeadlineCommand } from "../timeline/commands/deadline-commands";
 import { planPlacements } from "../timeline/commands/placement-store";
@@ -148,6 +149,61 @@ test("Board selects late matching tickets and global counts without loading tick
   expect(result.rows.map((row) => row.resource.extensionId)).toEqual(["pstdio.planner", "pstdio.planner"]);
   expect(selectedFields.flat()).not.toContain("needsAttention");
   expect(selectedFields.flat()).not.toContain("reviewRequests");
+});
+
+test("Board filter counts include unloaded tickets and count multi-select options independently", async () => {
+  const storage = createMemoryStorage();
+  const ctx = makeCommandContext({ storage, params: {} });
+  await putTag(storage, {
+    id: "labels",
+    name: "Labels",
+    type: "multi_select",
+    sortOrder: 0,
+    options: ["defect", "urgent"].map((id, sortOrder) => ({
+      id,
+      name: id,
+      color: "blue",
+      sortOrder,
+      icon: null,
+      description: null,
+    })),
+  });
+  for (const [position, title, statusId, labels] of [
+    ["a", "Matching A", "ready", ["defect", "urgent"]],
+    ["b", "Matching B", "ready", ["urgent"]],
+    ["c", "Matching C", "backlog", ["defect"]],
+    ["d", "Excluded D", "ready", ["defect", "urgent"]],
+  ] as const) {
+    await putTicket(storage, {
+      id: position,
+      shorthand: `T-${position}`,
+      title,
+      content: `# ${title}`,
+      statusId,
+      tags: { labels: [...labels] },
+      archived: false,
+      position,
+      createdAt: "2026-01-01",
+      updatedAt: "2026-01-01",
+    });
+  }
+  const page = { limit: 1, offset: 0, fields: ["title"], searchFields: ["title"], search: "Matching" };
+  const first = await queryTickets(ctx, { page });
+  expect(first.rows.map(({ id }) => id)).toEqual(["a"]);
+  const counts = (field: string) => {
+    const statistic = first.page.statistics?.[field];
+    return statistic?.type === "top-values"
+      ? Object.fromEntries(statistic.values.map(({ label, count }) => [label, count]))
+      : undefined;
+  };
+  expect(counts("status")).toEqual({ ready: 2, backlog: 1 });
+  expect(counts("labels")).toEqual({ defect: 2, urgent: 2 });
+  expect(counts("archived")).toEqual({ active: 3 });
+  const second = await queryTickets(ctx, {
+    page: { ...page, offset: 1, cursor: first.page.cursor!, revision: first.page.revision },
+  });
+  expect(second.rows.map(({ id }) => id)).toEqual(["b"]);
+  expect(second.page.statistics).toEqual(first.page.statistics);
 });
 
 test("Board does not resolve hidden relationship badges or query reviews for an empty page", async () => {

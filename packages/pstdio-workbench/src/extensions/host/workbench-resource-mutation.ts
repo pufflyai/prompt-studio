@@ -1,12 +1,37 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import { text } from "pstdio-extensions/workbench";
 import type { WorkbenchCommandExecutionContext } from "../../core";
+import type { ResourceChange } from "../../core/registries/resources/resource-preview";
 import { unwrapCommandValue } from "./command-response";
 import { runCommandConfirmation } from "./workbench-command-confirmation";
 import type { WorkbenchExtensionCommandContext } from "./workbench-extension-command";
 
 const noteRenameCommand = "pstdio.notes.command.notes.rename";
 const noteTitleCheck = "pstdio.notes.command.notes.check-title";
+type ExtensionCommand = WorkbenchExtensionMetadata["commands"][number];
+
+const previewChange = (kind: "archive" | "remove" | "rename", label: unknown): ResourceChange => {
+  if (kind === "archive") return { archived: true, attributeId: "archived", value: "archived" };
+  if (kind === "remove") return { removed: true };
+  return { label: (label as string).trim() };
+};
+
+export const resolveWorkbenchResourceMutation = (command: ExtensionCommand | undefined) => {
+  if (command?.resourceMutation) return command.resourceMutation;
+  // Older Planner builds predate the declarative Delete preview.
+  if (
+    command?.id === "pstdio.planner.command.delete-ticket" ||
+    command?.id === "pstdio.pstdio-planner.command.delete-ticket"
+  )
+    return { kind: "remove", resourceType: "ticket", idParam: "id" } as const;
+  // Planner archives keep the ticket accessible and change its board filter value.
+  if (
+    command?.id === "pstdio.planner.command.archive-ticket" ||
+    command?.id === "pstdio.pstdio-planner.command.archive-ticket"
+  )
+    return { kind: "archive", resourceType: "ticket", idParam: "id" } as const;
+  return undefined;
+};
 
 const noteRenameVerifier = (
   context: WorkbenchExtensionCommandContext,
@@ -46,7 +71,7 @@ export const runResourceMutation = async (
     command.confirmation
       ? runCommandConfirmation(context, command, params, persist, undefined, execution?.signal)
       : persist();
-  const mutation = command.resourceMutation;
+  const mutation = resolveWorkbenchResourceMutation(command);
   if (!mutation) return withoutPreview();
   const id = params?.[mutation.idParam] ?? execution?.resource?.id;
   if (typeof id !== "string") return withoutPreview();
@@ -65,7 +90,7 @@ export const runResourceMutation = async (
     const result = context.workbench.resources.preview.submit(
       resource,
       persist,
-      mutation.kind === "remove" ? { removed: true } : { label: (rawLabel as string).trim() },
+      previewChange(mutation.kind, rawLabel),
       text(command.title, "Change resource"),
       noteRenameVerifier(context, command.id, id, rawLabel),
       typeof rawLabel === "string" ? rawLabel : undefined,

@@ -25,6 +25,19 @@ interface CollectionOperationInput {
 }
 
 const domain = "collection.row";
+export const archiveColumnDomain = "collection.column.archive";
+
+export interface ArchiveColumnIntent {
+  columnId: string;
+  projectionKey: string;
+}
+
+export const pendingArchivedColumns = (pending: readonly OperationPreview[], projectionKey: string) =>
+  pending.flatMap((operation) => {
+    if (operation.domain !== archiveColumnDomain || operation.status === "unknown") return [];
+    const intent = operation.intent as ArchiveColumnIntent | undefined;
+    return intent?.projectionKey === projectionKey ? [intent.columnId] : [];
+  });
 
 const rowResource = (row?: CollectionRow) => {
   const resource = row?.resource as Partial<ResourceRef> | undefined;

@@ -17,6 +17,7 @@ import type {
   WorkbenchPanelInstance,
 } from "../../../core";
 import { rendererReadKey } from "../../../core";
+import type { OperationPreview } from "../../../core/registries/mutations/operation-types";
 import { bindKanbanRendererContribution } from "../../../core/registries/renderers/kanban-renderer-binding";
 import type { KanbanRendererCreateRequest } from "../../../core/registries/renderers/kanban-renderer-registry";
 import { rendererResourceDependency } from "../../../core/registries/renderers/renderer-refresh-key";
@@ -26,7 +27,8 @@ import type { BoardCreationIntent } from "../../../extensions/host/workbench-cre
 import type { CommandParamFieldRenderer } from "../../command-palette/command-params-dialog";
 import { useWorkbenchResourceActionResolver } from "../../menus/resource-actions";
 import { useOperationAuthority } from "../../shared/use-operation-authority";
-import { projectBoardRows } from "../collection-operation-projection";
+import { useWorkbenchStore } from "../../shared/use-workbench-store";
+import { pendingArchivedColumns, projectBoardRows } from "../collection-operation-projection";
 import { kanbanPageFields, kanbanSearchFields, rendererPagePresentation } from "../renderer-page-fields";
 import { rendererQueryKey } from "../renderer-query-key";
 import { RendererReadNotice } from "../renderer-read-notice";
@@ -37,10 +39,16 @@ import { useRendererPages } from "../use-renderer-pages";
 import { useRendererRead } from "../use-renderer-read";
 import { useRendererViews } from "../use-renderer-views";
 import { ViewToolbarActions } from "../view-toolbar-actions";
-import { prepareKanbanMove } from "./kanban-move";
+import { bindKanbanColumnAction, bindKanbanRowWrites, isPlannerArchiveColumn } from "./kanban-move";
 import type { ReactRegisteredKanbanRendererContribution } from "./kanban-presentation";
 import { loadKanbanRows, resolveKanbanQueryPresentation } from "./kanban-query-result";
 import { resolveKanbanRendererStorageKey } from "./kanban-view-storage";
+import {
+  applyColumnArchives,
+  projectKanbanColumnArchive,
+  projectKanbanResourceChange,
+  projectKanbanResourceChanges,
+} from "./project-kanban-resource-change";
 import { useKanbanAttributes } from "./use-kanban-attributes";
 import { useKanbanPageAttributes } from "./use-kanban-page-attributes";
 
@@ -50,6 +58,20 @@ const projectAcknowledgedMove = (snapshot: KanbanReadResult, move: KanbanRendere
   const rows = applyKanbanMove(snapshot.rows, move);
   return rows === snapshot.rows ? snapshot : { ...snapshot, rows };
 };
+
+const boardCreations = (
+  pending: readonly OperationPreview[],
+  rows: KanbanRendererRow[],
+  projectId: string | undefined,
+  readKey: string,
+) =>
+  pending.flatMap((entry) => {
+    if (entry.domain !== "resource.create" || !entry.intent || entry.projectId !== projectId) return [];
+    const intent = entry.intent as BoardCreationIntent;
+    if (intent.openCreatedRow && entry.status !== "unknown") return [];
+    if (intent.viewKey !== readKey || rows.some(({ id }) => id === intent.confirmedId)) return [];
+    return [{ key: entry.id, columnId: intent.columnId, title: intent.title, unconfirmed: entry.status === "unknown" }];
+  });
 
 interface WorkbenchKanbanViewProps {
   workbench: WorkbenchCore;
@@ -201,6 +223,17 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
     queryScope: contribution.queryScope,
     queryKey: rendererQueryKey([contribution.id, resourceKey(placement.resource)]),
     dependency: rendererResourceDependency(placement.resource),
+    projectionKey: rendererQueryKey([
+      contribution.id,
+      contribution.queryScope,
+      resourceKey(placement.resource),
+      settings,
+      filter,
+      sorts,
+      pageParams,
+      pages.request.search,
+      pages.request.collapsedGroups,
+    ]),
     refreshKey: rendererQueryKey([settings, filter, sorts, pageParams, ...(paged ? [pages.refreshKey] : [])]),
   };
   const read = useRendererRead<KanbanReadResult>({
@@ -210,6 +243,7 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
     ownerKey: rendererReadKey(placement),
     queryEvents: contribution.queryEvents,
     onAccept: pages.accept,
+    projectResourceChange: (value, resource, change) => projectKanbanResourceChange(value, resource, change, filter),
     load: async (signal, _publish, accepted) => {
       const state = { settings, filter, sorts, pageParams, resource: placement.resource };
       const loaded = await loadKanbanRows(contribution, state, pages, signal, accepted);
@@ -223,15 +257,23 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
   });
   const acceptedRows = read.acceptedValue?.rows ?? emptyRows;
   const mutations = useCollectionOperations(workbench, query, acceptedRows, projectAcknowledgedMove);
-  const rows = projectBoardRows(acceptedRows, mutations.pending, contribution.id, query.queryScope?.projectId);
-  const pendingCreations = mutations.pending.flatMap((entry) => {
-    if (entry.domain !== "resource.create" || !entry.intent || entry.projectId !== query.queryScope?.projectId)
-      return [];
-    const intent = entry.intent as BoardCreationIntent;
-    if (intent.openCreatedRow && entry.status !== "unknown") return [];
-    if (intent.viewKey !== mutations.originatingRead.key || rows.some(({ id }) => id === intent.confirmedId)) return [];
-    return [{ key: entry.id, columnId: intent.columnId, title: intent.title, unconfirmed: entry.status === "unknown" }];
-  });
+  const resourceChanges = useWorkbenchStore(workbench.resources.preview.store, (state) => state.changes);
+  const projectedBoard = projectKanbanResourceChanges(read.acceptedValue, resourceChanges, filter);
+  const movedRows = projectBoardRows(
+    projectedBoard?.rows ?? emptyRows,
+    mutations.pending,
+    contribution.id,
+    query.queryScope?.projectId,
+  );
+  const archives = pendingArchivedColumns(mutations.pending, query.projectionKey);
+  const board = applyColumnArchives(projectedBoard, movedRows, archives, filter);
+  const rows = archives.length ? (board?.rows ?? movedRows) : movedRows;
+  const pendingCreations = boardCreations(
+    mutations.pending,
+    rows,
+    query.queryScope?.projectId,
+    mutations.originatingRead.key,
+  );
   const presentation = resolveKanbanQueryPresentation(contribution, read.value, declaredAttributes);
   pageAttributes.accept(read.value?.attributes, paged);
   // Use the read's and pages' own functions, not the `read` and `pages` objects, which change on
@@ -279,7 +321,13 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
     <WorkbenchKanbanViewFrame>
       {read.value ? readNotice : null}
       <Renderer
-        page={pages.controls(read.value?.page, read.loading, paged, read.value?.position, mutations.isSaving())}
+        page={pages.controls(
+          board?.page,
+          read.loading,
+          paged,
+          read.value?.position,
+          mutations.isSaving() || board !== read.acceptedValue,
+        )}
         itemLabel={
           contribution.resourceKind ? workbench.resources.getKind(contribution.resourceKind)?.label : undefined
         }
@@ -299,30 +347,7 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
         hideToolbar={contribution.hideToolbar}
         onRowClick={contribution.onRowActivate || rows.some(hasKanbanRowTarget) ? handleOpenRow : undefined}
         onActionError={(error, action) => reportUserActionError(workbench, action, error)}
-        onAttributeChange={
-          contribution.onAttributeChange
-            ? (rowId, attributeId, value) =>
-                mutations.submit({ rowId, attributes: { [attributeId]: value } }, () =>
-                  contribution.onAttributeChange!(rowId, attributeId, value),
-                )
-            : undefined
-        }
-        onMove={
-          contribution.onMove || contribution.onAttributeChange
-            ? (move) => {
-                const mutation = prepareKanbanMove(contribution, move);
-                return mutations.submit(mutation.move, mutation.save);
-              }
-            : undefined
-        }
-        onReorder={
-          contribution.onReorder
-            ? (rowId, beforeRowId) =>
-                mutations.submit({ rowId, attributes: {}, order: { beforeRowId } }, () =>
-                  contribution.onReorder!(rowId, beforeRowId),
-                )
-            : undefined
-        }
+        {...bindKanbanRowWrites(contribution, mutations.submit)}
         createRow={contribution.createRow}
         createDraftAuthority={createDraftAuthority}
         pendingCreations={pendingCreations}
@@ -330,19 +355,21 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
           originatingRead: mutations.originatingRead,
           canOpenCreatedRow: () => workbench.viewers.captureContext(placement.placementIdentity).isViewerCurrent,
         })}
-        onColumnAction={
-          contribution.onColumnAction
-            ? (...args) =>
-                runUserAction(workbench, "Column action", async () => {
-                  // Wait before holding the read. Earlier moves reconcile against that same read.
-                  await mutations.waitForPendingWrites();
-                  await mutate(
-                    (snapshot) => snapshot,
-                    () => contribution.onColumnAction!(...args),
-                  );
-                })
-            : undefined
-        }
+        onColumnAction={bindKanbanColumnAction(
+          contribution.onColumnAction,
+          workbench,
+          async (columnId, actionId, write) => {
+            if (isPlannerArchiveColumn(contribution.id, actionId))
+              return mutations.archiveColumn(
+                { columnId, projectionKey: query.projectionKey },
+                () => mutate((snapshot) => snapshot, write),
+                (snapshot) => projectKanbanColumnArchive(snapshot, columnId, filter),
+              );
+            // Earlier moves reconcile against this read. Wait before holding it.
+            await mutations.waitForPendingWrites();
+            await mutate((snapshot) => snapshot, write);
+          },
+        )}
         getRowContextMenuActions={getRowContextMenuActions}
         toolbarActions={
           <ViewToolbarActions

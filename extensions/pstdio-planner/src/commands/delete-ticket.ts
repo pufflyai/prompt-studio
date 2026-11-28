@@ -10,6 +10,7 @@ import { deleteUnusedLinkedWorkspaces } from "./ticket-workspace-cleanup";
 export const deleteTicketCommand = defineCommand({
   id: "delete-ticket",
   mutating: true,
+  resourceMutation: { kind: "remove", resourceType: "ticket", idParam: "id" },
   title: "Delete ticket",
   cli: { examples: ["pstdio pstdio.planner delete-ticket --id PS-1"] },
   menus: [

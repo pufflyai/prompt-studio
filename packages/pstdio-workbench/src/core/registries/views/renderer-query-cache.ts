@@ -3,10 +3,12 @@ import {
   isScopedQueryCancellation,
   matchesQueryDependency,
   type QueryChangeEnvelope,
+  type ResourceRef,
   type ScopedQuery,
   type ScopedQueryClient,
   viewDataEvents,
 } from "@pstdio/sdk/extensions";
+import type { ResourceChange } from "../resources/resource-preview";
 import { createRendererQueryLease } from "./renderer-query-lease";
 import { type createRendererReadAdmission, rendererReadAdmissionFor } from "./renderer-read-admission";
 import { createRendererReadLifetime } from "./renderer-read-lifetime";
@@ -19,6 +21,8 @@ export type RendererQueryIdentity = Pick<
 export interface ProgressiveOwner<T> {
   query: ScopedQuery<T>;
   load: RendererReadRequest<T>["load"];
+  projectResourceChange?: RendererReadRequest<T>["projectResourceChange"];
+  projectionKey?: string;
   version: number;
   progress: Set<(value: T) => void>;
   currentProgress?: { version: number; revision: number; signal: AbortSignal; value: T };
@@ -53,6 +57,21 @@ const readRendererQuery = async <T>(owner: ProgressiveOwner<T>, signal: AbortSig
       if (signal.aborted || owner.query.isDisposed() || !isScopedQueryCancellation(error)) throw error;
     }
   }
+};
+
+const refreshObservedOwner = async <T>(owner: ProgressiveOwner<T> | undefined, projectUnobserved?: (value: T) => T) => {
+  if (!owner || owner.query.isDisposed()) return;
+  owner.version++;
+  owner.currentProgress = undefined;
+  // A hidden presentation keeps its acknowledged edit while waiting for its next read.
+  if (projectUnobserved && !owner.query.inspect().automaticObservers) {
+    const current = owner.query.getSnapshot().data;
+    if (current !== undefined) {
+      const projected = projectUnobserved(current);
+      if (projected !== current) owner.query.accept(projected);
+    }
+  }
+  await owner.query.refreshObserved();
 };
 
 /** Progressive publication is an adapter over the same finite-query authority, never another data cache. */
@@ -121,6 +140,8 @@ export const createRendererQueryCache = (sharedQueries?: ScopedQueryClient) => {
       owners.set(query, owner);
     }
     owner.load = request.load;
+    owner.projectResourceChange = request.projectResourceChange;
+    owner.projectionKey = request.projectionKey;
     owner.admission = admission;
     const { queryKey, queryScope, sourceId, dependency } = request;
     entries.set(keyFor(request), {
@@ -166,21 +187,22 @@ export const createRendererQueryCache = (sharedQueries?: ScopedQueryClient) => {
         ? (query.getSnapshot() as ReturnType<ScopedQuery<T>["getSnapshot"]>)
         : undefined;
     },
-    async refreshObserved<T>(identity: RendererQueryIdentity, projectUnobserved?: (value: T) => T) {
-      const owner = entries.get(keyFor(identity))?.owner as ProgressiveOwner<T> | undefined;
-      if (!owner || owner.query.isDisposed()) return;
-      owner.version++;
-      owner.currentProgress = undefined;
-      // A hidden presentation does not read until it returns. Carry the acknowledged
-      // edit into its cached snapshot before retiring the pending operation.
-      if (projectUnobserved && !owner.query.inspect().automaticObservers) {
+    refreshObserved: <T>(identity: RendererQueryIdentity, projectUnobserved?: (value: T) => T) =>
+      refreshObservedOwner(entries.get(keyFor(identity))?.owner as ProgressiveOwner<T> | undefined, projectUnobserved),
+    projectUnobserved: <T>(key: string, project: (value: T) => T) =>
+      Promise.all(
+        [...entries.values()]
+          .map(({ owner }) => owner as ProgressiveOwner<T>)
+          .filter(({ projectionKey, query }) => projectionKey === key && !query.inspect().automaticObservers)
+          .map((owner) => refreshObservedOwner(owner, project)),
+      ),
+    async refreshResource(resource: ResourceRef, change: ResourceChange) {
+      const refreshes = [...entries.values()].flatMap(({ owner }) => {
         const current = owner.query.getSnapshot().data;
-        if (current !== undefined) {
-          const projected = projectUnobserved(current);
-          if (projected !== current) owner.query.accept(projected);
-        }
-      }
-      await owner.query.refreshObserved();
+        const projected = current === undefined ? current : owner.projectResourceChange?.(current, resource, change);
+        return projected === undefined || projected === current ? [] : [refreshObservedOwner(owner, () => projected)];
+      });
+      await Promise.all(refreshes);
     },
     async refreshRequired(identity: RendererQueryIdentity, signal: AbortSignal) {
       const owner = entries.get(keyFor(identity))?.owner;
