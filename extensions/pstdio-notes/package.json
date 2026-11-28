@@ -1,6 +1,6 @@
 {
   "name": "notes",
-  "version": "0.47.0",
+  "version": "0.47.1-nightly.20261128192510",
   "displayName": "Notes",
   "description": "Write Markdown notes that live in the project repository.",
   "publisher": "pstdio",

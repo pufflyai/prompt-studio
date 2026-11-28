@@ -1,6 +1,6 @@
 {
   "name": "pstdio-skill-browser",
-  "version": "0.2.0",
+  "version": "0.2.1-nightly.20261128192510",
   "displayName": "Skill Browser",
   "description": "Browse project skills and read their instructions and supporting files.",
   "publisher": "pstdio",

@@ -1,5 +1,15 @@
 # remote-workspaces
 
+## 0.46.3-nightly.20261128192510
+
+_2026-11-28_
+
+### Patch Changes
+
+- 958363f: Keep extensions available on the next host API while retaining compatibility with previously supported hosts.
+- 6b4d753: Let the workbench keep the prepared PocketCoder workspace ID if the later session request cannot be confirmed.
+- 24293aa: Remove PocketCoder launch from the project header. The command is available in the palette, Create shortcuts, CLI, and automations.
+
 ## 0.46.2
 
 _2026-11-21_

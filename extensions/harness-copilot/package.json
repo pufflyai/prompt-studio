@@ -1,6 +1,6 @@
 {
   "name": "harness-copilot",
-  "version": "0.48.0",
+  "version": "0.48.1-nightly.20261128192510",
   "displayName": "GitHub Copilot",
   "description": "Contributes the optional GitHub Copilot coding agent harness.",
   "publisher": "pstdio",

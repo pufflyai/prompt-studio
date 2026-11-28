@@ -1,5 +1,39 @@
 # @pstdio/sdk
 
+## 0.49.0-nightly.20261128192510
+
+_2026-11-28_
+
+### Minor Changes
+
+- 4ce70b9: Sign in to Prompt Studio Cloud with a personal Microsoft account or a work or school account using the SDK or CLI.
+- 43f79ed: Create a team and sync its first project across your computers.
+- bb732e9: Add outcome-aware device saves and live resource actions in native document menus.
+- d7407f0: Move the extension API to 0.6: issue automation tokens with independent retry histories and allow explicit device or project credential scope. Revoke a saved global or shared sign-in by origin through the SDK.
+- 1c8b09a: Expose scoped Markdown plugins and selection toolbar slots, preserve captured editor context for contributed commands, and let Activity own a minimal anchored comment input and independent inline thread replies. Add a native unsent session draft action that preserves existing browser draft isolation.
+- aa1d78b: Add desktop team invitation codes, full project-member capabilities and owner-managed extension policies to the public account APIs.
+- aa1d78b: Invite people to Cloud teams, inspect incoming links, and manage team membership.
+- 9867397: Keep one unsent draft per conversation, without restore prompts. The draft survives switching conversations, reloading and, in the desktop app, restarting. A failed send puts its text back in the box.
+
+  Native chat no longer synchronizes or recovers drafts. `ChatDraft.recovered`, the `recoverDraft` stream event, `browserDraft.acknowledgeRecovery`, `legacySessionDraft` and the `draftClientId` action parameter are removed. Declare `browserDraft: {}` to let the host keep the draft. Extensions that still declare `legacySessionDraft` or `acknowledgeRecovery` keep loading; those fields are ignored.
+
+- 47960a3: Keep view controls and resource menus with their live page or tab, support movable menu headers and bottom menu presets, and align web app headers with desktop. Add the public header-view contract and TextPen icon for extension consumers.
+- 6d70a09: Navigate conversation turns and identify attributed messages by sender.
+- aa1d78b: Grant and revoke a member’s Cloud team project access. Rotate shared keys when access ends.
+- 026e2e3: Show settings, notification changes, resource changes, and collection edits immediately across views. Keep failed and uncertain drafts available through System activity.
+- dab0dc1: Add global host-managed extension connections shared across local projects and support localized static parameter choices.
+- aa1d78b: Offer and accept ownership of a Cloud team without changing project grants.
+- 1c8b09a: Expose live workbench context to agents, preview resource links beside their source, add Markdown Find and passage discussions, manage nested navigation visibility with eye buttons, preserve navigation fonts, open selected conversations at the latest message, and recover compatible extension upgrades without losing local files.
+
+  Tell extension settings editors when Reset discards their pending changes so inline fields can clear their drafts.
+
+### Patch Changes
+
+- d51d8c5: Let native chat providers opt into browser-local drafts through additive extension API 0.5.1 while preserving existing provider-managed persistence. Acknowledge recovered input only after every body is saved in durable browser storage.
+- be73848: Extensions can list host environment variable names in `pstdio.processEnvironment` and pass a granted value to one child with `envFromHost` on `ctx.process.run`, `runOrThrow` and `spawnDetached`. You allow names per project and extension source in the extension's details or with `pst extensions permissions`; changed source needs a new grant, and revoking stops the children that received the value. The host no longer reads `PSTDIO_EXTENSION_PROCESS_ENV`.
+- 323ad8f: Extensions can start a host-owned child with `ctx.process.spawn` and talk to it while it runs: write its stdin, stream its stdout and stderr, and kill it. The child belongs to the call or to the enabled extension, runs on the selected workspace, and goes through a remote workspace provider's new `spawn` method when the workspace is remote. Harnesses can read files on a session's workspace with `ctx.targetFiles.readText`. Both work in the process runtime.
+- dadd665: Add `ctx.diagnostics.capture`, which lets first-party extensions profile the Prompt Studio API process and trace its runtime operations from their backend workers.
+
 ## 0.48.0
 
 _2026-11-21_

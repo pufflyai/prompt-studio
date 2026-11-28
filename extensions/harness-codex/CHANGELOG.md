@@ -1,5 +1,15 @@
 # harness-codex
 
+## 0.48.1-nightly.20261128192510
+
+_2026-11-28_
+
+### Patch Changes
+
+- 958363f: Keep extensions available on the next host API while retaining compatibility with previously supported hosts.
+- d3bec14: Find the private CLI on first use after upgrading an existing profile, even when workspace setup already started the harness worker.
+- fadc095: Restore private CLI discovery for prebuilt Codex, Claude Code, and OpenCode harnesses on demand.
+
 ## 0.48.0
 
 _2026-11-21_

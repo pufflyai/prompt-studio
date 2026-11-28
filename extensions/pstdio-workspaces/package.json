@@ -1,6 +1,6 @@
 {
   "name": "workspaces",
-  "version": "0.3.0",
+  "version": "0.3.1-nightly.20261128192510",
   "displayName": "Workspaces",
   "publisher": "pstdio",
   "description": "Browse project files and workspaces across devices.",

@@ -1,5 +1,13 @@
 # harness-pi
 
+## 0.46.2-nightly.20261128192510
+
+_2026-11-28_
+
+### Patch Changes
+
+- 958363f: Keep extensions available on the next host API while retaining compatibility with previously supported hosts.
+
 ## 0.46.1
 
 _2026-11-21_

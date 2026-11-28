@@ -1,5 +1,13 @@
 # pstdio-workspaces
 
+## 0.3.1-nightly.20261128192510
+
+_2026-11-28_
+
+### Patch Changes
+
+- 958363f: Keep extensions available on the next host API while retaining compatibility with previously supported hosts.
+
 ## 0.3.0
 
 _2026-11-21_

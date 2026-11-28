@@ -1,6 +1,6 @@
 {
   "name": "cloud",
-  "version": "0.3.0",
+  "version": "0.4.0-nightly.20261128192510",
   "displayName": "Prompt Studio Cloud",
   "description": "Sync projects across your computers and manage your Cloud account and devices.",
   "publisher": "pstdio",
