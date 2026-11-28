@@ -146,4 +146,7 @@ test("uploads the selected comparison history without unrelated workspace branch
     },
     "refs/custom/release",
   );
+  await expect(withSourceArchive(localProcess, root, "HEAD", async () => undefined, "@{upstream}")).rejects.toThrow(
+    "Resolve reflog and upstream expressions",
+  );
 });

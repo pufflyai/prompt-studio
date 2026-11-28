@@ -120,6 +120,8 @@ async function prepareHistory(
   let base = revision;
   let comparisonRef = "";
   if (comparison) {
+    if (comparison.includes("@{"))
+      throw new Error("Resolve reflog and upstream expressions to a commit SHA on the host before uploading.");
     const named = await process.runOrThrow({
       command: ["git", "-C", root, "rev-parse", "--symbolic-full-name", "--verify", "--end-of-options", comparison],
       timeoutMs: 10_000,
