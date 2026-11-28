@@ -388,8 +388,8 @@ test("removing a Cloud copy cancels a blocking automation before draining finite
     ).toBe(200);
     expect(await appDeps.projectService.get(projectId)).toBeNull();
   } finally {
-    if (runId && (await appDeps.projectService.get(projectId)))
-      await appDeps.automationService.cancelProjectRuns(projectId);
+    // Cancel even when removal already hid the project, so a regression reports "blocked" instead of hanging here.
+    if (runId) await appDeps.automationService.cancelProjectRuns(projectId);
     await pending;
     work.run = original;
     await manager.stop(true);
