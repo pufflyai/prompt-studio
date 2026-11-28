@@ -47,10 +47,8 @@ export const archiveTicketCommand = defineCommand({
     if (!saved) return null;
     const next = await withTicketIdentity(ctx, ticketWithCurrentTitle(saved));
 
-    // Await cascade so single-ticket UX reflects completion, but never reject:
-    // the ticket is durably archived, so a cleanup failure should not be reported
-    // as a failed archive. The failure surfaces via a persistent notification instead.
-    await deleteUnusedLinkedWorkspaces(ctx, [next]);
+    if (ctx.source === "dashboard") await enqueueArchivedCleanup(ctx, [next.id]);
+    else await deleteUnusedLinkedWorkspaces(ctx, [next]);
     await emitPlannerTicketsChanged(ctx, { ticketId: next.id });
 
     return withTicketTagIds(next);
@@ -104,14 +102,16 @@ type ArchiveContext = Pick<
   "events" | "notify" | "storage" | "workspaces" | "settings" | "resources" | "automation"
 >;
 
-const enqueueArchivedCleanup = async (ctx: ArchiveContext, archived: string[]) => {
+const enqueueArchivedCleanup = async (ctx: ArchiveContext, archived: string[], discoverLinks = false) => {
   try {
-    const linked = await linkedWorkspacePage(
-      ctx,
-      archived.map((id) => ({ id })),
-      undefined,
-      1,
-    ).catch(() => undefined);
+    const linked = discoverLinks
+      ? await linkedWorkspacePage(
+          ctx,
+          archived.map((id) => ({ id })),
+          undefined,
+          1,
+        ).catch(() => undefined)
+      : undefined;
     if (!linked || linked.items.length)
       await ctx.automation.enqueue({
         command: cleanupTicketWorkspacesCommand.ref,
@@ -154,7 +154,7 @@ export const archiveTicketColumnAction = async (ctx: ArchiveContext, input: { co
       // Durable jobs retain bounded IDs, not detached closures holding every archived body.
       // At most one preceding page discovers/queues cleanup while this page writes.
       await cleanup;
-      cleanup = archived.length ? enqueueArchivedCleanup(ctx, archived) : Promise.resolve();
+      cleanup = archived.length ? enqueueArchivedCleanup(ctx, archived, true) : Promise.resolve();
       after = String(page.records.at(-1)!.fields.id);
       if (page.records.length < 100) break;
     }

@@ -29,14 +29,31 @@ test("column, row group, and order save as one move and one completed event", as
   expect(f.events).toEqual(["tickets.changed"]);
 });
 
-test("sorted moves preserve manual order and skip unchanged grouping values", async () => {
+test("sorted moves update one ticket while order is locked and skip unchanged values", async () => {
   const f = await ticketMoveFixture();
   const [first, hidden, last] = f.tickets;
-  await moveTicketOnBoard(f.ctx, { rowId: first.id, attributes: { status: "done" } });
+  const input = { rowId: first.id, attributes: { status: "done", priority: "default-priority-high" } };
+  const releaseOrder = Promise.withResolvers<void>();
+  const order = withWriteGuard(f.ctx, "ticket-order", () => releaseOrder.promise);
+  const move = moveTicketOnBoard(f.ctx, input);
+  try {
+    const blockedByOrder = Bun.sleep(500).then(() => "waiting for ticket-order");
+    await expect(Promise.race([move, blockedByOrder])).resolves.toEqual({ changed: 1 });
+  } finally {
+    releaseOrder.resolve();
+    await Promise.all([order, move]);
+  }
   expect(await f.ordered()).toEqual([first.id, hidden.id, last.id]);
+  expect(await ticketsCollection(f.storage).get(first.id)).toMatchObject({
+    statusId: "done",
+    tags: { "default-priority": "default-priority-high" },
+  });
+  expect(f.reads).toEqual([first.id]);
+  expect(f.writes).toEqual([first.id]);
+  expect(f.events).toEqual(["tickets.changed"]);
   f.writes.length = 0;
   f.events.length = 0;
-  await moveTicketOnBoard(f.ctx, { rowId: first.id, attributes: { status: "done" } });
+  await expect(moveTicketOnBoard(f.ctx, input)).resolves.toEqual({ changed: 0 });
   expect(f.writes).toEqual([]);
   expect(f.events).toEqual([]);
 });

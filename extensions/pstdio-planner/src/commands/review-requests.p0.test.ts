@@ -365,7 +365,7 @@ describe("review request ownership", () => {
           return Object.assign(Object.create(collection), {
             createIfAbsent: async (id: string, value: unknown) => {
               await ticketsCollection(storage).delete("ps-1");
-              await reviewRequestCleanupHook.run(context("event") as never, { ticketId: "ps-1" });
+              await reviewRequestCleanupHook.run(context("event") as never, { ticketId: "ps-1", deleted: true });
               return insert(id, value);
             },
           });
@@ -386,6 +386,8 @@ describe("review request ownership", () => {
     await ticketsCollection(storage).delete("ps-1");
 
     await reviewRequestCleanupHook.run(context("event") as never, { ticketId: "ps-1" });
+    expect(await reviewRequestsCollection(storage).get(request.id)).toBeDefined();
+    await reviewRequestCleanupHook.run(context("event") as never, { ticketId: "ps-1", deleted: true });
 
     expect(await reviewRequestsCollection(storage).get(request.id)).toBeUndefined();
     await expect(
