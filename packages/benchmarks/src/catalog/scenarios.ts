@@ -58,6 +58,7 @@ export const scenarios = [
   },
   {
     id: "B4",
+    workloadVersion: 2,
     label: "Work during agent streaming",
     platforms: primary,
     file: "packages/e2e/src/perf/critical/streaming-work.p3.bench.ts",
@@ -80,6 +81,7 @@ export const scenarios = [
       "close/reopen panel",
       "switch project/session away/back",
       "verify final content",
+      "return to an open session tab",
       "start second replay",
       "cancel",
       "verify cancellation",
@@ -94,6 +96,7 @@ export const scenarios = [
       elapsed("stream-to-paint"),
       elapsed("longest-stall"),
       elapsed("completion"),
+      elapsed("session-return"),
       elapsed("cancellation"),
       metric("script", "share", "regression"),
       metric("task", "share", "regression"),

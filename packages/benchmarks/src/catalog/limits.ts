@@ -40,6 +40,12 @@ export const meetsLimit = (value: number, budget: number, unit: BenchmarkUnit) =
   unit === "share" ? Number.isFinite(value) && value <= budget : isBelowBudget(value, budget);
 
 export const retainedLimit = (scenario: string, metric: string, platform: string = process.platform) => {
+  if (scenario === "B4" && metric === "session-return")
+    return {
+      value: 250,
+      evidence:
+        "Requested 2026-11-28 after PS-1363 rebuilt transcripts on every session tab switch; B4 foreground limits are delegated",
+    };
   if (scenario === "B2" && metric === "extensions-ready")
     return {
       value: 1_800,
