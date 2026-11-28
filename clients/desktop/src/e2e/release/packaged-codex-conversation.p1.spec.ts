@@ -43,7 +43,10 @@ test("sends a message and a follow-up in the same packaged Codex conversation", 
     const { page } = app;
     const project = await createPackagedProject(app, "Release conversation");
     await openPackagedProject(page, project);
-    await page.getByRole("option", { name: "Sessions", exact: true }).click();
+    const sidenav = page.locator('[data-workbench-region="sidenav"]');
+    await sidenav.getByRole("option", { name: "Sessions", exact: true }).click();
+    await sidenav.getByText("Sessions", { exact: true }).hover();
+    await sidenav.getByRole("button", { name: "New session", exact: true }).click();
 
     const editor = page.getByTestId("content-editable").filter({ visible: true }).last();
     const send = page.getByTestId("send-message-button").filter({ visible: true }).last();
