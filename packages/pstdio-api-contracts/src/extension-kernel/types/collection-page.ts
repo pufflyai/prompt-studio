@@ -9,7 +9,6 @@ export const DEFAULT_COLLECTION_PAGE_SIZE = 100;
 
 /** A bounded read after applying the view's filter, sorts, search and grouping. */
 export interface CollectionPageRequest {
-  /** Maximum returned rows. Zero requests page summaries only. */
   limit: number;
   /** Next-page cursor returned by this provider. Omit for a direct offset jump. */
   cursor?: string;

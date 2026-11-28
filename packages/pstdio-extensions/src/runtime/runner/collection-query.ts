@@ -38,6 +38,7 @@ export const validateCollectionQueryRequest = (
 ) => {
   if (!policy) return;
   const request = params.page as { limit?: number; offset?: number } | undefined;
+  // Paged providers can return summaries with a zero-row request.
   const limit = policy.mode === "static" ? validateLimit(policy.maxRows) : validateLimit(request?.limit ?? 100, 0);
   if (request?.offset !== undefined && (!Number.isSafeInteger(request.offset) || request.offset < 0))
     throw new Error("Collection query offsets must be nonnegative safe integers");
