@@ -6,11 +6,9 @@ export interface AutoScrollProps {
   /** Displayed messages; a new message, part or text while away means there is something new to read. */
   messages: SessionMessage[];
   conversationKey?: string | null;
-  /** Whether the reader is viewing this conversation, has switched away, or closed it. Defaults to reading. */
-  presence?: ReaderPresence;
+  /** Whether the reader is viewing this conversation. Defaults to true. */
+  reading?: boolean;
 }
-
-export type ReaderPresence = "reading" | "away" | "closed";
 
 export interface ReaderReturnState {
   reading: boolean;
@@ -24,11 +22,8 @@ export interface ReaderReturnState {
 export const READER_RETURN_CATCH_UP_MS = 3_000;
 
 /** Returning readers land on the latest reply only when it changed while they were away. */
-export const getNextReaderReturnState = (state: ReaderReturnState, presence: ReaderPresence, tail: string | null) => {
-  const reading = presence === "reading";
-  // Reopening a closed conversation always starts at its latest reply.
-  const seenTail = presence === "closed" ? null : state.seenTail;
-  if (!reading) return { shouldScroll: false, state: { reading, seenTail, returning: false } };
+export const getNextReaderReturnState = (state: ReaderReturnState, reading: boolean, tail: string | null) => {
+  if (!reading) return { shouldScroll: false, state: { reading, seenTail: state.seenTail, returning: false } };
   const returning = state.returning || !state.reading;
   if (!returning) return { shouldScroll: false, state: { reading, seenTail: tail, returning: false } };
   const shouldScroll = tail !== state.seenTail;
@@ -108,18 +103,17 @@ export const scrollForNextAutoScrollState = (args: ScrollForNextAutoScrollStateA
 };
 
 export function AutoScroll(props: AutoScrollProps) {
-  const { conversationKey, messages, presence = "reading" } = props;
-  const reading = presence === "reading";
+  const { conversationKey, messages, reading = true } = props;
   const userMessageCount = messages.reduce((count, message) => count + (message.role === "user" ? 1 : 0), 0);
   const tail = tailIdentity(messages.at(-1));
   const { scrollToBottom } = useStickToBottomContext();
   const readerRef = useRef<ReaderReturnState>({ reading, seenTail: tail, returning: false });
 
   useEffect(() => {
-    const next = getNextReaderReturnState(readerRef.current, presence, tail);
+    const next = getNextReaderReturnState(readerRef.current, reading, tail);
     readerRef.current = next.state;
     if (next.shouldScroll) scrollToBottom("instant");
-  }, [presence, tail, scrollToBottom]);
+  }, [reading, tail, scrollToBottom]);
 
   useEffect(() => {
     if (!reading) return;

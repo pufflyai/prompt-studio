@@ -8,7 +8,7 @@ import { ChatImageHistoryContext, indexChatImageSources } from "../links/chat-im
 import type { ChatLinkProps } from "../links/chat-link";
 import { ChatLinkProvider } from "../links/chat-link-context";
 import { ChatPrimitives } from "./ai-conversation";
-import { AutoScroll, type ReaderPresence } from "./auto-scroll";
+import { AutoScroll } from "./auto-scroll";
 import { getRecentUserPrompts } from "./chat-input-history";
 import type { ChatInputQuestionPrompt, ChatInputQuestionResponse } from "./chat-input-question-prompt";
 import { ChatMessageList } from "./chat-message-list";
@@ -31,10 +31,10 @@ export interface ChatPanelProps extends ChatLinkProps {
   /** Stable conversation identity used to reset ready state when switching sessions. */
   conversationKey?: string;
   /**
-   * Whether the reader is viewing this conversation, has switched away, or closed it. Defaults to reading.
-   * Returning scrolls to the latest reply only if messages changed while away; reopening always does.
+   * Whether the reader is viewing this conversation. Defaults to true. When the reader returns,
+   * the transcript scrolls to the latest reply only if messages changed while they were away.
    */
-  presence?: ReaderPresence;
+  reading?: boolean;
   messages: SessionMessage[];
   /** IDs intersecting the settled conversation viewport, excluding virtual overscan. */
   onVisibleMessageIdsChange?: (ids: string[]) => void;
@@ -259,7 +259,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
           <Flex className="ps-chat-panel" css={panelStyles}>
             <ChatPrimitives.Root key={messageListKey} containerType="inline-size">
               <ChatOutlineHost enabled={merged.length > 2} onAvailable={setOutlineHost} />
-              <AutoScroll conversationKey={messageListKey ?? null} messages={merged} presence={props.presence} />
+              <AutoScroll conversationKey={messageListKey ?? null} messages={merged} reading={props.reading} />
               <ChatPrimitives.Viewport visibility={isMessageViewportReady ? "visible" : "hidden"}>
                 {hasMessages ? (
                   <>
