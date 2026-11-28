@@ -5,7 +5,9 @@ import {
 } from "pstdio-extensions/authoring";
 import { withPreparationContinuation } from "pstdio-extensions/preparation-client";
 import { runExtensionPreparation } from "./extension-preparation";
+import type { ExtensionWatchProcess } from "./extension-watch-process";
 import { createPreparationWatchRefresh } from "./preparation-watch-refresh";
+import type { WatchUpdate } from "./preparation-watchers";
 
 export type { ExtensionSourceWatcher } from "pstdio-extensions/authoring";
 
@@ -19,7 +21,10 @@ export type CreateExtensionSourceWatcherInput = Omit<LocalWatcherInput, "listIns
   afterSourceChanged?: (sourcePath: string) => Promise<unknown>;
 };
 
-export const createExtensionSourceWatcher = async (input: CreateExtensionSourceWatcherInput) => {
+export const createExtensionSourceWatcher = async (
+  input: CreateExtensionSourceWatcherInput,
+  watchProcess?: ExtensionWatchProcess,
+) => {
   if (input.watch || input.includeIgnoredPath)
     return createLocalWatcher({
       ...input,
@@ -108,10 +113,11 @@ export const createExtensionSourceWatcher = async (input: CreateExtensionSourceW
     observedHashes.set(path, hash);
     return hash === previous;
   };
-  const unsubscribe = subscribePreparationEvents((event) => {
+  const restore = () => (watchProcess ? refresh() : withPreparationContinuation(refresh, { priority: "restoration" }));
+  const unsubscribe = (watchProcess?.subscribe ?? subscribePreparationEvents)((event) => {
     if (disposed) return;
     if (registered && (event.kind === "worker-ready" || event.kind === "worker-lost")) {
-      void withPreparationContinuation(refresh, { priority: "restoration" }).catch((error) => input.onError?.(error));
+      void restore().catch((error) => input.onError?.(error));
       return;
     }
     if (event.watchId !== id) return;
@@ -147,11 +153,9 @@ export const createExtensionSourceWatcher = async (input: CreateExtensionSourceW
         attachments.delete(path);
       }
     for (const path of paths) if (!observedHashes.has(path)) observedHashes.set(path, undefined);
-    await runExtensionPreparation(
-      "watch.update",
-      { id, kind: "sources", rows, ...refresh },
-      { priority: "background", signal },
-    );
+    const update: WatchUpdate = { id, kind: "sources", rows, ...refresh };
+    if (watchProcess) await watchProcess.run({ task: "watch.update", input: update }, signal);
+    else await runExtensionPreparation("watch.update", update, { priority: "background", signal });
   });
   const refresh = refreshOwner.refresh;
   try {
@@ -177,7 +181,8 @@ export const createExtensionSourceWatcher = async (input: CreateExtensionSourceW
       await Promise.allSettled(
         [...running.values()].map((change) => change.work).concat(attaching ?? Promise.resolve()),
       );
-      await runExtensionPreparation("watch.dispose", { id }).catch(() => {});
+      if (watchProcess) await watchProcess.run({ task: "watch.dispose", input: { id } }).catch(() => {});
+      else await runExtensionPreparation("watch.dispose", { id }).catch(() => {});
     },
   };
 };

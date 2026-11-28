@@ -97,8 +97,10 @@ export const createQuitFlow = (deps: QuitFlowDeps) => {
     if (result.state !== "accepted") throw new Error("Runtime refused graceful shutdown");
 
     deps.setState({ kind: "closing" });
-    await deps.showLifecycle().catch(deps.logError);
-    await deps.runtimeManager.waitForExit();
+    if (quitIntent === "install-update") {
+      await deps.showLifecycle().catch(deps.logError);
+      await deps.runtimeManager.waitForExit();
+    }
     await finishQuit();
   };
 

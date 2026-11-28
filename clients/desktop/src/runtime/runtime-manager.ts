@@ -150,6 +150,21 @@ export class DesktopRuntimeManager {
     await this.#startupTask?.catch(() => {});
   }
 
+  async #waitForPreviousShutdown(signal: AbortSignal) {
+    const path = this.#options.descriptorPath;
+    const shutdown = readRuntimeShutdown(path);
+    if (!shutdown) return;
+    // An idle quit leaves the sidecar to finish closing its database. Its descriptor
+    // remains authoritative until that cleanup releases it or the process dies.
+    while (true) {
+      signal.throwIfAborted();
+      const current = this.#deps.readRuntimeDescriptor(path);
+      if (current?.pid !== shutdown.pid || current.instanceId !== shutdown.instanceId) return;
+      if (!this.#deps.isRuntimePidAlive(shutdown.pid)) return;
+      await this.#deps.sleep(50);
+    }
+  }
+
   async #start(signal: AbortSignal, onStarting?: (descriptor: RuntimeDescriptor) => void) {
     this.#intentional = false;
     this.#eventAbort?.abort();
@@ -162,6 +177,7 @@ export class DesktopRuntimeManager {
       return this.#attach(descriptor, true);
     }
 
+    await this.#waitForPreviousShutdown(signal);
     const initialShutdown = readRuntimeShutdown(this.#options.descriptorPath);
     let announced = false;
     const discover = async (path: string, expectedRuntime?: Pick<RuntimeDescriptor, "pid" | "instanceId">) => {
