@@ -78,7 +78,7 @@ export default meta;
 export const MoveBeforeSave: CanvasFrame = {
   id: "renderers-kanban-move-preview--move-before-save",
   description:
-    "A card changes columns immediately. Loaded cards stay in place while the save reconciles, and scrolling still loads more cards.",
+    "A card changes columns immediately. The move stays visible when you return to the board during a refresh.",
   render: () => <DeferredMove />,
 };
 export const RestoreAfterFailure: CanvasFrame = {

@@ -198,6 +198,76 @@ test("status moves keep loaded pages visible and the next scroll still appends",
   expect(board.rows.map(({ id }) => id)).toEqual(["0", "1", "2", "3", "4", "5"]);
 });
 
+test("returning to a hidden board keeps an acknowledged status move visible during the fresh read", async () => {
+  environment.IS_REACT_ACT_ENVIRONMENT = true;
+  core = createWorkbench();
+  const renderers = getWorkbenchRenderers(core);
+  const save = Promise.withResolvers<void>();
+  const refresh = Promise.withResolvers<void>();
+  let status = "todo";
+  let reads = 0;
+  const unchanged = { id: "other", title: "Other", attributes: { status: "todo" } };
+  renderers.registerKanbanRenderer({
+    id: "tickets",
+    title: "Tickets",
+    attributes: [],
+    executeQuery: () => [],
+    executePage: async () => {
+      reads++;
+      if (reads > 1) await refresh.promise;
+      return {
+        rows: [{ id: "ticket", title: "Ticket", attributes: { status } }, unchanged],
+        page: { revision: String(reads), cursor: null, total: 2, filteredTotal: 2, groups: [] },
+      };
+    },
+    onMove: async ({ attributes }) => {
+      await save.promise;
+      status = String(attributes.status);
+    },
+  });
+  let board!: KanbanRendererProps;
+  const Renderer = (props: KanbanRendererProps) => {
+    board = props;
+    return null;
+  };
+  const content = (visible: boolean) => (
+    <ChakraProvider value={psTheme}>
+      <Activity mode={visible ? "visible" : "hidden"}>
+        <WorkbenchKanbanView
+          workbench={core}
+          contribution={renderers.getKanbanRenderer("tickets")!}
+          placement={{ instanceId: "tickets", panelId: "tickets", closable: false }}
+          Renderer={Renderer}
+        />
+      </Activity>
+    </ChakraProvider>
+  );
+  await act(async () => {
+    tree = create(content(true));
+  });
+  let move: Promise<void> | void;
+  await act(async () => {
+    move = board.onMove!({ rowId: "ticket", attributes: { status: "blocked" } });
+  });
+  expect(board.rows[0].attributes.status).toBe("blocked");
+  const stableRow = board.rows[1];
+  await act(async () => tree?.update(content(false)));
+  await act(async () => {
+    save.resolve();
+    await move;
+  });
+  expect(reads).toBe(1);
+  await act(async () => tree?.update(content(true)));
+  expect(reads).toBe(2);
+  const returning = board.rows;
+  await act(async () => refresh.resolve());
+  expect(returning[0].attributes.status).toBe("blocked");
+  expect(returning[1]).toBe(stableRow);
+  expect(board.rows[0].attributes.status).toBe("blocked");
+  expect(board.rows[1]).toBe(stableRow);
+  expect(board.page?.result?.revision).toBe("2");
+});
+
 test("create and open leaves the departing board stale until it is visible again", async () => {
   environment.IS_REACT_ACT_ENVIRONMENT = true;
   core = createWorkbench();

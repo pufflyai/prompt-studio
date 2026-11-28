@@ -1,7 +1,8 @@
 import { Box, Stack } from "@chakra-ui/react";
-import { resourceKey } from "@pstdio/sdk/extensions";
+import { type KanbanRendererMove, resourceKey } from "@pstdio/sdk/extensions";
 import type { ResourceContextAction } from "@pstdio/ui";
 import {
+  applyKanbanMove,
   KanbanRenderer,
   type KanbanRendererProps,
   KanbanRendererSkeleton,
@@ -42,6 +43,13 @@ import { loadKanbanRows, resolveKanbanQueryPresentation } from "./kanban-query-r
 import { resolveKanbanRendererStorageKey } from "./kanban-view-storage";
 import { useKanbanAttributes } from "./use-kanban-attributes";
 import { useKanbanPageAttributes } from "./use-kanban-page-attributes";
+
+type KanbanReadResult = Awaited<ReturnType<typeof loadKanbanRows>>;
+
+const projectAcknowledgedMove = (snapshot: KanbanReadResult, move: KanbanRendererMove) => {
+  const rows = applyKanbanMove(snapshot.rows, move);
+  return rows === snapshot.rows ? snapshot : { ...snapshot, rows };
+};
 
 interface WorkbenchKanbanViewProps {
   workbench: WorkbenchCore;
@@ -195,7 +203,7 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
     dependency: rendererResourceDependency(placement.resource),
     refreshKey: rendererQueryKey([settings, filter, sorts, pageParams, ...(paged ? [pages.refreshKey] : [])]),
   };
-  const read = useRendererRead<Awaited<ReturnType<typeof loadKanbanRows>>>({
+  const read = useRendererRead<KanbanReadResult>({
     ...query,
     enabled: views.ready,
     workbench,
@@ -214,7 +222,7 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
     subscribe: contribution.subscribe,
   });
   const acceptedRows = read.acceptedValue?.rows ?? emptyRows;
-  const mutations = useCollectionOperations(workbench, query, acceptedRows);
+  const mutations = useCollectionOperations(workbench, query, acceptedRows, projectAcknowledgedMove);
   const rows = projectBoardRows(acceptedRows, mutations.pending, contribution.id, query.queryScope?.projectId);
   const pendingCreations = mutations.pending.flatMap((entry) => {
     if (entry.domain !== "resource.create" || !entry.intent || entry.projectId !== query.queryScope?.projectId)

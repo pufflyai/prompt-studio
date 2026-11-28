@@ -29,21 +29,22 @@ export const collectionReadIdentity = (read: CollectionRead) => ({
   queryKey: JSON.stringify([read.queryKey, read.refreshKey]),
 });
 
-const observedRead = (workbench: WorkbenchCore, read: CollectionRead) => {
+const observedRead = <T>(workbench: WorkbenchCore, read: CollectionRead, projectUnobserved?: (value: T) => T) => {
   const identity = collectionReadIdentity(read);
   return {
     key: JSON.stringify([identity.queryScope, identity.sourceId, identity.queryKey]),
     refresh: (signal: AbortSignal) => {
       signal.throwIfAborted();
-      return getRendererReadCache(workbench.views.reads).refreshObserved(identity);
+      return getRendererReadCache(workbench.views.reads).refreshObserved(identity, projectUnobserved);
     },
   };
 };
 
-export const useCollectionOperations = (
+export const useCollectionOperations = <T>(
   workbench: WorkbenchCore,
   read: CollectionRead,
   rows: readonly { id: string; resource?: unknown }[],
+  projectUnobserved?: (value: T, move: KanbanRendererMove) => T,
 ) => {
   const operations = getWorkbenchOperations(getWorkbenchQueries(workbench));
   const { pending } = useSyncExternalStore(operations.subscribe, operations.getSnapshot, operations.getSnapshot);
@@ -69,7 +70,7 @@ export const useCollectionOperations = (
       write: () => void | Promise<void>,
       options?: { refreshAfterHandlerFailure: boolean },
     ) => {
-      const origin = observedRead(workbench, read);
+      const origin = observedRead<T>(workbench, read, projectUnobserved && ((value) => projectUnobserved(value, move)));
       const failedHandler = (error: unknown) => options?.refreshAfterHandlerFailure && reportedHandlerFailure(error);
       return operations.submit({
         ...collectionOperation({

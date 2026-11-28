@@ -166,11 +166,20 @@ export const createRendererQueryCache = (sharedQueries?: ScopedQueryClient) => {
         ? (query.getSnapshot() as ReturnType<ScopedQuery<T>["getSnapshot"]>)
         : undefined;
     },
-    async refreshObserved(identity: RendererQueryIdentity) {
-      const owner = entries.get(keyFor(identity))?.owner;
+    async refreshObserved<T>(identity: RendererQueryIdentity, projectUnobserved?: (value: T) => T) {
+      const owner = entries.get(keyFor(identity))?.owner as ProgressiveOwner<T> | undefined;
       if (!owner || owner.query.isDisposed()) return;
       owner.version++;
       owner.currentProgress = undefined;
+      // A hidden presentation does not read until it returns. Carry the acknowledged
+      // edit into its cached snapshot before retiring the pending operation.
+      if (projectUnobserved && !owner.query.inspect().automaticObservers) {
+        const current = owner.query.getSnapshot().data;
+        if (current !== undefined) {
+          const projected = projectUnobserved(current);
+          if (projected !== current) owner.query.accept(projected);
+        }
+      }
       await owner.query.refreshObserved();
     },
     async refreshRequired(identity: RendererQueryIdentity, signal: AbortSignal) {
