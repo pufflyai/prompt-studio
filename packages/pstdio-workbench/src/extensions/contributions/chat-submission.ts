@@ -69,35 +69,38 @@ export const createChatSubmissionRunner = (input: {
       })
       .catch((error) => {
         const current = source.read();
-        const unchanged = current.edits === before.edits;
         const failed = { text: action.text, attachments: action.attachments };
+        // Failed input goes back in the composer, ahead of any newer typing. Returns what the
+        // composer held before, so a late delivery can put it back.
         const returnInput = () => {
-          if (action.questionResponse) return;
+          if (action.questionResponse) return undefined;
           const draft = source.read().draft;
           const returned = returnFailedChatInput(draft, failed);
-          if (returned !== draft) source.changeDraft(returned);
+          if (returned === draft) return undefined;
+          source.changeDraft(returned);
+          return { draftEdits: source.read().edits, previous: { text: draft.text, attachments: draft.attachments } };
         };
         if (error instanceof UnresolvedSubmissionError && pending) {
-          // Sending stays blocked until delivery is known, so the input can wait in the composer.
-          if (unchanged) returnInput();
-          const draftEdits = unchanged ? source.read().edits : undefined;
+          // Sending stays blocked until delivery is known.
+          returnInput();
           source.publish({
             sending: false,
             pending: current.pending?.map((item) =>
-              item.message.id === pending.message.id
-                ? { ...item, failure: error.message, unresolved: error, draftEdits }
-                : item,
+              item.message.id === pending.message.id ? { ...item, failure: error.message, unresolved: error } : item,
             ),
           });
           throw error;
         }
         const queued = current.pending?.find((item) => item.message.id === pending?.message.id && item.queue);
         if (queued && !queued.echoed) {
-          // The failed row offers Restore draft; closing it discards the message.
+          // The row stays so a late queue entry can still claim it.
+          const returned = returnInput();
           source.publish({
             sending: false,
             pending: current.pending?.map((item) =>
-              item === queued ? { ...item, failure: error instanceof Error ? error.message : String(error) } : item,
+              item === queued
+                ? { ...item, failure: error instanceof Error ? error.message : String(error), returned }
+                : item,
             ),
           });
           throw error;

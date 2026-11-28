@@ -346,7 +346,7 @@ test("independent live query roots cannot reuse another authority's retained cha
   two.dispose();
 });
 
-test("a retired owner cannot restore a failed message while accepted work drains", async () => {
+test("a retired owner cannot write its draft while accepted work drains", async () => {
   const queries = createScopedQueryClient({ runtimeId: "runtime", accountId: "one", extensionId: "host" });
   const core = createWorkbench({ queries });
   const reply = Promise.withResolvers<unknown>();
@@ -369,7 +369,7 @@ test("a retired owner cannot restore a failed message while accepted work drains
   await session.flushDraft();
   const action = session.run({ type: "stop" });
   queries.setAuthority({ accountId: "two" });
-  session.restoreSubmission("retired");
+  session.changeDraft({ text: "After retirement" });
   await session.flushDraft();
   expect(writes).toEqual(["Current"]);
   reply.resolve({});

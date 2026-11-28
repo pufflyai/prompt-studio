@@ -1,4 +1,10 @@
-import { CommandOutcomeError, commandRefId, type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
+import {
+  type ChatDraft,
+  CommandOutcomeError,
+  commandRefId,
+  type ResourceRef,
+  resourceKey,
+} from "@pstdio/sdk/extensions";
 import type { WorkbenchPanelRenderInput } from "../../core";
 import { classifyApiWrite } from "../../core/registries/mutations/operation-failures";
 import type { OperationRecovery } from "../../core/registries/mutations/operation-types";
@@ -84,6 +90,9 @@ export const createChatSessionProvider = (source: {
       )
     : undefined;
   const providerSave = !localDraft && body.saveDraftHandlerId;
+  const saveProviderDraft = providerSave
+    ? (draft: ChatDraft) => binding().required(providerSave, { draft })
+    : undefined;
   const session = createChatSession({
     actionOperations:
       sourceResource?.type === "session" && view.extensionId === "pstdio.session-browser"
@@ -107,7 +116,7 @@ export const createChatSessionProvider = (source: {
     query: (signal, values) => binding().run(body.queryHandlerId, localDraft ? { values } : {}, signal),
     action: (action) => binding().required(body.actionHandlerId, { action }),
     loadDraft: body.loadDraftHandlerId ? () => binding().run(body.loadDraftHandlerId!, {}) : undefined,
-    saveDraft: localDraft?.save ?? (providerSave ? (draft) => binding().required(providerSave, { draft }) : undefined),
+    saveDraft: localDraft ? async (draft) => localDraft.save(draft) : saveProviderDraft,
     captureSaveDraft: providerSave
       ? () => {
           const captured = binding();
@@ -115,8 +124,7 @@ export const createChatSessionProvider = (source: {
           return (draft) => work(() => captured.run(providerSave, { draft }));
         }
       : undefined,
-    // The following save reports a failed write; staging only records the newest typing.
-    stageDraft: localDraft ? (draft) => void localDraft.save(draft).catch(() => undefined) : undefined,
+    stageDraft: localDraft?.save,
     watch: body.stream
       ? (signal) => {
           const input = source.input();

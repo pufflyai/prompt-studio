@@ -85,7 +85,7 @@ test("question replies do not create a pending queue or consume the ordinary dra
   expect(session.getSnapshot().draft.attachments).toEqual([file]);
 });
 
-test("a rejected queued send can be restored ahead of newer typing", async () => {
+test("a rejected queued send returns to the composer and leaves it if it arrives later", async () => {
   const saved: unknown[] = [];
   const session = createChatSession({
     initial: { streaming: true },
@@ -99,19 +99,17 @@ test("a rejected queued send can be restored ahead of newer typing", async () =>
   });
   session.changeDraft({ text: "", attachments: [], values: action.values });
   await expect(session.run(action)).rejects.toThrow("Could not send");
-  expect(session.getSnapshot().draft.text).toBe("");
+  expect(session.getSnapshot().draft).toEqual({ text: action.text, attachments: [file], values: action.values });
   expect(session.getSnapshot().pending?.[0]?.failure).toBe("Could not send");
   expect(session.getSnapshot().messages).toMatchObject([{ role: "user", delivery: "unsent" }]);
-  session.changeDraft({ text: "Newer work", attachments: [{ id: "B", name: "B.txt" }], values: { model: "A" } });
-  session.restoreSubmission(session.getSnapshot().pending![0]!.message.id);
-  expect(session.getSnapshot().pending).toBeUndefined();
-  expect(session.getSnapshot().draft).toEqual({
-    text: `${action.text}\n\nNewer work`,
-    attachments: [file, { id: "B", name: "B.txt" }],
-    values: { model: "A" },
-  });
   await session.flushDraft();
   expect(saved.at(-1)).toEqual(session.getSnapshot().draft);
+  session.accept({
+    revision: 1,
+    snapshot: { queuedFollowUps: [{ id: "delivered", prompt: action.text, attachments: [file] }] },
+  });
+  expect(session.getSnapshot().pending).toBeUndefined();
+  expect(session.getSnapshot().draft).toMatchObject({ text: "", attachments: [] });
 });
 
 test("identical queued sends claim separate receipts across refresh and canonical handoff", async () => {
@@ -310,7 +308,7 @@ test("identical failed inputs each keep a receipt until their own acknowledgemen
   expect(session.getSnapshot().pending).toBeUndefined();
 });
 
-test("dismissing an unsent message discards it and keeps the current draft", async () => {
+test("dismissing an unsent message keeps the composer and shows its files", async () => {
   const session = createChatSession({
     initial: { streaming: true },
     query: async () => ({}),
@@ -323,10 +321,11 @@ test("dismissing an unsent message discards it and keeps the current draft", asy
   const unrelated = { id: "file-B", name: "B.txt" };
   session.changeDraft({ text: "Keep typing", attachments: [file, unrelated] });
   const { draft, pending } = session.getSnapshot();
-  expect(visibleChatDraftAttachments(draft.attachments, pending)).toEqual([unrelated]);
+  // The failed input's file is back in the composer, so nothing stays hidden.
+  expect(visibleChatDraftAttachments(draft.attachments, pending)).toEqual([file, unrelated]);
   session.dismissSubmission(session.getSnapshot().pending![0]!.message.id);
   const dismissed = session.getSnapshot();
   expect(dismissed.pending?.[0]?.failureDismissed).toBe(true);
   expect(dismissed.draft).toEqual(draft);
-  expect(visibleChatDraftAttachments(dismissed.draft.attachments, dismissed.pending)).toEqual([unrelated]);
+  expect(visibleChatDraftAttachments(dismissed.draft.attachments, dismissed.pending)).toEqual([file, unrelated]);
 });

@@ -42,26 +42,21 @@ test("each conversation keeps its own draft across a reload", () => {
   expect(createLocalChatDraft("conversation-c", storage).read()).toBeUndefined();
 });
 
-test("typing is written after a pause instead of on every keystroke", () => {
-  const { storage, writes } = createStorage();
-  const local = createLocalChatDraft("conversation", storage);
-  local.save({ ...draft, text: "H" });
-  local.save({ ...draft, text: "Ha" });
-  local.save(draft);
-
-  expect(writes).toEqual([]);
-  expect(local.read()).toEqual(draft);
-  local.flush();
-  expect(writes).toEqual(["pstdio-workbench:chat-draft:conversation"]);
-  local.dispose();
+test("a replaced view of the same conversation stops writing its draft", () => {
+  const { storage } = createStorage();
+  const old = createLocalChatDraft("conversation", storage);
+  const replacement = createLocalChatDraft("conversation", storage);
+  replacement.save(draft);
+  old.save({ ...draft, text: "Stale typing" });
+  expect(createLocalChatDraft("other", storage).read()).toBeUndefined();
+  expect(replacement.read()).toEqual(draft);
 });
 
-test("an emptied draft is removed from storage", () => {
+test("a sent or emptied draft is removed even when it keeps control values", () => {
   const { storage, records } = createStorage();
   const local = createLocalChatDraft("conversation", storage);
   local.save(draft);
-  local.flush();
-  local.save({ text: "", attachments: [], values: {} });
+  local.save({ text: "", attachments: [], values: draft.values });
   local.dispose();
 
   expect(records.size).toBe(0);
@@ -118,4 +113,27 @@ test("a seeded draft opens in its new conversation and cannot overwrite an exist
     "already has a draft",
   );
   expect(createLocalChatDraft("new-session", storage).read()).toEqual(draft);
+});
+
+test("a provider draft saved by an older release still loads and keeps saving", async () => {
+  const saved: ChatDraft[] = [];
+  const session = createChatSession({
+    query: async () => ({}),
+    action: async () => undefined,
+    loadDraft: async () => ({ ...draft, recovered: [{ text: "Older copy", attachments: [], values: {} }] }),
+    saveDraft: async (next) => {
+      saved.push(next);
+    },
+  });
+  const release = session.retain();
+  try {
+    await new Promise((done) => setTimeout(done, 0));
+    expect(session.getSnapshot().draft).toEqual(draft);
+    session.changeDraft({ text: "Edited" });
+    await session.flushDraft();
+    expect(saved.at(-1)).toEqual({ ...draft, text: "Edited" });
+  } finally {
+    release();
+    session.dispose();
+  }
 });

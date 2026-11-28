@@ -2,8 +2,8 @@ import { contributionRefId, sessionBrowser } from "@pstdio/sdk/extensions";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench";
 import { seedChatBrowserDraft } from "@pstdio/workbench/extensions";
 import type { ExtensionUpgradeReview, ExtensionUpgradeReviewFile } from "pstdio-api-contracts";
-import { buildAbsoluteApiUrl, getApiClient } from "@/lib/api";
-import { dashboardChatDraftStorage } from "@/shared/app/chat-draft-storage";
+import { getApiClient } from "@/lib/api";
+import { dashboardChatDraftScope, dashboardChatDraftStorage } from "@/shared/app/chat-draft-storage";
 
 const maxPromptBytes = 96 * 1024;
 const maxFiles = 12;
@@ -77,7 +77,7 @@ export const openExtensionUpgradeAgentDraft = async (
     resource,
     viewId: contributionRefId(sessionBrowser.views.conversation),
     extensionId: sessionBrowser.views.conversation.extensionId,
-    storageScope: buildAbsoluteApiUrl("/"),
+    storageScope: dashboardChatDraftScope(),
     storage: dashboardChatDraftStorage(),
     draft: { text, attachments: [], values: {} },
   });

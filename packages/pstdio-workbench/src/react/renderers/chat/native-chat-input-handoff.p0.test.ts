@@ -12,7 +12,8 @@ test("the shared owner keeps a rejected queued input while the generic editor co
     },
   });
   await expect(handoffNativeChatInput(session, () => session.run(action))).resolves.toBeUndefined();
-  expect(session.getSnapshot().draft.text).toBe("");
+  // The owner already returned the input to the composer, so the editor must not restore it twice.
+  expect(session.getSnapshot().draft.text).toBe(action.text);
   expect(session.getSnapshot().pending?.[0]?.failure).toBe("Could not send");
 });
 test("unowned ordinary and question failures still reject the generic editor handoff", async () => {

@@ -171,8 +171,9 @@ draft per conversation: its text, attachment references and control values, scop
 by host, project, view and resource. Main and Side share it. It survives switching
 conversations, reloading and, on desktop, restarting the app. Sending clears it.
 Text typed before a stored draft loads wins, and the stored copy is dropped. Control
-values are kept with the draft but are not draft content. Typing is written after a
-short pause. The query receives the control `values`. There is no synchronization
+values are kept with the draft but are not draft content; a draft without text or
+files is removed. Each change is written immediately, so quitting right after typing
+keeps it. The query receives the control `values`. There is no synchronization
 between browsers or devices and no restore list. This mode cannot be combined with
 `loadDraft` or `saveDraft` callbacks and requires the `view.chat.browser-draft.v1`
 capability.
@@ -338,7 +339,7 @@ remain owned by the workbench.
 
 The native owner retains an ordinary submitted input while its action is pending, including a sending queue row when the conversation is running. This presentation stays outside canonical transcript and queue indexes, survives placement changes, and hands off once to the matching saved request or canonical user message. Question replies do not create ordinary pending input or consume the message draft.
 
-A rejected queued input stays visible as unsent work. Restore draft puts its text and files back in the composer ahead of any newer typing; closing the alert discards it. When delivery is unknown, the input stays in the composer and sending waits until delivery is known; if the message arrives after all, an unchanged composer is cleared. No extra queue or execution service is needed.
+A rejected queued input returns its text and files to the composer, ahead of any newer typing, and stays visible as unsent work until delivered or dismissed. If it arrives after all, an unchanged composer goes back to what it held before. When delivery is unknown, the input also returns to the composer and sending waits until delivery is known. No extra queue or execution service is needed.
 
 Canonical session link resolution can call `sessionBrowser.commands.resolve` with
 `{ resources: ResourceRef[] }`. The provider returns readable, unarchived

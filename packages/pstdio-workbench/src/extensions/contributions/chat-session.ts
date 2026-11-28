@@ -161,12 +161,13 @@ export const createChatSession = (input: ChatSessionInput) => {
     const transcriptOnly = isTranscriptUpdate(hasLoaded, incoming);
     hasLoaded = true;
     publish({ ...merged.state, loading: false }, transcriptOnly);
-    // A message whose delivery was unknown arrived after all; its text no longer belongs in the composer.
-    const delivered = pending?.some(
+    // A failed message arrived after all; take its returned text back out of an unchanged composer.
+    const delivered = pending?.find(
       (item) =>
-        item.draftEdits === drafts.edits() && !state.pending?.some((next) => next.message.id === item.message.id),
+        item.returned?.draftEdits === drafts.edits() &&
+        !state.pending?.some((next) => next.message.id === item.message.id),
     );
-    if (delivered) drafts.change({ text: "", attachments: [] });
+    if (delivered?.returned) drafts.change(delivered.returned.previous);
     if (expectedValues && merged.valuesChanged) drafts.changed(capturedSave);
   };
   const reader = createChatEventReader({
@@ -282,8 +283,6 @@ export const createChatSession = (input: ChatSessionInput) => {
       ...input,
       active: () => !retired,
       read: readState,
-      values: snapshots.values,
-      changeDraft: drafts.change,
       publish,
     }),
     run,

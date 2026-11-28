@@ -10,7 +10,7 @@ import { createElement } from "react";
 import { buildAbsoluteApiUrl, getApiClient } from "@/lib/api";
 import { getDashboardScopedQueries } from "@/lib/scoped-queries";
 import { getRuntimeCollections } from "@/lib/sync/collections";
-import { dashboardChatDraftStorage } from "@/shared/app/chat-draft-storage";
+import { dashboardChatDraftScope, dashboardChatDraftStorage } from "@/shared/app/chat-draft-storage";
 import { createDashboardChatHost } from "@/shared/chat/native-chat-host";
 import { createDashboardParamFieldRenderer } from "@/shared/command-params/dashboard-param-field";
 import { uploadExtensionCommandFile } from "@/shared/extensions/api";
@@ -126,7 +126,7 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
         treeSources: workspaceTreeSources(owner),
         presentationLocale: getExtensionPresentationLocale(),
         chatRendererOwners: input.chatRendererOwners,
-        chatDraftStorageScope: buildAbsoluteApiUrl("/"),
+        chatDraftStorageScope: dashboardChatDraftScope(),
         chatDraftStorage: dashboardChatDraftStorage(),
         terminalRendererOwners: input.terminalRendererOwners,
         createChatHost: createDashboardChatHost,

@@ -41,8 +41,11 @@ export const chatQueuedRequestSchema = z.strictObject({
   steeringDelivery: z.object({ id: z.string(), runStartedAt: z.string() }).nullable().optional(),
   sending: z.boolean().optional(),
 });
-/** The unsent composer input of one conversation. Control values are kept with it but are not draft content. */
-export const chatDraftSchema = z.strictObject({
+/**
+ * The unsent composer input of one conversation. Control values are kept with it but are not draft content.
+ * Unknown fields, such as the restore list older releases saved, are dropped.
+ */
+export const chatDraftSchema = z.object({
   text: z.string(),
   attachments: z.array(chatAttachmentSchema),
   values: controlValuesSchema,

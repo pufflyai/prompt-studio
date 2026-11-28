@@ -2,9 +2,6 @@ import type { ChatDraft } from "@pstdio/sdk/extensions";
 import { chatDraftSchema } from "pstdio-api-contracts";
 import type { WorkbenchStorageLike } from "../../storage/local-storage-persistence-helpers";
 
-// Desktop rewrites one state file per write, so typing is saved after a short pause.
-const WRITE_DELAY_MS = 300;
-
 const draftStorageKey = (key: string) => `pstdio-workbench:chat-draft:${key}`;
 
 const resolveStorage = (storage: WorkbenchStorageLike | undefined) => {
@@ -16,15 +13,15 @@ const resolveStorage = (storage: WorkbenchStorageLike | undefined) => {
   }
 };
 
-const isEmpty = (draft: ChatDraft) => !draft.text && !draft.attachments.length && !Object.keys(draft.values).length;
+// Control values alone are not a draft, so a sent or emptied draft leaves nothing behind.
+const isEmpty = (draft: ChatDraft) => !draft.text && !draft.attachments.length;
 
 const readDraft = (storage: WorkbenchStorageLike | undefined, key: string) => {
   const raw = storage?.getItem(draftStorageKey(key));
   if (!raw) return undefined;
   try {
-    // Older releases stored extra fields with the draft. Keep its text and drop the rest.
-    const { text, attachments, values } = JSON.parse(raw) as Partial<ChatDraft>;
-    return chatDraftSchema.parse({ text, attachments: attachments ?? [], values: values ?? {} });
+    // Older releases stored a restore list with the draft; parsing drops it.
+    return chatDraftSchema.parse(JSON.parse(raw));
   } catch {
     return undefined;
   }
@@ -43,40 +40,16 @@ export const createLocalChatDraft = (key: string, input?: WorkbenchStorageLike) 
     owners.set(storage, scoped);
     scoped.set(storageKey, owner);
   }
-  let pending: ChatDraft | undefined;
-  let written: ReturnType<typeof Promise.withResolvers<void>> | undefined;
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const flush = () => {
-    if (timer) clearTimeout(timer);
-    timer = undefined;
-    const draft = pending;
-    const settled = written;
-    pending = undefined;
-    written = undefined;
-    try {
-      if (draft && storage && scoped?.get(storageKey) === owner) {
-        if (isEmpty(draft)) storage.removeItem?.(storageKey);
-        else storage.setItem(storageKey, JSON.stringify(draft));
-      }
-      settled?.resolve();
-    } catch (error) {
-      settled?.reject(error);
-    }
-  };
-  globalThis.addEventListener?.("pagehide", flush);
   return {
-    read: () => pending ?? readDraft(storage, key),
-    /** Resolves once the draft is written; quick successive saves share one write. */
+    read: () => readDraft(storage, key),
+    // Written on every change, as desktop layout is, so quitting right after typing keeps it.
+    // The desktop main process batches the disk writes.
     save(draft: ChatDraft) {
-      pending = draft;
-      written ??= Promise.withResolvers<void>();
-      timer ??= setTimeout(flush, WRITE_DELAY_MS);
-      return written.promise;
+      if (!storage || scoped?.get(storageKey) !== owner) return;
+      if (isEmpty(draft)) storage.removeItem?.(storageKey);
+      else storage.setItem(storageKey, JSON.stringify(draft));
     },
-    flush,
     dispose() {
-      globalThis.removeEventListener?.("pagehide", flush);
-      flush();
       if (scoped?.get(storageKey) === owner) scoped.delete(storageKey);
     },
   };
