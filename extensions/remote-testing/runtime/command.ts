@@ -26,8 +26,11 @@ export async function runCommand(options: {
   let logError: Error | undefined;
   // A full workspace volume surfaces as a stream error. Capture it instead of
   // crashing the runner, then reject after the process and log are cleaned up.
-  log.on("error", (error) => {
-    logError = error;
+  const logFailure = new Promise<never>((_, reject) => {
+    log.on("error", (error) => {
+      logError = error;
+      reject(error);
+    });
   });
   let tail = "";
   const child = Bun.spawn(["sh", "-c", options.command], {
@@ -74,7 +77,8 @@ export async function runCommand(options: {
     }
   };
   try {
-    await Promise.all([collect(child.stdout), collect(child.stderr), child.exited]);
+    // A silent command must not keep the run alive after its log failed.
+    await Promise.race([Promise.all([collect(child.stdout), collect(child.stderr), child.exited]), logFailure]);
   } finally {
     clearTimeout(deadline);
     clearTimeout(killTimer);

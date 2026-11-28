@@ -161,20 +161,22 @@ async function prepareHistory(
       "for-each-ref",
       `--merged=${revision}`,
       `--merged=${base}`,
-      "--format=%(refname)",
+      "--format=%(refname) %(objectname)",
       "refs/heads",
       "refs/remotes",
       "refs/tags",
     ],
     timeoutMs: 60_000,
   });
+  // Fetch each listed ref from its captured object so a concurrent host ref move
+  // cannot import history outside the captured candidate and comparison commits.
   const refs = listed.stdout
     .trim()
     .split("\n")
     .filter(Boolean)
-    .map((ref) => `+${ref}:${ref}`);
-  // Name the captured commit, not the host ref: a concurrent ref move must not
-  // import history outside the captured candidate and comparison commits.
+    .map((line) => line.split(" "))
+    .filter(([ref]) => ref !== comparisonRef)
+    .map(([ref, object]) => `+${object}:${ref}`);
   if (comparisonRef) refs.push(`+${base}:${comparisonRef}`);
   await git("fetch", "--no-write-fetch-head", "--no-tags", root, revision, base, ...refs);
   await git("update-ref", "refs/cloud-upload/head", revision);

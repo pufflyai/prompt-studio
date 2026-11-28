@@ -31,11 +31,14 @@ export function dockerPatch(pod: TestPod, policy: DockerPolicy) {
   ];
   // Image evidence is read on the admitted workspace's node. The provider still
   // sends its default pool selector, so align probes without giving them Docker.
-  if (
-    pod.metadata?.labels?.["pocketcoder.dev/workload-probe"] === "true" &&
-    pod.spec.containers.some((container) => container.name === "probe" && policy.images.includes(container.image))
-  )
+  if (pod.metadata?.labels?.["pocketcoder.dev/workload-probe"] === "true") {
+    const probe = pod.spec.containers.find((container) => container.name === "probe");
+    // A probe Pod must reach the trusted node too. A stale policy cannot schedule
+    // it, so deny instead of leaving it on the default pool.
+    if (!probe || !policy.images.includes(probe.image))
+      throw new Error("The Docker admission policy does not approve this probe image. Wait for its rollout to finish.");
     return scheduling;
+  }
   const workspace = pod.spec.containers.find((container) => container.name === "workspace");
   if (!workspace) return [];
   // The webhook only sends approved images here. After an allowlist change, an

@@ -37,11 +37,13 @@ test("does not start a command when the signal is already aborted", async () => 
   expect(outcome).toEqual({ exitCode: null, timedOut: false, aborted: true, tail: "" });
 });
 
-test("rejects with the log stream error instead of crashing", async () => {
+test("rejects with the log stream error instead of waiting for a silent command", async () => {
   const directory = await mkdtemp(join(tmpdir(), "remote-testing-command-"));
   try {
-    // A directory path makes the log stream fail while the command runs.
-    await expect(runCommand({ ...base, command: "echo hi", logPath: directory })).rejects.toThrow();
+    // A directory path makes the log stream fail while the command stays silent.
+    const started = Date.now();
+    await expect(runCommand({ ...base, command: "sleep 10", logPath: directory })).rejects.toThrow();
+    expect(Date.now() - started).toBeLessThan(5000);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
