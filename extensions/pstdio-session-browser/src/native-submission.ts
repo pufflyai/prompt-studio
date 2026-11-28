@@ -12,6 +12,7 @@ export const nativeSubmissionIndex: StorageRecordIndex = {
   name: "native-inputs",
   fields: {
     sessionId: { path: ["sessionId"], type: "string" },
+    // Records written before PS-1405 carry draftClientId; the index keeps its declared shape.
     draftClientId: { path: ["draftClientId"], type: "string" },
     state: { path: ["state"], type: "string" },
     createdAt: { path: ["createdAt"], type: "string" },
@@ -23,10 +24,10 @@ interface NativeSubmission {
   sessionId: string;
   fileId: string;
   previousRequest: string | null;
-  draftClientId?: string;
   requestStarted?: string | null;
   started: boolean;
   createdAt: string;
+  /** "recovering" and "recovered" only appear on records written before PS-1405. */
   state: "pending" | "recovering" | "confirmed" | "recovered";
   hidden?: boolean;
 }
@@ -42,7 +43,6 @@ export const saveNativeSubmission = async (
   previousRequest: string | null,
   started: boolean,
   requestStarted?: string | null,
-  draftClientId?: string,
 ) => {
   const file = await ctx.storage.files.put({
     name: "native-input.json",
@@ -53,7 +53,6 @@ export const saveNativeSubmission = async (
     sessionId: id,
     fileId: file.id,
     previousRequest,
-    ...(draftClientId && { draftClientId }),
     ...(requestStarted !== undefined && { requestStarted }),
     started,
     createdAt: new Date().toISOString(),
@@ -67,41 +66,12 @@ export const saveNativeSubmission = async (
   });
   return recordId;
 };
-export const readNativeSubmissions = async (
-  ctx: ExtensionContextBase,
-  id: string,
-  pendingOnly = false,
-  draftClientId?: string,
-) => {
+/** The newest submitted native input of a conversation. */
+export const readNativeSubmissions = async (ctx: ExtensionContextBase, id: string) => {
   const page = await ctx.storage.records.query({
     index: nativeSubmissionIndex.name,
-    where: {
-      all: [
-        { field: "sessionId", op: "eq", value: id },
-        ...(draftClientId
-          ? [
-              {
-                any: [
-                  { field: "draftClientId", op: "eq" as const, value: draftClientId },
-                  // Accepted input predating browser ownership must remain recoverable.
-                  { field: "draftClientId", op: "missing" as const },
-                ],
-              },
-            ]
-          : []),
-        ...(pendingOnly
-          ? [
-              {
-                any: [
-                  { field: "state", op: "eq" as const, value: "pending" },
-                  { field: "state", op: "eq" as const, value: "recovering" },
-                ],
-              },
-            ]
-          : []),
-      ],
-    },
-    limit: pendingOnly ? 100 : 1,
+    where: { field: "sessionId", op: "eq", value: id },
+    limit: 1,
   });
   const records = await ctx.storage.records.readMany(page.records.map((row) => row.recordId));
   return Promise.all(
@@ -140,4 +110,33 @@ export const updateNativeSubmission = async (
     operationId,
     edits: [{ recordId, replace: { ...value } }, changed],
   });
+};
+
+/**
+ * Settle accepted native inputs once the session has moved past them, so hidden ones are deleted.
+ * A failed input stays pending while visible, which keeps its failure notice.
+ */
+export const confirmNativeInputs = async (
+  ctx: ExtensionContextBase,
+  id: string,
+  session: { status: string; lastRequestStarted: string | null },
+) => {
+  if (["in_progress", "awaiting_input", "queued"].includes(session.status)) return;
+  const page = await ctx.storage.records.query({
+    index: nativeSubmissionIndex.name,
+    where: {
+      all: [
+        { field: "sessionId", op: "eq", value: id },
+        { field: "state", op: "eq", value: "pending" },
+      ],
+    },
+    limit: 100,
+  });
+  const failed = session.status === "failed" || session.status === "disconnected";
+  for (const record of await ctx.storage.records.readMany(page.records.map((row) => row.recordId))) {
+    const value = record.value as unknown as NativeSubmission | undefined;
+    if (!record.exists || record.deleted || !value || value.sessionId !== id) continue;
+    if (session.lastRequestStarted === value.previousRequest || (failed && !value.hidden)) continue;
+    await updateNativeSubmission(ctx, record.recordId, { state: "confirmed" });
+  }
 };

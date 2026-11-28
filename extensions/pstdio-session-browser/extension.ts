@@ -23,9 +23,7 @@ import { changeHeads, readChange } from "./src/changes";
 import { connectionRefresh } from "./src/controls";
 import { copySessionId } from "./src/copy-session-id";
 import { copySessionNickname } from "./src/copy-session-nickname";
-import { acknowledgeSavedDraft } from "./src/draft-recovery";
 import { listSessionLinks } from "./src/linked-resources";
-import { acknowledgeNativeInputs } from "./src/native-recovery";
 import { nativeSubmissionIndex } from "./src/native-submission";
 import {
   archive,
@@ -41,7 +39,6 @@ import {
 } from "./src/navigation";
 import { quotaAvailability } from "./src/quota-availability";
 import { quotaRestart, quotaRestartHook } from "./src/quota-restart";
-import { sessionId } from "./src/resource";
 import { pinSession, sessionPinsChanged, sessionPinsIndex } from "./src/session-pins";
 import { composerControls, readSnapshot } from "./src/snapshot";
 import { conversationTab } from "./src/tab";
@@ -55,14 +52,7 @@ const conversation = defineView({
   body: {
     kind: "chat",
     draftKey: "draft",
-    legacySessionDraft: true,
-    browserDraft: {
-      acknowledgeRecovery: async (ctx, { renderer, draftKey, draft, draftClientId }) => {
-        const id = sessionId(renderer.resource);
-        if (id) await acknowledgeNativeInputs(ctx, id, draft, draftClientId);
-        await acknowledgeSavedDraft(ctx, draftKey, draft);
-      },
-    },
+    browserDraft: {},
     initial: {
       messages: [],
       nativeLinks: true,

@@ -22,7 +22,6 @@ export const submitNativeDraft = async (
   id: string | undefined,
   resource: ResourceRef | undefined,
   action: ChatRendererAction,
-  draftClientId?: string,
 ) => {
   if (action.type !== "submit" || action.questionResponse) return undefined;
   const intent = commandIntent(action.values);
@@ -58,7 +57,6 @@ export const submitNativeDraft = async (
     previous?.lastRequestStarted ?? null,
     result.status === "started",
     accepted?.lastRequestStarted !== previous?.lastRequestStarted ? accepted?.lastRequestStarted : undefined,
-    draftClientId,
   );
   if (created)
     ctx.navigation.open({

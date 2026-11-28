@@ -118,35 +118,6 @@ test("idle local sessions stay quiet; native command and workspace hints read on
   expect(f.counts.closed).toBe(1);
 });
 
-test("a native input committed after the final session event still restores its accepted draft", async () => {
-  const f = createWatchObservationFixture();
-  f.session.status = "failed";
-  f.session.lastRequestStarted = "2026-11-09T00:00:00Z";
-  const recovered = Promise.withResolvers<unknown>();
-  f.state.wrote = (frame) => {
-    if ("recoverDraft" in frame) recovered.resolve(frame.recoverDraft);
-  };
-  const watching = watchConversation(f.ctx, { type: "session", id: "s" }, "browser");
-  try {
-    await f.connected;
-    const draft = { text: "Accepted objective", attachments: [], values: {} };
-    await saveNativeSubmission(
-      f.ctx,
-      "s",
-      { draft, operation: { kind: "command", text: "/goal objective" } },
-      "previous",
-      true,
-      undefined,
-      "browser",
-    );
-    expect(await recovered.promise).toEqual(draft);
-    expect(f.counts).toMatchObject({ execution: 1, session: 1, queue: 1, harness: 1, stream: 1 });
-  } finally {
-    f.controller.abort();
-    await watching;
-  }
-});
-
 test("session change notifications refresh the conversation outside the host callback", async () => {
   const f = createWatchObservationFixture();
   const callback = new AsyncLocalStorage<boolean>();

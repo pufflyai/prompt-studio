@@ -35,14 +35,14 @@ const requireSession = (id?: string) => {
 };
 export const act = async (
   ctx: ExtensionContextBase,
-  input: { renderer: RendererContext; action: ChatRendererAction; draftKey: string; draftClientId?: string },
+  input: { renderer: RendererContext; action: ChatRendererAction; draftKey: string },
 ): Promise<ChatRendererActionResult> => {
   const { action, renderer } = input;
   const resource = renderer.resource;
   const id = sessionId(resource);
   const native = await nativeAction(ctx, id, action);
   if (native) return native;
-  const submitted = await submitNativeDraft(ctx, id, resource, action, input.draftClientId);
+  const submitted = await submitNativeDraft(ctx, id, resource, action);
   if (submitted) return submitted;
   switch (action.type) {
     case "upload":

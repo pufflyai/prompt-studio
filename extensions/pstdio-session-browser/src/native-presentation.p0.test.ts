@@ -53,20 +53,13 @@ test("each native refresh supplies every pending revision while actions dismiss 
   ]);
 });
 
-test("accepted native command failure remains visible after recovery and refresh without losing newer work", async () => {
+test("accepted native command failure stays visible across refresh", async () => {
   const { saveNativeSubmission } = await import("./native-submission");
-  const { recoverNativeInputs, acknowledgeNativeInputs } = await import("./native-recovery");
   const ctx = makeCommandContext({ storage: createMemoryStorage({ indexes: [nativeSubmissionIndex] }), params: {} });
   const draft = { text: "/fail", attachments: [], values: { harness: { harnessId: "agent" } } };
   await saveNativeSubmission(ctx, "s", { draft, operation: { kind: "command", text: "/fail" } }, "old", true);
   const session = { status: "failed", lastRequestStarted: "new" };
-  const recovered: unknown[] = [];
-  await recoverNativeInputs(ctx, "s", session, async (body) => {
-    recovered.push(body);
-  });
-  await acknowledgeNativeInputs(ctx, "s", { text: "Newer work", attachments: [], values: {}, recovered: [draft] });
   const read = () => nativePresentation(ctx, "s", undefined, "agent", undefined, session);
-  expect(recovered).toEqual([draft]);
   expect((await read()).notice).toContain("Native command /fail failed");
   expect((await read()).notice).toContain("Native command /fail failed");
   expect(
@@ -74,14 +67,11 @@ test("accepted native command failure remains visible after recovery and refresh
   ).toBe("");
 });
 
-test("a later ordinary failure cannot revive an already recovered native command error", async () => {
+test("a later ordinary failure cannot revive an earlier native command error", async () => {
   const { saveNativeSubmission } = await import("./native-submission");
-  const { recoverNativeInputs, acknowledgeNativeInputs } = await import("./native-recovery");
   const ctx = makeCommandContext({ storage: createMemoryStorage({ indexes: [nativeSubmissionIndex] }), params: {} });
   const draft = { text: "/fail", attachments: [], values: {} };
   await saveNativeSubmission(ctx, "s", { draft, operation: { kind: "command", text: "/fail" } }, "before", true);
-  await recoverNativeInputs(ctx, "s", { status: "failed", lastRequestStarted: "native" }, async () => {});
-  await acknowledgeNativeInputs(ctx, "s", draft);
   expect(
     (
       await nativePresentation(ctx, "s", undefined, "agent", undefined, {
@@ -106,4 +96,28 @@ test("a later ordinary failure cannot revive an already recovered native command
       })
     ).notice,
   ).toBe("");
+});
+
+test("a hidden native command is deleted once the session moves past it, while a visible failure stays", async () => {
+  const { saveNativeSubmission, updateNativeSubmission, confirmNativeInputs, readNativeSubmissions } = await import(
+    "./native-submission"
+  );
+  const ctx = makeCommandContext({ storage: createMemoryStorage({ indexes: [nativeSubmissionIndex] }), params: {} });
+  const draft = { text: "/goal Ship", attachments: [], values: {} };
+  const hidden = await saveNativeSubmission(
+    ctx,
+    "s",
+    { draft, operation: { kind: "command", text: "/goal Ship" } },
+    "a",
+    true,
+  );
+  await updateNativeSubmission(ctx, hidden, { hidden: true });
+  await confirmNativeInputs(ctx, "s", { status: "in_progress", lastRequestStarted: "b" });
+  expect(await readNativeSubmissions(ctx, "s")).toHaveLength(1);
+  await confirmNativeInputs(ctx, "s", { status: "completed", lastRequestStarted: "b" });
+  expect(await readNativeSubmissions(ctx, "s")).toHaveLength(0);
+
+  await saveNativeSubmission(ctx, "s", { draft, operation: { kind: "command", text: "/goal Ship" } }, "b", true);
+  await confirmNativeInputs(ctx, "s", { status: "failed", lastRequestStarted: "c" });
+  expect((await readNativeSubmissions(ctx, "s"))[0]?.value.state).toBe("pending");
 });
