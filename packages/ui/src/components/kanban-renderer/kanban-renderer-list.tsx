@@ -7,7 +7,7 @@ import { useVirtualizer } from "@/utils/use-virtualizer";
 import { CollectionPageBoundary } from "../collection-view/collection-page-boundary";
 import type { AttributeBadge } from "./kanban-renderer-helpers";
 import { KanbanRendererListRow } from "./kanban-renderer-list-row";
-import { KanbanListRowSkeleton } from "./kanban-renderer-skeleton";
+import { KanbanListSkeletonRows } from "./kanban-renderer-skeleton";
 import { shouldVirtualizeKanban } from "./kanban-renderer-virtualization";
 
 export interface KanbanRendererListItem {
@@ -22,6 +22,8 @@ export interface KanbanRendererListItem {
   onCreate?: () => void;
   expandOnClick?: boolean;
   countBadge?: number;
+  /** Unloaded rows in this group, when the provider supplies a full count. */
+  remainingRows?: number;
   countColorPalette?: string;
   statusIcon?: ComponentType<{ size?: number | string }>;
   statusColor?: string;
@@ -55,17 +57,20 @@ export interface FlattenedKanbanRendererListItem {
   depth: number;
   isGroup: boolean;
   canExpand: boolean;
+  pageBoundary?: true;
 }
 
 export const flattenKanbanRendererListItems = (
   items: KanbanRendererListItem[],
   expanded: KanbanRendererListExpandedState,
   depth = 0,
+  includePageBoundaries = false,
 ) => {
   const rows: FlattenedKanbanRendererListItem[] = [];
 
   for (const item of items) {
-    const canExpand = (item.children?.length ?? 0) > 0;
+    const hasMore = (item.remainingRows ?? 0) > 0;
+    const canExpand = (item.children?.length ?? 0) > 0 || (includePageBoundaries && hasMore);
     rows.push({
       id: item.id,
       item,
@@ -75,7 +80,17 @@ export const flattenKanbanRendererListItems = (
     });
 
     if (canExpand && getRowIsExpanded(expanded, item.id)) {
-      rows.push(...flattenKanbanRendererListItems(item.children ?? [], expanded, depth + 1));
+      rows.push(...flattenKanbanRendererListItems(item.children ?? [], expanded, depth + 1, includePageBoundaries));
+      if (includePageBoundaries && hasMore) {
+        rows.push({
+          id: JSON.stringify(["next-page", item.id]),
+          item,
+          depth: depth + 1,
+          isGroup: false,
+          canExpand: false,
+          pageBoundary: true,
+        });
+      }
     }
   }
 
@@ -90,6 +105,11 @@ const updateExpandedState = (expandedState: KanbanRendererListExpandedState, row
   return { ...expandedState, [rowId]: isExpanded };
 };
 
+const pageSkeletonCount = 3;
+const listRowEstimate = 35;
+const skeletonCount = (row?: FlattenedKanbanRendererListItem) =>
+  Math.min(pageSkeletonCount, row?.item.remainingRows ?? pageSkeletonCount);
+
 export const KanbanRendererList = (props: KanbanRendererListProps) => {
   const { items, selectedItemId = null, expandedGroups, onItemClick, onExpandedGroupChange } = props;
   const [localExpandedGroups, setLocalExpandedGroups] = useState<KanbanRendererListExpandedState>({});
@@ -97,8 +117,20 @@ export const KanbanRendererList = (props: KanbanRendererListProps) => {
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
   const [focusedItemId, setFocusedItemId] = useState<string | null>(null);
   const expanded = expandedGroups ?? localExpandedGroups;
-  const rows = flattenKanbanRendererListItems(items, expanded);
+  const hasNextPage = Boolean(props.pageCursor || props.onLoadMore || props.loadingMore);
+  const pagedGroups = items.some((item) => item.remainingRows !== undefined);
+  const rows = flattenKanbanRendererListItems(items, expanded, 0, hasNextPage && pagedGroups);
   const virtualize = shouldVirtualizeKanban(rows.length);
+  const pageBoundary = (row?: FlattenedKanbanRendererListItem) => (
+    <CollectionPageBoundary
+      key={props.pageCursor ?? rows.length}
+      loading={props.loadingMore && !draggedItemId}
+      onLoadMore={draggedItemId ? undefined : props.onLoadMore}
+      loadingLabel={row ? `Loading more items in ${row.item.title}` : undefined}
+      placeholder={<KanbanListSkeletonRows count={skeletonCount(row)} depth={row?.depth} />}
+      reservePlaceholderSpace
+    />
+  );
 
   const handleExpandedChange = (rowId: string, isExpanded: boolean) => {
     onExpandedGroupChange?.(rowId, isExpanded);
@@ -113,7 +145,11 @@ export const KanbanRendererList = (props: KanbanRendererListProps) => {
     enabled: virtualize,
     getScrollElement: () => viewport.current,
     getItemKey: (index) => rows[index].id,
-    estimateSize: (index) => (rows[index].isGroup ? 29 : 35),
+    estimateSize: (index) => {
+      const row = rows[index];
+      if (row.pageBoundary) return skeletonCount(row) * listRowEstimate;
+      return row.isGroup ? 29 : listRowEstimate;
+    },
     overscan: 10,
     // Active rows keep their DOM node when scrolled beyond the visible range.
     rangeExtractor: (range) => {
@@ -147,29 +183,26 @@ export const KanbanRendererList = (props: KanbanRendererListProps) => {
                 if (!event.currentTarget.contains(event.relatedTarget)) setFocusedItemId(null);
               }}
             >
-              <KanbanRendererListRow
-                row={row}
-                isExpanded={getRowIsExpanded(expanded, row.id)}
-                selectedItemId={selectedItemId}
-                activeDropTargetId={activeDropTargetId}
-                draggedItemId={draggedItemId}
-                onDraggedItemChange={setDraggedItemId}
-                onDropTargetChange={setActiveDropTargetId}
-                onItemClick={onItemClick}
-                onExpandedChange={handleExpandedChange}
-              />
+              {row.pageBoundary ? (
+                pageBoundary(row)
+              ) : (
+                <KanbanRendererListRow
+                  row={row}
+                  isExpanded={getRowIsExpanded(expanded, row.id)}
+                  selectedItemId={selectedItemId}
+                  activeDropTargetId={activeDropTargetId}
+                  draggedItemId={draggedItemId}
+                  onDraggedItemChange={setDraggedItemId}
+                  onDropTargetChange={setActiveDropTargetId}
+                  onItemClick={onItemClick}
+                  onExpandedChange={handleExpandedChange}
+                />
+              )}
             </Box>
           );
         })}
       </Box>
-      {props.onLoadMore && !draggedItemId ? (
-        <CollectionPageBoundary
-          key={props.pageCursor ?? rows.length}
-          loading={props.loadingMore}
-          onLoadMore={props.onLoadMore}
-          placeholder={<KanbanListRowSkeleton />}
-        />
-      ) : null}
+      {hasNextPage && !pagedGroups ? pageBoundary() : null}
     </ScrollArea>
   );
 };

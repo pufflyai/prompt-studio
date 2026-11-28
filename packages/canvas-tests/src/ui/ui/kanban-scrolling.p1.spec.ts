@@ -19,6 +19,29 @@ test("the board loads successive pages for an empty column and keeps focus durin
   await expect(previousLast).toBeInViewport();
 });
 
+test("list continuation shows skeletons inside the group with unloaded rows", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/kanban-renderer/paged-board.canvas.tsx#UnloadedColumn",
+  );
+  const todo = preview.getByTestId("board-column-todo");
+  await expect(todo.getByRole("button", { name: "Card 175", exact: true })).toBeVisible();
+  const display = preview.getByRole("button", { name: "Display settings", exact: true });
+  await display.click();
+  await preview.getByRole("button", { name: "List", exact: true }).click();
+  await display.click();
+
+  const list = preview.locator('[aria-label="Collection list"]');
+  await list.evaluate((viewport) => {
+    viewport.scrollTop = 650;
+  });
+  const skeletons = list.getByRole("status", { name: "Loading more items in Todo" });
+  await expect(skeletons).toBeInViewport();
+  await expect(list.getByRole("status")).toHaveCount(1);
+  await expect(list.getByRole("option", { name: "Card 200", exact: true })).toBeInViewport();
+  await expect(skeletons).toHaveCount(0);
+});
+
 // Critical: changing the rendering strategy must keep the last card reachable by keyboard.
 test("board keyboard navigation reaches the last card before and after resizing", async ({ page }) => {
   const preview = await openCanvasPreview(

@@ -1,4 +1,5 @@
 import { HStack, Skeleton, type SkeletonProps, Stack, useSlotRecipe } from "@chakra-ui/react";
+import { computePaddingLeft } from "../list-row/list-row-root-props";
 import type { KanbanRendererSettings } from "./types";
 
 interface KanbanRendererSkeletonProps {
@@ -64,7 +65,7 @@ const BoardSkeleton = () => {
   );
 };
 
-export const KanbanListRowSkeleton = ({ titleWidth = rowTitleWidths[0] }: { titleWidth?: string }) => (
+const KanbanListRowSkeleton = ({ titleWidth }: { titleWidth: string }) => (
   <HStack height="collection-row" gap="xs" paddingX="sm" borderBottomWidth="1px" borderColor="border.subtle">
     <Skeleton boxSize="4" borderRadius="full" flexShrink={0} />
     <Bar width="2rem" height="2.5" />
@@ -74,9 +75,9 @@ export const KanbanListRowSkeleton = ({ titleWidth = rowTitleWidths[0] }: { titl
   </HStack>
 );
 
-const ListSkeleton = () => (
-  <Stack flex="1" minH="0" gap="0" overflow="hidden">
-    {Array.from({ length: 12 }, (_, row) => (
+export const KanbanListSkeletonRows = ({ count, depth = 0 }: { count: number; depth?: number }) => (
+  <Stack gap="0" paddingInlineStart={computePaddingLeft(depth)}>
+    {Array.from({ length: count }, (_, row) => (
       <KanbanListRowSkeleton key={row} titleWidth={rowTitleWidths[row % rowTitleWidths.length]} />
     ))}
   </Stack>
@@ -97,7 +98,13 @@ export const KanbanRendererSkeleton = (props: KanbanRendererSkeletonProps) => {
       overflow="hidden"
     >
       <ViewBarSkeleton />
-      {viewMode === "board" ? <BoardSkeleton /> : <ListSkeleton />}
+      {viewMode === "board" ? (
+        <BoardSkeleton />
+      ) : (
+        <Stack flex="1" minH="0" gap="0" overflow="hidden">
+          <KanbanListSkeletonRows count={12} />
+        </Stack>
+      )}
     </Stack>
   );
 };

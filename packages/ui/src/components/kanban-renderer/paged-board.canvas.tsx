@@ -31,7 +31,7 @@ const PagedBoard = () => {
     const timer = setTimeout(() => {
       setLoaded((count) => Math.min(rows.length, count + 50));
       setLoading(false);
-    }, 400);
+    }, 1_000);
     return () => clearTimeout(timer);
   }, [loading]);
   return (
@@ -74,5 +74,5 @@ type Story = CanvasFrame<typeof meta>;
 export const UnloadedColumn: Story = {
   id: "patterns-kanban-renderer-paged-board--unloaded-column",
   description:
-    "A visible empty column shows a card skeleton while it loads. Dragging a card pauses the loading indicator.",
+    "An empty board column shows a card skeleton while it loads. In List view, skeleton rows appear inside expanded groups with more items to load.",
 };

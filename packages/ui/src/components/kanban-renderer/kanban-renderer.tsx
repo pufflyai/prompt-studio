@@ -170,6 +170,9 @@ export const KanbanRenderer = <TRow extends KanbanRendererRow>(props: KanbanRend
           settings,
           sorts,
           presorted: Boolean(props.page),
+          hasPageGroupCounts: props.page?.result?.groups.some(
+            (group) => !group.parent && group.field === settings.columnGrouping,
+          ),
           search: deferredSearch,
           visibleRows,
           grouped,
