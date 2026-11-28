@@ -37,7 +37,12 @@ export function dockerPatch(pod: TestPod, policy: DockerPolicy) {
   )
     return scheduling;
   const workspace = pod.spec.containers.find((container) => container.name === "workspace");
-  if (!workspace || !policy.images.includes(workspace.image)) return [];
+  if (!workspace) return [];
+  // The webhook only sends approved images here. After an allowlist change, an
+  // admission Pod that still runs the previous policy must not let the Pod start
+  // without Docker; deny until its rollout finishes.
+  if (!policy.images.includes(workspace.image))
+    throw new Error("The Docker admission policy does not approve this test image. Wait for its rollout to finish.");
   if (
     !pod.metadata?.labels?.["pocketcoder.workspace"] ||
     !pod.metadata.ownerReferences?.some((owner) => owner.kind === "Job" && owner.controller)

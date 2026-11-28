@@ -5,6 +5,14 @@ export function dockerDeployment(config: Config) {
   const name = "remote-test-docker";
   const metadata = { name, namespace: config.namespace };
   const labels = { "app.kubernetes.io/name": name };
+  const policy = JSON.stringify({
+    images: config.images,
+    daemonImage: config.daemonImage,
+    nodeSelector: config.nodeSelector,
+  });
+  // The admission server reads the policy only at startup, so change the Pod
+  // template with the policy to roll out Pods that select new runtime images.
+  const policyChecksum = new Bun.CryptoHasher("sha256").update(policy).digest("hex");
   return {
     apiVersion: "v1",
     kind: "List",
@@ -13,13 +21,7 @@ export function dockerDeployment(config: Config) {
         apiVersion: "v1",
         kind: "ConfigMap",
         metadata,
-        data: {
-          "policy.json": JSON.stringify({
-            images: config.images,
-            daemonImage: config.daemonImage,
-            nodeSelector: config.nodeSelector,
-          }),
-        },
+        data: { "policy.json": policy },
       },
       {
         apiVersion: "apps/v1",
@@ -29,7 +31,7 @@ export function dockerDeployment(config: Config) {
           replicas: 2,
           selector: { matchLabels: labels },
           template: {
-            metadata: { labels },
+            metadata: { labels, annotations: { "pocketcoder.dev/policy-checksum": policyChecksum } },
             spec: {
               automountServiceAccountToken: false,
               nodeSelector: { "pocketcoder.dev/pool": "system" },
