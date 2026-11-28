@@ -1,20 +1,24 @@
 import { Box } from "@chakra-ui/react";
 import { defaultRangeExtractor, measureElement } from "@tanstack/react-virtual";
+import { useState } from "react";
 import { useStickToBottomContext } from "use-stick-to-bottom";
 import { useVirtualizer } from "@/utils/use-virtualizer";
 import { useMessageAnimationKeys } from "./chat-message-animation";
 import { ChatMessageRowLayout } from "./chat-message-row-layout";
-import { buildChatMessageRows, getChatStickyRowIndex, hasChatRowGap } from "./chat-message-rows";
+import {
+  type ChatMessageRow,
+  getChatStickyRowIndex,
+  hasChatRowGap,
+  isChatMessageContinuation,
+} from "./chat-message-rows";
 import { ChatOutline } from "./chat-outline";
-import type { MessageGroup, SessionMessage } from "./message-types";
+import { ChatToolExpansionContext } from "./chat-tool-expansion";
 import { useChatMessageVisibility } from "./use-chat-message-visibility";
 import { useTailReady } from "./use-chat-tail-ready";
 
 interface ChatMessageListProps {
   outlineHost?: HTMLElement | null;
-  leadingResponses: SessionMessage[];
-  groups: MessageGroup[];
-  streaming: boolean;
+  rows: ChatMessageRow[];
   hideActiveQuestionForms: boolean;
   expandedStickyMessageIds: Set<string>;
   onToggleStickyMessage: (messageId: string) => void;
@@ -31,9 +35,7 @@ const retainTailOffset = () => false;
 
 export const ChatMessageList = (props: ChatMessageListProps) => {
   const {
-    leadingResponses,
-    groups,
-    streaming,
+    rows,
     hideActiveQuestionForms,
     expandedStickyMessageIds,
     onToggleStickyMessage,
@@ -42,8 +44,9 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
     forkDisabledReason,
   } = props;
   const { scrollRef, state, stopScroll, isAtBottom } = useStickToBottomContext();
-  const rows = buildChatMessageRows(leadingResponses, groups, streaming);
-  const animatedKeys = useMessageAnimationKeys(rows.map((row) => row.message.animationKey ?? row.key));
+  const rowKeys = rows.map((row) => (row.type === "user" ? (row.message.animationKey ?? row.key) : row.key));
+  const animatedKeys = useMessageAnimationKeys(rowKeys);
+  const [toolExpansion] = useState(() => new Map<string, Set<string>>());
   const initialHeight = scrollRef.current?.clientHeight || 1;
   const gapCount = rows.reduce((count, _row, index) => count + Number(hasChatRowGap(rows, index)), 0);
   const { virtualizer, virtualItems, totalSize, measurements } = useVirtualizer<HTMLDivElement, HTMLDivElement>({
@@ -56,7 +59,7 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
       instance.shouldAdjustScrollPositionOnItemSizeChange = state.isAtBottom ? retainTailOffset : undefined;
       return measureElement(element, entry, instance);
     },
-    getItemKey: (index) => rows[index].message.animationKey ?? rows[index].key,
+    getItemKey: (index) => rowKeys[index],
     overscan: VIRTUAL_LIST_OVERSCAN,
     initialRect: { width: 0, height: initialHeight },
     initialOffset: () =>
@@ -71,7 +74,7 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
 
   useTailReady({ onReady, scrollRef });
   const visibleRows = props.onVisibleMessageIdsChange
-    ? JSON.stringify(virtualItems.map((item) => rows[item.index].messageIds))
+    ? JSON.stringify(virtualItems.map((item) => rows[item.index].key))
     : "[]";
   const list = useChatMessageVisibility(scrollRef, visibleRows, props.onVisibleMessageIdsChange);
 
@@ -93,40 +96,45 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
           }}
         />
       )}
-      <Box position="relative" width="100%" style={{ height: totalSize }}>
-        {virtualItems.map((virtualItem) => {
-          const row = rows[virtualItem.index];
-          let height: number | undefined;
-          if (row.type === "user") {
-            const end =
-              (measurements[row.endIndex]?.end ?? totalSize) -
-              (hasChatRowGap(rows, row.endIndex) ? VIRTUAL_LIST_GAP : 0);
-            height = Math.max(virtualItem.size, end - virtualItem.start);
-          }
-          return (
-            <ChatMessageRowLayout
-              key={virtualItem.key}
-              rowType={row.type}
-              occurrences={row.messageIds.length}
-              rowId={row.key}
-              message={row.message}
-              index={virtualItem.index}
-              start={virtualItem.start}
-              height={height}
-              hasGap={hasChatRowGap(rows, virtualItem.index)}
-              measureElement={virtualizer.measureElement}
-              expanded={row.type === "user" && expandedStickyMessageIds.has(row.message.animationKey ?? row.key)}
-              animatedKeys={animatedKeys}
-              onToggleStickyMessage={onToggleStickyMessage}
-              streaming={row.type === "response" && streaming && row.isActiveTurn && row.showAssistantActions}
-              hideQuestionForms={row.type === "response" && (!row.isActiveTurn || hideActiveQuestionForms)}
-              showAssistantActions={row.type === "response" && row.showAssistantActions}
-              onForkMessage={onForkMessage}
-              forkDisabledReason={forkDisabledReason}
-            />
-          );
-        })}
-      </Box>
+      <ChatToolExpansionContext value={toolExpansion}>
+        <Box position="relative" width="100%" style={{ height: totalSize }}>
+          {virtualItems.map((virtualItem) => {
+            const row = rows[virtualItem.index];
+            let height: number | undefined;
+            if (row.type === "user") {
+              const end =
+                (measurements[row.endIndex]?.end ?? totalSize) -
+                (hasChatRowGap(rows, row.endIndex) ? VIRTUAL_LIST_GAP : 0);
+              height = Math.max(virtualItem.size, end - virtualItem.start);
+            }
+            return (
+              <ChatMessageRowLayout
+                key={virtualItem.key}
+                rowType={row.type}
+                occurrences={row.messageIds.length}
+                rowId={row.key}
+                animationKey={rowKeys[virtualItem.index]}
+                continues={isChatMessageContinuation(row)}
+                partRange={row.type === "response" ? row.partRange : undefined}
+                message={row.message}
+                index={virtualItem.index}
+                start={virtualItem.start}
+                height={height}
+                hasGap={hasChatRowGap(rows, virtualItem.index)}
+                measureElement={virtualizer.measureElement}
+                expanded={row.type === "user" && expandedStickyMessageIds.has(row.message.animationKey ?? row.key)}
+                animatedKeys={animatedKeys}
+                onToggleStickyMessage={onToggleStickyMessage}
+                streaming={row.type === "response" && row.streaming}
+                hideQuestionForms={row.type === "response" && (!row.isActiveTurn || hideActiveQuestionForms)}
+                showAssistantActions={row.type === "response" && row.showAssistantActions}
+                onForkMessage={onForkMessage}
+                forkDisabledReason={forkDisabledReason}
+              />
+            );
+          })}
+        </Box>
+      </ChatToolExpansionContext>
     </Box>
   );
 };

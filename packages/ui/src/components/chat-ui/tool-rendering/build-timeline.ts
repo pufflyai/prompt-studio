@@ -295,7 +295,10 @@ const renderInvocation = (
 export const buildTimelineDocFromInvocations = (invocations: ToolPart[], options?: ToolTimelineBuilderOptions) => {
   const toolRenderers = mergeToolRenderers(options?.toolRenderers);
   const items = invocations
-    .map((invocation) => renderInvocation(invocation, toolRenderers, options))
+    .map((invocation) => {
+      const item: Item = renderInvocation(invocation, toolRenderers, options);
+      return item.id || !invocation.callId ? item : { ...item, id: invocation.callId };
+    })
     .filter(isVisibleItem);
 
   return { items };

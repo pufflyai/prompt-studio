@@ -60,7 +60,7 @@ await runScenario("B4", (capture) =>
       const before = await counters();
       const started = performance.now();
       await request(first.runtime, `/sessions/${first.fixture.session.id}/follow-up`, {
-        prompt: "Replay __fake_long_stream__",
+        prompt: "Replay __fake_long_stream__ __fake_activity_only__",
       });
       await expect(first.page.getByText(/^Step 1\./).filter({ visible: true })).toBeVisible();
       assert.equal(
@@ -128,15 +128,24 @@ await runScenario("B4", (capture) =>
       capture.record("task", (after.task - before.task) / (after.at - before.at));
       const conversation = await request(first.runtime, `/sessions/${first.fixture.session.id}/conversation`);
       assert.equal(conversation.messages.length, 131);
+      const replay = conversation.messages.slice(101);
+      const activityOnlyTurns = replay.filter((message: { parts: { type: string }[] }) =>
+        message.parts.every((part) => part.type === "reasoning" || part.type === "tool"),
+      );
+      assert.equal(activityOnlyTurns.length, capture.scenario.stream.activityOnlyTurns);
+      assert(
+        activityOnlyTurns.every(
+          ({ parts }: { parts: { type: string }[] }) => parts.length === capture.scenario.stream.updatesPerTurn + 1,
+        ),
+        "The activity-only replay omitted reasoning or tool results",
+      );
       assert.equal(
-        conversation.messages
-          .slice(101)
-          .filter((message: { parts: { type: string }[] }) => message.parts.some((part) => part.type === "tool"))
+        replay.filter((message: { parts: { type: string }[] }) => message.parts.some((part) => part.type === "tool"))
           .length,
         30,
       );
       await request(first.runtime, `/sessions/${first.fixture.session.id}/follow-up`, {
-        prompt: "Replay __fake_long_stream__",
+        prompt: "Replay __fake_long_stream__ __fake_activity_only__",
       });
       await wait(
         async () => (await request(first.runtime, `/sessions/${first.fixture.session.id}`)).status === "in_progress",

@@ -162,6 +162,7 @@ function MessagePartsContent(props: MessagePartsProps) {
           <Box key={key} width="full">
             <RenderToolInvocationTimeline
               invocations={invocations}
+              expansionKey={key}
               linkHandler={linkHandler}
               labeledBlocks
               hideQuestionForms={hideQuestionForms}

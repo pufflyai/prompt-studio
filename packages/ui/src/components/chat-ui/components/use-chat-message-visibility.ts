@@ -12,21 +12,20 @@ export const useChatMessageVisibility = (
     const content = list.current;
     if (!root || !content || !changed || typeof IntersectionObserver === "undefined") return;
     const visible = new Set<string>();
-    const groups: string[][] = JSON.parse(rows);
-    const mounted = new Map(groups.map((ids) => [ids[0], ids]));
+    const mounted = new Set<string>(JSON.parse(rows));
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
-          const id = (entry.target as HTMLElement).dataset.chatMessageId;
+          const id = (entry.target as HTMLElement).dataset.chatRowKey;
           if (!id || !mounted.has(id)) continue;
           if (entry.isIntersecting && entry.intersectionRect.height > 0) visible.add(id);
           else visible.delete(id);
         }
-        changed([...visible].flatMap((id) => mounted.get(id) ?? []));
+        changed([...visible]);
       },
       { root },
     );
-    for (const row of content.querySelectorAll("[data-chat-message-id]")) observer.observe(row);
+    for (const row of content.querySelectorAll("[data-chat-row-key]")) observer.observe(row);
     return () => {
       observer.disconnect();
       changed([]);

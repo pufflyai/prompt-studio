@@ -1,11 +1,14 @@
 import { ChatMessageListResponse } from "./chat-message-list-items";
-import type { ChatMessageRow } from "./chat-message-rows";
+import type { ChatMessagePartRange, ChatMessageRow } from "./chat-message-rows";
 import type { SessionMessage } from "./message-types";
 import { StickyUserMessage } from "./sticky-user-message";
 
 interface ChatMessageRowLayoutProps {
   rowType: ChatMessageRow["type"];
   rowId: string;
+  animationKey: string;
+  continues: boolean;
+  partRange?: ChatMessagePartRange;
   occurrences: number;
   message: SessionMessage;
   index: number;
@@ -28,6 +31,9 @@ export const ChatMessageRowLayout = (props: ChatMessageRowLayoutProps) => {
   const {
     rowType,
     rowId,
+    animationKey,
+    continues,
+    partRange,
     message,
     index,
     start,
@@ -53,6 +59,7 @@ export const ChatMessageRowLayout = (props: ChatMessageRowLayoutProps) => {
           data-index={index}
           data-chat-message-list-item="user"
           data-chat-message-id={rowId}
+          data-chat-row-key={rowId}
           data-chat-row-gap={hasGap ? "" : undefined}
         >
           <StickyUserMessage
@@ -72,12 +79,17 @@ export const ChatMessageRowLayout = (props: ChatMessageRowLayoutProps) => {
       ref={measureElement}
       data-index={index}
       data-chat-message-list-item={rowType}
-      data-chat-message-id={rowId}
+      data-chat-message-id={continues ? undefined : message.id}
+      data-chat-row-key={rowId}
+      data-chat-row-continues={continues ? "" : undefined}
       data-chat-row-gap={hasGap ? "" : undefined}
       style={{ top: start }}
     >
       <ChatMessageListResponse
         message={message}
+        animationKey={animationKey}
+        continues={continues}
+        partRange={partRange}
         occurrences={props.occurrences}
         streaming={streaming}
         hideQuestionForms={hideQuestionForms}

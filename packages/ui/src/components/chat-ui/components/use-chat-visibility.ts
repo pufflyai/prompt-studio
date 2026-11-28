@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo } from "react";
+import type { ChatMessageRow } from "./chat-message-rows";
 import type { ChatPanelProps } from "./chat-panel";
 import { chatVisibilitySourceIds } from "./chat-visibility-sources";
-import type { SessionMessage } from "./message-types";
 
 export const useChatVisibility = (
   props: Pick<ChatPanelProps, "hideComposer" | "messages" | "onVisibleQuestionChange" | "onVisibleMessageIdsChange">,
   ready: boolean,
   questionId: string | undefined,
-  displayed: SessionMessage[],
+  rows: ChatMessageRow[],
 ) => {
   const changed = props.onVisibleQuestionChange;
   const visibleQuestionId = props.hideComposer ? undefined : questionId;
@@ -18,8 +18,8 @@ export const useChatVisibility = (
   const visibleMessages = props.onVisibleMessageIdsChange;
   const messages = props.messages;
   const sourceIds = useMemo(
-    () => (visibleMessages ? chatVisibilitySourceIds(messages, displayed) : undefined),
-    [visibleMessages, messages, displayed],
+    () => (visibleMessages ? chatVisibilitySourceIds(messages, rows) : undefined),
+    [visibleMessages, messages, rows],
   );
   const onRows = useCallback(
     (rows: string[]) => visibleMessages?.(sourceIds?.(rows) ?? []),

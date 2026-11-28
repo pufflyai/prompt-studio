@@ -6,6 +6,7 @@ import { TimelineFromJSON } from "./timeline";
 
 export interface ToolInvocationTimelineProps extends ChatLinkProps {
   invocations: ToolPart[];
+  expansionKey?: string;
   labeledBlocks?: boolean;
   hideQuestionForms?: boolean;
 }
@@ -31,5 +32,5 @@ export function ToolInvocationTimeline(props: ToolInvocationTimelineProps) {
 
   const data = buildTimelineDocFromInvocations(visibleInvocations, { labeledBlocks });
 
-  return <TimelineFromJSON data={data} linkHandler={linkHandler} />;
+  return <TimelineFromJSON data={data} linkHandler={linkHandler} expansionKey={props.expansionKey} />;
 }

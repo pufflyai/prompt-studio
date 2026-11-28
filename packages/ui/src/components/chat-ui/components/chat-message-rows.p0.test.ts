@@ -121,3 +121,35 @@ test("keeps a recurring error separate when another error intervenes", () => {
   );
   expect(rows.map((row) => row.messageIds)).toEqual([["first", "duplicate"], ["changed"], ["latest"]]);
 });
+
+test("bounds long assistant rows while retaining the original reply for message actions", () => {
+  const reply: SessionMessage = {
+    ...message("reply"),
+    parts: [
+      ...Array.from({ length: 200 }, (_, index) => ({
+        type: "reasoning" as const,
+        text: `Review step ${index + 1}`,
+      })),
+      { type: "text", text: "The review is complete." },
+    ],
+  };
+  const rows = buildChatMessageRows([], [{ userMessage: message("user", "user"), responses: [reply] }]);
+  expect(rows.length).toBeGreaterThan(2);
+  const responses = rows.filter((row) => row.type === "response");
+  expect(responses.flatMap((row) => row.message.parts.slice(row.partRange?.start, row.partRange?.end))).toEqual(
+    reply.parts,
+  );
+  expect(
+    Math.max(...responses.map((row) => row.message.parts.slice(row.partRange?.start, row.partRange?.end).length)),
+  ).toBeLessThanOrEqual(4);
+  expect(responses.filter((row) => row.showAssistantActions).map((row) => row.message)).toEqual([reply]);
+  expect(responses.every((row) => row.userIndex === 0)).toBe(true);
+});
+
+test("preserves existing virtual rows when streaming past part boundaries", () => {
+  const parts = Array.from({ length: 9 }, (_, index) => ({ type: "text" as const, text: `Part ${index + 1}` }));
+  const keys = (count: number) =>
+    buildChatMessageRows([{ ...message("reply"), parts: parts.slice(0, count) }], [], true).map((row) => row.key);
+  expect(keys(5).slice(0, 1)).toEqual(keys(4));
+  expect(keys(9).slice(0, 2)).toEqual(keys(8));
+});

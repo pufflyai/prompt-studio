@@ -14,6 +14,10 @@ export const chatMessageRowLayoutCss = {
     top: "0",
     pointerEvents: "auto",
   },
+  ".ps-chat-response-row-layout[data-chat-row-continues] > .ai-message__root": {
+    mb: "0",
+    pb: "sm",
+  },
   ".ps-chat-response-row-layout[data-chat-row-gap], .ps-chat-sticky-row-layout[data-chat-row-gap]": {
     pb: "xs",
   },

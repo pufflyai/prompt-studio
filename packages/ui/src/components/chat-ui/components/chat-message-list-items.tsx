@@ -2,12 +2,16 @@ import { Badge, Button, Flex, useSlotRecipe } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 import { ChatMessage } from "./ai-message";
 import { useMessageFadeIn } from "./chat-message-animation";
+import type { ChatMessagePartRange } from "./chat-message-rows";
 import { MessageActionPanel } from "./message-action-panel";
 import { MessagePartsRenderer } from "./message-parts-renderer";
 import { getMessageOrigin, type SessionMessage } from "./message-types";
 
 interface ChatMessageListResponseProps {
   message: SessionMessage;
+  animationKey?: string;
+  continues?: boolean;
+  partRange?: ChatMessagePartRange;
   occurrences?: number;
   streaming: boolean;
   hideQuestionForms?: boolean;
@@ -20,6 +24,9 @@ interface ChatMessageListResponseProps {
 export const ChatMessageListResponse = (props: ChatMessageListResponseProps) => {
   const {
     message,
+    animationKey,
+    continues,
+    partRange,
     streaming,
     hideQuestionForms = false,
     animatedKeys,
@@ -27,7 +34,9 @@ export const ChatMessageListResponse = (props: ChatMessageListResponseProps) => 
     onForkMessage,
     forkDisabledReason,
   } = props;
-  const fadeInProps = useMessageFadeIn(message.animationKey ?? message.id, animatedKeys);
+  const fadeInProps = useMessageFadeIn(animationKey ?? message.animationKey ?? message.id, animatedKeys);
+  const parts = partRange ? message.parts.slice(partRange.start, partRange.end) : message.parts;
+  const displayed = partRange || animationKey !== undefined ? { ...message, animationKey, parts } : message;
   const from = getMessageOrigin(message.role);
   const showActions = from === "user" || (from === "assistant" && showAssistantActions);
 
@@ -35,12 +44,12 @@ export const ChatMessageListResponse = (props: ChatMessageListResponseProps) => 
     <ChatMessage.Root from={from} {...fadeInProps}>
       <ChatMessage.Content from={from}>
         <MessagePartsRenderer
-          message={message}
+          message={displayed}
           streaming={streaming && from === "assistant"}
           hideQuestionForms={hideQuestionForms}
         />
         <MessageOccurrences count={props.occurrences} />
-        {showActions || message.sender ? (
+        {!continues && (showActions || message.sender) ? (
           <MessageActionPanel
             message={message}
             showActions={showActions}
