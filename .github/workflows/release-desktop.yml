@@ -122,6 +122,7 @@ jobs:
             /packages/e2e/src/packaged/packaged-codex.fixture.ts
             /packages/e2e/package.json
             /packages/e2e/src/cli/timeouts.ts
+            /packages/e2e/src/packaged/packaged-harness-model.fixture.ts
             /packages/e2e/src/packaged/packaged-harness-smoke.ts
             /packages/e2e/src/packaged/packaged-helpers.ts
             /packages/e2e/src/packaged/packaged-package-cache.ts
