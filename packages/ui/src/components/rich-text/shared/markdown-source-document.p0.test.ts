@@ -4,7 +4,7 @@ import * as markdownAst from "./markdown-ast";
 import { createMarkdownSourceDocument } from "./markdown-source-document";
 import { updateMarkdownTableCell } from "./markdown-table";
 import { $isDataTableNode } from "./nodes/DataTableNode";
-import { $isEquationNode } from "./plugins/EquationPlugin/EquationNode";
+import { $createEquationNode, $isEquationNode } from "./plugins/EquationPlugin/EquationNode";
 import { createHeadlessEditor } from "./transformers/markdown-transformers-test-utils";
 
 const sourceRoundTrip = (markdown: string, edit?: (editor: ReturnType<typeof createHeadlessEditor>) => void) => {
@@ -313,6 +313,198 @@ describe("Markdown source document", () => {
 
     expect(result).toBe(markdown.replace("Before", "After"));
   });
+});
+
+test("edits a note after an escaped placeholder and preserves the placeholder source", () => {
+  const markdown = "\\[name]\n\n## Protocol\n\nOpen a fresh session.";
+
+  const result = sourceRoundTrip(markdown, (editor) => {
+    editor.update(
+      () => {
+        const texts = $getRoot().getAllTextNodes();
+        expect(texts.map((node) => node.getTextContent())).toEqual(["[name]", "Protocol", "Open a fresh session."]);
+        texts.at(-1)?.setTextContent("Open a temporary session.");
+      },
+      { discrete: true },
+    );
+  });
+
+  expect(result).toBe(markdown.replace("fresh", "temporary"));
+});
+
+test("edits multiline display math without rewriting the original delimiter lines", () => {
+  const markdown = "\\[x + y\r\n= z\\]\r\n\r\n## Next section";
+  const result = sourceRoundTrip(markdown, (editor) => {
+    editor.update(
+      () => {
+        const equation = $getRoot().getFirstChild();
+        expect($isEquationNode(equation)).toBe(true);
+        if ($isEquationNode(equation)) equation.setEquation("x + y\n= w");
+      },
+      { discrete: true },
+    );
+  });
+
+  expect(result).toBe(markdown.replace("= z", "= w"));
+});
+
+test("edits the second of two adjacent formulas without rewriting its delimiters", () => {
+  const markdown = String.raw`Adjacent: \(x\)\[y\].`;
+  const result = sourceRoundTrip(markdown, (editor) => {
+    editor.update(
+      () => {
+        const paragraph = $getRoot().getFirstChild();
+        expect($isElementNode(paragraph)).toBe(true);
+        if (!$isElementNode(paragraph)) return;
+        const equations = paragraph.getChildren().filter($isEquationNode);
+        expect(equations.map((equation) => equation.getEquation())).toEqual(["x", "y"]);
+        equations[1]!.setEquation("z");
+      },
+      { discrete: true },
+    );
+  });
+
+  expect(result).toBe(String.raw`Adjacent: \(x\)\[z\].`);
+});
+
+test.each([
+  { markdown: String.raw`\(\$5\)`, before: false, expected: String.raw`\(\$5\)\(\$6\)` },
+  { markdown: String.raw`\(\$5\)`, before: true, expected: String.raw`\(\$6\)\(\$5\)` },
+  { markdown: "$x$", before: false, expected: String.raw`$x$\(\$6\)` },
+  { markdown: "$x$", before: true, expected: String.raw`\(\$6\)$x$` },
+  { markdown: "Before $x$ after.", before: true, expected: String.raw`Before \(\$6\)$x$ after.` },
+  { markdown: "Before $x$ after.", before: false, expected: String.raw`Before $x$\(\$6\) after.` },
+  {
+    markdown: "\\[x\\]\n\nBefore $x$ after.",
+    before: true,
+    expected: "\\[x\\]\n\nBefore \\(\\$6\\)$x$ after.",
+  },
+])("inserts an adjacent formula and preserves the loaded equation source (%o)", ({ markdown, before, expected }) => {
+  const result = sourceRoundTrip(markdown, (editor) => {
+    editor.update(
+      () => {
+        const paragraph = $getRoot().getChildren().find($isElementNode);
+        expect($isElementNode(paragraph)).toBe(true);
+        if (!$isElementNode(paragraph)) return;
+        const existing = paragraph.getChildren().find($isEquationNode);
+        expect(existing).toBeDefined();
+        const formula = $createEquationNode(String.raw`\$6`, true);
+        if (before) existing?.insertBefore(formula);
+        else existing?.insertAfter(formula);
+      },
+      { discrete: true },
+    );
+  });
+
+  expect(result).toBe(expected);
+});
+
+test("removes an adjacent formula without rewriting the surviving formula", () => {
+  const result = sourceRoundTrip(String.raw`Before $x$\[y\] after.`, (editor) => {
+    editor.update(
+      () => {
+        const paragraph = $getRoot().getFirstChild();
+        expect($isElementNode(paragraph)).toBe(true);
+        if ($isElementNode(paragraph)) paragraph.getChildren().find($isEquationNode)?.remove();
+      },
+      { discrete: true },
+    );
+  });
+
+  expect(result).toBe(String.raw`Before \[y\] after.`);
+});
+
+test("keeps a remaining bracket equation inline after removing its only neighbor", () => {
+  const result = sourceRoundTrip(String.raw`\(x\)\[\$5\]`, (editor) => {
+    editor.update(
+      () => {
+        const paragraph = $getRoot().getFirstChild();
+        expect($isElementNode(paragraph)).toBe(true);
+        if ($isElementNode(paragraph)) paragraph.getChildren().find($isEquationNode)?.remove();
+      },
+      { discrete: true },
+    );
+  });
+
+  expect(markdownAst.parseMarkdown(result).children).toMatchObject([
+    { type: "paragraph", children: [{ type: "inlineMath", value: String.raw`\$5` }] },
+  ]);
+});
+
+test.each([
+  {
+    markdown: String.raw`Before $x$\(y\) after.`,
+    index: 0,
+    value: String.raw`\$6`,
+    expected: String.raw`Before \(\$6\)\(y\) after.`,
+  },
+  {
+    markdown: String.raw`Before \(x\)$$\$5$$ after.`,
+    index: 1,
+    value: "1+2",
+    expected: String.raw`Before \(x\)$$1+2$$ after.`,
+  },
+])("saves changes to adjoining formulas with the required delimiters (%o)", ({ markdown, index, value, expected }) => {
+  const result = sourceRoundTrip(markdown, (editor) => {
+    editor.update(
+      () => {
+        const paragraph = $getRoot().getFirstChild();
+        expect($isElementNode(paragraph)).toBe(true);
+        if ($isElementNode(paragraph)) paragraph.getChildren().filter($isEquationNode)[index]!.setEquation(value);
+      },
+      { discrete: true },
+    );
+  });
+
+  expect(result).toBe(expected);
+});
+
+test("keeps the remaining dollar equations distinct after removing an intervening formula", () => {
+  const result = sourceRoundTrip(String.raw`Before $x$\(y\)$z$ after.`, (editor) => {
+    editor.update(
+      () => {
+        const paragraph = $getRoot().getFirstChild();
+        expect($isElementNode(paragraph)).toBe(true);
+        if ($isElementNode(paragraph)) paragraph.getChildren().filter($isEquationNode)[1]!.remove();
+      },
+      { discrete: true },
+    );
+  });
+
+  expect(result).toBe("Before $x$ $z$ after.");
+});
+
+test("keeps dollar equations distinct when the prose between them is deleted", () => {
+  const result = sourceRoundTrip("Before $x$ and $y$ after.", (editor) => {
+    editor.update(
+      () => {
+        const separator = $getRoot()
+          .getAllTextNodes()
+          .find((text) => text.getTextContent() === " and ");
+        expect(separator).toBeDefined();
+        separator?.remove();
+      },
+      { discrete: true },
+    );
+  });
+
+  expect(result).toBe("Before $x$ $y$ after.");
+});
+
+test("edits price prose without rewriting its dollar signs", () => {
+  const markdown = "Prices are $.50 and $.99. The equation is $5$.";
+  const result = sourceRoundTrip(markdown, (editor) => {
+    editor.update(
+      () => {
+        const text = $getRoot().getAllTextNodes()[0];
+        expect(text?.getTextContent()).toBe("Prices are $.50 and $.99. The equation is ");
+        text?.setTextContent(text.getTextContent().replace("and", "or"));
+      },
+      { discrete: true },
+    );
+  });
+
+  expect(result).toBe(markdown.replace("and", "or"));
 });
 
 test("maps edits within their block while preserving neighboring tokens and line endings", () => {

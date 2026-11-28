@@ -1,20 +1,49 @@
 import type { Paragraph, PhrasingContent, Root, RootContent } from "mdast";
 import { fromMarkdown } from "mdast-util-from-markdown";
 import { gfmFromMarkdown, gfmToMarkdown } from "mdast-util-gfm";
-import { mathFromMarkdown, mathToMarkdown } from "mdast-util-math";
-import { toMarkdown } from "mdast-util-to-markdown";
+import { type InlineMath, mathToMarkdown } from "mdast-util-math";
+import { type Handle, toMarkdown } from "mdast-util-to-markdown";
 import { gfm } from "micromark-extension-gfm";
-import { math } from "micromark-extension-math";
+import { parseLegacyInlineSource, parseLegacyMath } from "./markdown-legacy-math";
+import { dollarMath, legacyInlineMath, mathAst } from "./markdown-math-syntax";
 
 const parserOptions = {
-  extensions: [gfm(), math()],
-  mdastExtensions: [gfmFromMarkdown(), mathFromMarkdown()],
+  extensions: [gfm(), dollarMath],
+  mdastExtensions: [gfmFromMarkdown(), mathAst],
+};
+
+const nativeMathSerializer = mathToMarkdown();
+const toDollarMath = nativeMathSerializer.handlers?.inlineMath;
+if (!toDollarMath) throw new Error("Markdown's inline math serializer is missing");
+
+const canUseLegacyDelimiter = (value: string) =>
+  value.trim() && !/[\r\n`]|\\[()[\]]|\\$/.test(value) && !/(?:^|[^\\])(?:\\\\)*\$/.test(value);
+
+const toInlineMath: Handle = (node: InlineMath, parent, state, info) => {
+  const activeIndex = state.indexStack.at(-1) ?? 0;
+  // The serializer also calls the next node's handler to inspect its first character.
+  const index = parent?.children[activeIndex] === node ? activeIndex : activeIndex + 1;
+  const previous = parent?.children[index - 1];
+  const next = parent?.children[index + 1];
+
+  if (previous?.type !== "inlineMath" && next?.type !== "inlineMath") return toDollarMath(node, parent, state, info);
+  if (canUseLegacyDelimiter(node.value)) {
+    const value = /^ .* $/s.test(node.value) ? ` ${node.value} ` : node.value;
+    return `\\(${value}\\)`;
+  }
+
+  // Retain dollar syntax for expressions that already contain a legacy delimiter.
+  const delimiterGap = next?.type === "inlineMath" && !canUseLegacyDelimiter(next.value) ? " " : "";
+  return toDollarMath(node, parent, state, info) + delimiterGap;
 };
 
 const serializerOptions = {
   bullet: "-" as const,
   emphasis: "*" as const,
-  extensions: [gfmToMarkdown(), mathToMarkdown()],
+  extensions: [
+    gfmToMarkdown(),
+    { ...nativeMathSerializer, handlers: { ...nativeMathSerializer.handlers, inlineMath: toInlineMath } },
+  ],
   fence: "`" as const,
   fences: true,
   listItemIndent: "one" as const,
@@ -22,91 +51,17 @@ const serializerOptions = {
   strong: "*" as const,
 };
 
-const fenceStart = (line: string) => line.match(/^ {0,3}(`{3,}|~{3,})/);
+const parseMatchedMath = (markdown: string, matches?: ReadonlyMap<number, number>) =>
+  fromMarkdown(
+    markdown,
+    matches
+      ? { ...parserOptions, extensions: [...parserOptions.extensions, legacyInlineMath(matches)] }
+      : parserOptions,
+  );
 
-const normalizeLegacyInlineMath = (line: string) => {
-  let codeFenceLength: number | null = null;
-  let result = "";
+export const parseMarkdownSource = (markdown: string) => parseLegacyInlineSource(markdown, parseMatchedMath);
 
-  for (let index = 0; index < line.length; ) {
-    if (line[index] === "`") {
-      let end = index;
-      while (line[end] === "`") end += 1;
-      const length = end - index;
-
-      if (codeFenceLength === null) codeFenceLength = length;
-      else if (codeFenceLength === length) codeFenceLength = null;
-
-      result += line.slice(index, end);
-      index = end;
-      continue;
-    }
-
-    const delimiter = line.slice(index, index + 2);
-    if (codeFenceLength === null && (delimiter === "\\(" || delimiter === "\\)")) {
-      result += "$";
-      index += 2;
-      continue;
-    }
-    if (codeFenceLength === null && (delimiter === "\\[" || delimiter === "\\]")) {
-      result += "$$";
-      index += 2;
-      continue;
-    }
-
-    result += line[index];
-    index += 1;
-  }
-
-  return result;
-};
-
-const normalizeLegacyMath = (markdown: string) => {
-  let fencedCode: { character: string; length: number } | null = null;
-  const normalized: string[] = [];
-
-  for (const line of markdown.split("\n")) {
-    if (fencedCode) {
-      normalized.push(line);
-      const closingFence = line.match(/^ {0,3}(`+|~+)[ \t]*$/)?.[1];
-      if (closingFence?.[0] === fencedCode.character && closingFence.length >= fencedCode.length) {
-        fencedCode = null;
-      }
-      continue;
-    }
-
-    const openingFence = fenceStart(line)?.[1];
-    if (openingFence) {
-      fencedCode = { character: openingFence[0] ?? "`", length: openingFence.length };
-      normalized.push(line);
-      continue;
-    }
-
-    const displayMath = line.match(/^( {0,3})\\\[\s*(.*?)\s*\\\][ \t]*$/);
-    if (displayMath) {
-      const indent = displayMath[1] ?? "";
-      normalized.push(`${indent}$$`, displayMath[2] ?? "", `${indent}$$`);
-      continue;
-    }
-
-    if (/^ {0,3}\\\[[ \t]*$/.test(line)) {
-      normalized.push(line.replace("\\[", () => "$$"));
-      continue;
-    }
-    if (/^ {0,3}\\\][ \t]*$/.test(line)) {
-      normalized.push(line.replace("\\]", () => "$$"));
-      continue;
-    }
-
-    normalized.push(normalizeLegacyInlineMath(line));
-  }
-
-  return normalized.join("\n");
-};
-
-export const parseMarkdown = (markdown: string) => fromMarkdown(normalizeLegacyMath(markdown), parserOptions);
-
-export const parseMarkdownSource = (markdown: string) => fromMarkdown(markdown, parserOptions);
+export const parseMarkdown = (markdown: string) => parseLegacyMath(markdown, parseMatchedMath);
 
 export const serializeMarkdownAst = (tree: Root) => toMarkdown(tree, serializerOptions).trimEnd();
 

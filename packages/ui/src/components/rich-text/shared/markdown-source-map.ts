@@ -1,5 +1,6 @@
-import { diffChars } from "diff";
+import { diffArrays, diffChars } from "diff";
 import { parseMarkdownSource } from "./markdown-ast";
+import { inlineMathRanges } from "./markdown-legacy-math";
 
 export interface SourceMap {
   blockStarts: Map<number, number>;
@@ -44,6 +45,37 @@ function* diffSourceBlocks(canonical: string, source: string, blocks: ReturnType
   }
   yield* diffChars(canonical.slice(canonicalOffset), source.slice(sourceOffset));
 }
+
+const mapInlineMathBoundaries = (
+  canonical: string,
+  source: string,
+  map: SourceMap,
+  parse: typeof parseMarkdownSource,
+) => {
+  if (!/\$|\\[([]/.test(canonical)) return;
+  const before = inlineMathRanges(parse(canonical));
+  if (!before.length) return;
+  const after = inlineMathRanges(parse(source));
+  const matches = diffArrays(before, after, { comparator: (left, right) => left.value === right.value });
+  let canonicalIndex = 0;
+  let sourceIndex = 0;
+  let previousEnd: number | undefined;
+  for (const match of matches) {
+    if (!match.added && !match.removed) {
+      for (let index = 0; index < match.count; index++) {
+        const original = before[canonicalIndex + index]!;
+        const loaded = after[sourceIndex + index]!;
+        map.start[original.start] = loaded.start;
+        // At a shared boundary, the left and right spellings can enclose source-only text.
+        if (original.start !== previousEnd) map.end[original.start] = loaded.start;
+        map.start[original.end] = map.end[original.end] = loaded.end;
+        previousEnd = original.end;
+      }
+    }
+    if (!match.added) canonicalIndex += match.count;
+    if (!match.removed) sourceIndex += match.count;
+  }
+};
 
 export const buildSourceMap = (canonical: string, source: string, parse = parseMarkdownSource) => {
   // Most caret spans are unchanged text. Their offsets already match, including block boundaries.
@@ -106,7 +138,9 @@ export const buildSourceMap = (canonical: string, source: string, parse = parseM
     blockStarts.set(canonicalStart, sourceStart);
   }
 
-  return { blockStarts, end, start } satisfies SourceMap;
+  const map = { blockStarts, end, start } satisfies SourceMap;
+  mapInlineMathBoundaries(canonical, source, map, parse);
+  return map;
 };
 
 const nearestMappedOffset = (values: number[], index: number, direction: -1 | 1) => {
