@@ -6,7 +6,6 @@ import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerAttempt, createPlannerTicket } from "../helpers/planner-api";
 import { expect, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
-import { showSidenavEntry } from "./helpers/sidenav-navigation";
 
 const createGitRepo = () => {
   const repoRoot = mkdtempSync(join(tmpdir(), "pstdio-e2e-ws-diff-"));
@@ -186,11 +185,12 @@ test.describe("Grouped Workspaces", () => {
     const dialog = page.frameLocator('iframe[title="Workspace action"]');
     await dialog.getByRole("textbox", { name: "Name" }).fill(nextName);
     await dialog.getByRole("button", { name: "Rename", exact: true }).click();
-    await expect(page.getByRole("dialog", { name: "Workspace action", exact: true })).not.toBeVisible();
+    await expect(page.locator('iframe[title="Workspace action"]')).toHaveCount(0);
 
     await page.getByRole("button", { name: "Back to project", exact: true }).click();
-    await (await showSidenavEntry(page, "Home")).click();
-    await (await showSidenavEntry(page, "Workspaces")).click();
+    await page.keyboard.press("Alt+Shift+Space");
+    await page.keyboard.press("g");
+    await page.keyboard.press("w");
     await expect(
       page.getByRole("region", { name: "Main", exact: true }).getByRole("option").filter({ hasText: nextName }).first(),
     ).toBeVisible();

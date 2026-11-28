@@ -33,11 +33,15 @@ export const createCoreNavigationRegistry = (resolveCore: () => WorkbenchCore) =
           prepareWorkbenchNavigation(core, targets, {
             resourceTabs: true,
             previewSource: sidePreviewSource(core, context),
+            onCommit: context?.onNavigationCommit,
           }),
         canOpenPanel: (target) => canOpenCorePanel(core, target),
         canExecuteCommand: (commandId) => Boolean(core.commands.getCommand(commandId)),
         openPanelTarget: (target, context) =>
-          prepareWorkbenchNavigation(core, [target], { previewSource: sidePreviewSource(core, context) }).commit(),
+          prepareWorkbenchNavigation(core, [target], {
+            previewSource: sidePreviewSource(core, context),
+            onCommit: context?.onNavigationCommit,
+          }).commit(),
         openViewerTarget: (target, context) => {
           if (!context?.viewer) throw new Error("Viewer navigation requires a calling viewer");
           return core.viewers.change(context.viewer, target, context);
@@ -45,10 +49,11 @@ export const createCoreNavigationRegistry = (resolveCore: () => WorkbenchCore) =
         openDialogTarget: (target) => openPageDialog(core, target),
         openPageTarget: (target, context) => {
           const resolved = resolveResourceTabTarget(core, target, core.pages.store.getState(), { resourceTabs: true });
-          if (resolved.target.kind === "panel")
+          if (resolved.target.kind === "panel" || context?.onNavigationCommit)
             return prepareWorkbenchNavigation(core, [resolved.target], {
               location: resolved.location,
               previewSource: sidePreviewSource(core, context),
+              onCommit: context?.onNavigationCommit,
             }).commit();
           const result = core.pageLocations.navigate(resolved.target);
           if (!result.ok) throw new Error(result.diagnostic.message);

@@ -105,6 +105,8 @@ export interface NavigationInvocationContext {
   viewer?: PlacementIdentity;
   /** Internal presentation handoff, called only after viewer replacement is authorized. */
   onViewerReplace?(resource: NavigationTargetViewer["resource"]): void;
+  /** Host-only source cleanup after navigation is accepted and before layouts are saved. */
+  onNavigationCommit?(): void;
 }
 
 const byPriorityAndId = (left: { id: string; priority: number }, right: { id: string; priority: number }) =>

@@ -27,6 +27,15 @@ export const createWorkbenchWebviewHostAdapters = (input: CreateWorkbenchWebview
     ...captured,
     isViewerCurrent: () => captured.isViewerCurrent?.() !== false && overlayCurrent?.() !== false,
   };
+  const commandInvocation = {
+    ...invocation,
+    onNavigationCommit:
+      overlayCurrent && placement?.pageContext
+        ? () => {
+            if (overlayCurrent()) workbench.overlays.closeOverlay(placement.instanceId);
+          }
+        : undefined,
+  };
   const requireCurrentViewer = () => {
     if (projectId && projectId !== workbench.pages.store.getState().projectId)
       throw new Error("The calling view belongs to another project");
@@ -39,7 +48,7 @@ export const createWorkbenchWebviewHostAdapters = (input: CreateWorkbenchWebview
   const executeCaptured: NonNullable<ExtensionWebviewHostAdapters["executeCommand"]> = async (
     request,
     signal,
-    context = invocation,
+    context = commandInvocation,
   ) => {
     // Accepted persistence keeps its captured project/resource; late UI navigation still checks the original viewer.
     if (input.executeCommand)

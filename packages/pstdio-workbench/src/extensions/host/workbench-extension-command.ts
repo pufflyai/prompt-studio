@@ -33,6 +33,7 @@ export interface WorkbenchExtensionCommandContext {
 }
 export interface ExecuteWorkbenchExtensionCommandInput {
   onViewerReplace?(resource: ResourceRef): void;
+  onNavigationCommit?(): void;
   onAdmitted?(): void;
   createFeedback?: CreateOperationFeedback;
   removalVersion?: number;
@@ -83,6 +84,7 @@ export const executeWorkbenchExtensionCommandResponse = async (
   const invocation = {
     ...captured,
     onViewerReplace: input.onViewerReplace,
+    onNavigationCommit: input.onNavigationCommit,
     removalVersion: input.removalVersion ?? captured.removalVersion,
     isViewerCurrent: input.isViewerCurrent ?? captured.isViewerCurrent,
   };
