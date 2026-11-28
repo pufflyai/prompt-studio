@@ -1,9 +1,8 @@
 import { copyFile, link } from "node:fs/promises";
 import { join } from "node:path";
 import { gunzipSync } from "node:zlib";
-import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { z } from "zod";
-import { PREPARATION_FORMAT } from "../runtime/prepared-revision";
+import { releaseBundleHost, releaseBundleManifest } from "../runtime/prepared-revision";
 import { extractEntries, extractFiles } from "./extract-files";
 import { MAX_EXTENSION_PACKAGE_BYTES, packageSha256 } from "./package";
 import { createPackageArchive } from "./package-archive";
@@ -28,10 +27,8 @@ const bundleManifestSchema = z.object({
 });
 type BundleManifest = z.infer<typeof bundleManifestSchema>;
 
-export const releaseBundleHost = () =>
-  [PREPARATION_FORMAT, EXTENSION_API_VERSION, Bun.version, Bun.revision, process.platform, process.arch].join(":");
+export { releaseBundleHost };
 
-const manifestPath = "release-bundle.json";
 export const releaseBundleEntry = "runtime.mjs";
 export const releaseBundleViews = "webviews";
 const safePath = (path: string) =>
@@ -52,7 +49,7 @@ const verifyViewPaths = (paths: Iterable<string>, views: string[]) => {
 };
 
 const validateBundlePaths = (files: ReadonlyMap<string, File>, manifest: BundleManifest) => {
-  const body = [...files.keys()].filter((path) => path !== manifestPath && path !== releaseBundleEntry);
+  const body = [...files.keys()].filter((path) => path !== releaseBundleManifest && path !== releaseBundleEntry);
   const assets = manifest.assets;
   if (!assets) {
     verifyViewPaths(body, manifest.webviews);
@@ -70,7 +67,7 @@ const readReleaseBundle = async (bytes: Uint8Array, expected?: ExtensionReleaseB
     throw new Error("Extension runtime bundle checksum or size mismatch.");
   const tar = gunzipSync(bytes, { maxOutputLength: 128 * 1024 * 1024 });
   const files = await new Bun.Archive(tar).files();
-  const manifest = bundleManifestSchema.parse(await files.get(manifestPath)?.json());
+  const manifest = bundleManifestSchema.parse(await files.get(releaseBundleManifest)?.json());
   if (expected && (manifest.host !== expected.host || manifest.sourceSha256 !== expected.sourceSha256))
     throw new Error("Extension runtime bundle does not match its release.");
   if (!files.has(releaseBundleEntry)) throw new Error("Extension runtime bundle has no entry.");
@@ -127,7 +124,7 @@ export const packExtensionReleaseBundle = async (
   };
   const bytes = await createPackageArchive({
     ...archive,
-    [manifestPath]: new TextEncoder().encode(JSON.stringify(manifest)),
+    [releaseBundleManifest]: new TextEncoder().encode(JSON.stringify(manifest)),
   });
   const descriptor = extensionReleaseBundleSchema.parse({
     host: manifest.host,

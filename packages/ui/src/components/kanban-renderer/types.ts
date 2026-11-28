@@ -186,6 +186,9 @@ export interface KanbanRendererPendingCreation {
 export interface KanbanRendererCreateSubmission {
   /** Called when the owner has accepted the submission and can retain it after the form closes. */
   onAdmitted?(): void;
+  /** Called when the attempt to open the saved row finishes. */
+  onOpenSettled?(): void;
+  canOpenCreatedRow?(): boolean;
   onDiscard?(): void;
   onAttachmentSaved?(file: File): void;
   /** Also runs when a separate confirmation read eventually succeeds. */

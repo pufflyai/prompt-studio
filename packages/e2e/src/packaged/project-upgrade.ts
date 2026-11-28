@@ -6,7 +6,7 @@ import { isDeepStrictEqual, parseArgs } from "node:util";
 import { chromium, expect, type Page } from "@playwright/test";
 import { describeProductionPayload, projectUpgradeLimitMs } from "pstdio-scripts/testing";
 import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
-import { signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
+import { signInBrowser, startPackagedServe } from "./packaged-serve-helpers";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 import { checkCloudProjectUpgrade } from "./project-upgrade-cloud";
 import {
@@ -26,6 +26,7 @@ import {
 } from "./project-upgrade-fixture";
 import { assertHomeConflict, assertHomeOpens, checkHomeHistory } from "./project-upgrade-home";
 import { captureUpgradeLayouts } from "./project-upgrade-layout";
+import { stopUpgradeProcess } from "./project-upgrade-shutdown";
 import { preparePublishedHost, versionFromTag } from "./published-host-binary";
 
 type Seed = Awaited<ReturnType<typeof seedUpgradeProject>>;
@@ -258,12 +259,12 @@ const run = async (
     runtime = await launch(baseline, "baseline");
     if (input.profile === "direct") {
       const ticket = await seedDirectUpgrade(upgradeApi(runtime.descriptor), input.home);
-      await stopProcess(runtime.child);
+      await stopUpgradeProcess(runtime.child);
       runtime = undefined;
       const start = performance.now();
       runtime = await launch(candidate, "upgrade");
       await verifyFirstProjectEdit(runtime, ticket, start, input.evidence, limitMs, ticket.content);
-      await stopProcess(runtime.child);
+      await stopUpgradeProcess(runtime.child);
       runtime = await launch(candidate, "restart");
       await assertUpgradeEdit(upgradeApi(runtime.descriptor), ticket);
       assert.equal(await Bun.file(ticket.file).text(), ticket.content);
@@ -271,20 +272,20 @@ const run = async (
     }
     if (input.profile === "conflicted") {
       const id = await seedConflictedProject(upgradeApi(runtime.descriptor), input.home);
-      await stopProcess(runtime.child);
+      await stopUpgradeProcess(runtime.child);
       runtime = undefined;
       const before = await checkHomeHistory(input, id);
       runtime = await launch(candidate, "upgrade");
       await assertCurrentDatabase(input.home);
       await assertHomeConflict(upgradeApi(runtime.descriptor), id);
-      await stopProcess(runtime.child);
+      await stopUpgradeProcess(runtime.child);
       runtime = undefined;
       await checkHomeHistory(input, id, before);
       return;
     }
     const state = await seed(runtime.descriptor, input);
     const layouts = await captureUpgradeLayouts(runtime.descriptor, state.fixture.id);
-    await stopProcess(runtime.child);
+    await stopUpgradeProcess(runtime.child);
     runtime = undefined;
     const home = await checkHomeHistory(input, state.fixture.id);
     const start = performance.now();
@@ -300,7 +301,7 @@ const run = async (
       /^pstdio@0\.(46|47|48)\./.test(pair.from) && candidateVersion.startsWith("0.49."),
     );
     const routes = await workbenchRoutes(runtime.descriptor, state.fixture);
-    await stopProcess(runtime.child);
+    await stopUpgradeProcess(runtime.child);
     runtime = await launch(candidate, "restart");
     await openSavedWork(runtime.descriptor, state.fixture, input.evidence, routes, layouts);
     await assertProjectToolsRetained(
@@ -310,11 +311,11 @@ const run = async (
       pair.expectedVersions,
     );
     await verifyRestart(runtime.descriptor, input.evidence, state.fixture, edited);
-    await stopProcess(runtime.child);
+    await stopUpgradeProcess(runtime.child);
     runtime = undefined;
     await checkHomeHistory(input, state.fixture.id, home);
   } finally {
-    if (runtime) await stopProcess(runtime.child);
+    if (runtime) await stopUpgradeProcess(runtime.child);
   }
 };
 

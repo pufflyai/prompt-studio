@@ -135,6 +135,8 @@ jobs:
       tag: ${{ steps.verify.outputs.tag || needs.prepare_patch.outputs.tag || steps.stable.outputs.tag || steps.nightly.outputs.tag || steps.existing.outputs.tag }}
       commit: ${{ steps.verify.outputs.commit || needs.prepare_patch.outputs.commit || steps.stable.outputs.commit || steps.nightly.outputs.commit || steps.existing.outputs.commit }}
       previous_tag: ${{ steps.verify.outputs.previous_tag || needs.prepare_patch.outputs.previous_tag || steps.stable.outputs.previous_tag }}
+      harness_smoke: ${{ steps.harness_smoke.outputs.required }}
+      harness_smoke_baseline: ${{ steps.harness_smoke.outputs.baseline }}
       candidate_run_id: ${{ steps.existing.outputs.artifact_run_id }}
       candidate_attempt: ${{ steps.existing.outputs.artifact_attempt }}
       source_sha: ${{ steps.verify.outputs.source_sha || (inputs.channel == 'patch' && inputs.source_sha || (steps.channel.outputs.channel == 'nightly' && github.sha || steps.stable.outputs.commit)) }}
@@ -207,6 +209,7 @@ jobs:
           set -euo pipefail
           LAST_TAG=$(gh release list --exclude-drafts --limit 100 --json tagName,isPrerelease \
             --jq 'map(select(.isPrerelease and (.tagName | test("^pstdio@.+-nightly\\.")))) | .[0].tagName // ""')
+          echo "previous_nightly_tag=$LAST_TAG" >> "$GITHUB_OUTPUT"
           # A nightly tag points at its version commit, whose parent is the main commit it built.
           if [ -n "$LAST_TAG" ] && [ "$(gh api "repos/$GH_REPO/commits/$LAST_TAG" --jq '.parents[0].sha')" = "$GITHUB_SHA" ]; then
             echo "Main has not changed since $LAST_TAG."
@@ -250,6 +253,40 @@ jobs:
             echo "tag=pstdio@$VERSION"
             echo "commit=$(git rev-parse HEAD)"
           } >> "$GITHUB_OUTPUT"
+
+      - name: Select the packaged harness smoke
+        id: harness_smoke
+        if: needs.prepare_patch.outputs.release == 'true' || steps.stable.outputs.release == 'true' || steps.nightly.outputs.release == 'true' || steps.verify.outputs.release == 'true'
+        env:
+          BASELINE: ${{ steps.channel.outputs.channel == 'nightly' && steps.changed.outputs.previous_nightly_tag || needs.prepare_patch.outputs.previous_tag || steps.stable.outputs.previous_tag || steps.verify.outputs.previous_tag }}
+          CANDIDATE: ${{ steps.verify.outputs.commit || needs.prepare_patch.outputs.commit || steps.stable.outputs.commit || steps.nightly.outputs.commit }}
+          CHANNEL: ${{ steps.channel.outputs.channel }}
+        run: |
+          set -euo pipefail
+          required=true
+          if [[ -n "$BASELINE" ]]; then
+            previous=$(git rev-parse --verify "refs/tags/$BASELINE^{commit}")
+            candidate="$CANDIDATE"
+            if [[ "$CHANNEL" == nightly ]]; then
+              # Compare source commits so nightly version bumps do not look like harness changes.
+              previous=$(git rev-parse --verify "$previous^")
+              candidate="$GITHUB_SHA"
+            fi
+            changed=$(git diff --name-only "$previous" "$candidate" -- \
+              ':(glob)extensions/harness-*/**' \
+              packages/pstdio-api/src/features/extensions \
+              packages/pstdio-api/files/extension-catalog.json \
+              packages/pstdio-extensions/src/runtime \
+              scripts/build \
+              packages/e2e/src/packaged/packaged-harness-smoke.ts \
+              .github/workflows/release-desktop.yml .github/workflows/release-packages.yml)
+            if [[ -z "$changed" ]]; then required=false; fi
+          fi
+          {
+            echo "required=$required"
+            echo "baseline=$BASELINE"
+          } >> "$GITHUB_OUTPUT"
+          echo "Packaged harness smoke required: $required" >> "$GITHUB_STEP_SUMMARY"
 
   # Prepared extension runtimes include the native Bun/OS/architecture identity.
   # Cross-compiling the CLI on Linux alone leaves Apple Silicon doing cold builds.
@@ -363,6 +400,8 @@ jobs:
       ref: ${{ needs.plan.outputs.commit }}
       targets: ${{ needs.plan.outputs.targets }}
       extension_ref: ${{ needs.plan.outputs.extension_ref }}
+      harness_smoke: ${{ needs.plan.outputs.harness_smoke == 'true' }}
+      harness_smoke_baseline: ${{ needs.plan.outputs.harness_smoke_baseline }}
     secrets:
       MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
       MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
@@ -384,9 +423,9 @@ jobs:
       candidate-ref: ${{ needs.plan.outputs.commit }}
 
   # A daily nightly and every stable candidate get the same deep diagnostics.
-  # Publication below waits for this job only for stable releases.
+  # Start advisory nightly diagnostics after the publisher settles so release checks get runners first.
   production:
-    needs: [plan, release_build, containers, desktop]
+    needs: [plan, release_build, containers, desktop, publish_nightly]
     if: ${{ !cancelled() && needs.plan.outputs.release == 'true' }}
     permissions:
       contents: read
@@ -526,6 +565,16 @@ jobs:
           channel: ${{ needs.plan.outputs.channel }}
           previous-tag: ${{ needs.plan.outputs.previous_tag }}
           patch: ${{ inputs.channel == 'patch' }}
+
+      - name: Report dispatch-to-publication time
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          started=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" --jq .created_at)
+          published=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq .published_at)
+          seconds=$(( $(date -d "$published" +%s) - $(date -d "$started" +%s) ))
+          echo "Nightly published in ${seconds}s (target <1800s)." >> "$GITHUB_STEP_SUMMARY"
+          if (( seconds >= 1800 )); then echo "::warning::Nightly exceeded its 30-minute delivery target (${seconds}s)"; fi
 
   # Performance measurements start independently when a candidate exists or after publication.
   # A dispatch failure remains advisory and cannot fail an otherwise delivered release.

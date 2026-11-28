@@ -1,5 +1,11 @@
 import { join } from "node:path";
-import { type BundledExtensionSources, releaseBundleHost, unpackExtension } from "pstdio-extensions/distribution";
+import { isRuntimeCliName } from "pstdio-extensions";
+import {
+  type BundledExtensionSources,
+  readExtensionPackage,
+  releaseBundleHost,
+  unpackExtension,
+} from "pstdio-extensions/distribution";
 
 import type { PreparedNamedInstallSource } from "./install-extension-source-types";
 import { readWarmedExtensionRelease } from "./prepared-release-bundle";
@@ -15,6 +21,25 @@ export const readBundledExtensionSources = async (files = Bun.embeddedFiles) => 
 };
 
 const matchesRelease = (bundle: BundledExtensionSources, ref: string) => bundle.ref === ref || bundle.commit === ref;
+
+const sourceArchive = (files: readonly Blob[], source: EmbeddedSource) =>
+  files.find((file) => assetName(file).endsWith(`extension-sources/${encodeURIComponent(source.installName)}.tgz`));
+
+export const readBundledExtensionRuntimeCli = async (
+  id: string,
+  origin: { url: string; path: string },
+  files = Bun.embeddedFiles,
+) => {
+  const bundled = await readBundledExtensionSources(files);
+  const source = bundled?.sources.find(
+    (entry) => entry.id === id && entry.url === origin.url && entry.path === origin.path,
+  );
+  const archive = source && sourceArchive(files, source);
+  if (!archive) return;
+  const pkg = await readExtensionPackage(new Uint8Array(await archive.arrayBuffer()));
+  const command: unknown = (await pkg.files.get("package.json")?.json())?.pstdio?.runtimeCli;
+  return isRuntimeCliName(command) ? command : undefined;
+};
 
 export const findBundledExtensionSource = async (origin: { url: string; path: string }, ref: string) => {
   const bundle = await readBundledExtensionSources();
@@ -45,8 +70,7 @@ export const prepareBundledExtensionSource = async (
   const descriptor = compatibleDescriptor(source);
   const warmed = descriptor && (await readWarmedExtensionRelease(descriptor, source));
   if (warmed) return { ...warmed, commit: bundle.commit };
-  const suffix = `extension-sources/${encodeURIComponent(source.installName)}.tgz`;
-  const archive = files.find((file) => assetName(file).endsWith(suffix));
+  const archive = sourceArchive(files, source);
   if (!archive) throw new Error(`Packaged extension source is missing: ${source.installName}`);
   const target = join(tempDir, "extension-source", encodeURIComponent(source.installName));
   await unpackExtension(new Uint8Array(await archive.arrayBuffer()), target, source);

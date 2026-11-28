@@ -1,12 +1,17 @@
+import { watch, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
 import { workerData } from "node:worker_threads";
 import { withFileMutationLock } from "pstdio-paths";
 import { runPreparationCommand, withPreparationBuildCommand } from "./preparation-command";
-import { publishPreparationEvent, startPreparationWorker } from "./preparation-server";
+import { type PreparationHandler, publishPreparationEvent, startPreparationWorker } from "./preparation-server";
 
 if (workerData?.startupUrl) await fetch(workerData.startupUrl);
 
+const watchCleanupMarker: string | undefined = workerData?.watchCleanupMarker;
+const watcher = watchCleanupMarker ? watch(dirname(watchCleanupMarker), () => {}) : undefined;
+
 let sequence = 0;
-startPreparationWorker(async (task, data, signal) => {
+const prepare: PreparationHandler = async (task, data, signal) => {
   const input = data as { name?: string; url: string; path: string };
   const spin = () => {
     publishPreparationEvent({ entered: task });
@@ -62,4 +67,10 @@ startPreparationWorker(async (task, data, signal) => {
   }
   signal.throwIfAborted();
   return { name: input.name, sequence: ++sequence };
+};
+
+startPreparationWorker(prepare, () => {
+  if (!watcher || !watchCleanupMarker) return;
+  watcher.close();
+  writeFileSync(watchCleanupMarker, "closed");
 });

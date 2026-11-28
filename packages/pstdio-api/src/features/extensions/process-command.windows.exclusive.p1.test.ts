@@ -159,21 +159,41 @@ test.skipIf(process.platform !== "win32")(
   45_000,
 );
 
-const stream = async (command: string[], env: Record<string, string>) => {
+const stream = async (command: string[], env: Record<string, string>, powerShellStarted?: string) => {
   const scope = createInvocationScope({ logger: { info() {}, warn() {}, error() {} } });
   const child = createProcessApi({ scope }).spawn({ command, env });
-  try {
+  let phase = "waiting for the process to start";
+  const collect = async () => {
     await child.started;
+    phase = "closing stdin";
+    // These output-only commands have no more input for an inherited pipe.
+    await child.end();
+    phase = "collecting events";
     const events = await Array.fromAsync(child.events());
     const output = (type: "stdout" | "stderr") =>
       Buffer.concat(events.flatMap((event) => (event.type === type ? [event.data] : [])))
         .toString()
         .trim();
+    phase = "waiting for exit status";
     const exit = await child.exited;
+    phase = "waiting for the process tree to exit";
     await child.treeExited;
     expect(events.at(-1)).toEqual({ type: "exit", exit });
     return { stdout: output("stdout"), stderr: output("stderr"), exit };
+  };
+  const deadline = Promise.withResolvers<never>();
+  // Leave time for the owner's five-second process-job cleanup before Bun's 45-second deadline.
+  const timer = powerShellStarted
+    ? setTimeout(() => {
+        deadline.reject(
+          new Error(`PowerShell stream stalled while ${phase}, scriptStarted=${existsSync(powerShellStarted)}`),
+        );
+      }, 38_000)
+    : undefined;
+  try {
+    return await Promise.race([collect(), deadline.promise]);
   } finally {
+    clearTimeout(timer);
     await scope.close();
   }
 };
@@ -200,12 +220,15 @@ test.skipIf(process.platform !== "win32")(
   "streams a standalone PowerShell script from a custom PATH",
   async () => {
     const { prefix } = fixture("PowerShell Å tools");
+    const started = join(prefix, "stream-started");
     writeFileSync(
       join(prefix, "stream-only.ps1"),
-      'Write-Output "1.2.3"\n[Console]::Error.WriteLine("PowerShell stderr")',
+      `[System.IO.File]::WriteAllText([System.IO.Path]::Combine($PSScriptRoot, 'stream-started'), 'started')
+Write-Output "1.2.3"
+[Console]::Error.WriteLine("PowerShell stderr")`,
     );
     const env = { PATH: `${prefix};${process.env.PATH ?? ""}`, PATHEXT: ".PS1" };
-    expect(await stream(["stream-only"], env)).toEqual({
+    expect(await stream(["stream-only"], env, started)).toEqual({
       stdout: "1.2.3",
       stderr: "PowerShell stderr",
       exit: { code: 0, signal: null },

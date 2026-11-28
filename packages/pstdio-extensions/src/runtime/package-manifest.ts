@@ -13,6 +13,9 @@ import { parseProcessEnvironmentDeclaration } from "./process-environment-declar
 const ID_SEGMENT_PATTERN = /^[a-z][a-z0-9-]*$/;
 const SEMVER_PATTERN = /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/;
 
+export const isRuntimeCliName = (value: unknown): value is string =>
+  typeof value === "string" && /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(value);
+
 export type ExtensionLoadScope = "user" | "repo";
 
 export interface PackageManifest {
@@ -26,6 +29,8 @@ export interface PackageManifest {
   enginesPstdio: string;
   pstdio?: {
     scope?: ExtensionLoadScope;
+    /** A CLI the host checks before provisioning a prebuilt harness's dependencies. */
+    runtimeCli?: string;
     projectFiles?: { tracked: boolean };
     /** Host variable names the extension may ask the host to pass to the children it starts. */
     processEnvironment?: string[];
@@ -114,6 +119,18 @@ const validatePstdioMetadata = (
     return null;
   }
 
+  const runtimeCli = value.runtimeCli;
+  if (runtimeCli !== undefined && !isRuntimeCliName(runtimeCli)) {
+    diagnostics.push(
+      createDiagnostic({
+        code: "extension_manifest_invalid_value",
+        message: "pstdio.runtimeCli must be an executable name without a path or arguments",
+        sourcePath: packagePath,
+      }),
+    );
+    return null;
+  }
+
   const projectFiles = value.projectFiles;
   if (projectFiles !== undefined) {
     if (!isStringRecord(projectFiles) || typeof projectFiles.tracked !== "boolean") {
@@ -143,9 +160,11 @@ const validatePstdioMetadata = (
     return null;
   }
 
-  if (scope === undefined && projectFiles === undefined && !processEnvironment) return undefined;
+  if (scope === undefined && runtimeCli === undefined && projectFiles === undefined && !processEnvironment)
+    return undefined;
   return {
     ...(scope ? { scope } : {}),
+    ...(runtimeCli ? { runtimeCli } : {}),
     ...(processEnvironment ? { processEnvironment: processEnvironment.names } : {}),
     ...(projectFiles ? { projectFiles: { tracked: projectFiles.tracked as boolean } } : {}),
   };

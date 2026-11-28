@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import type { ExtensionLoggerApi, TerminalEvent } from "pstdio-api-contracts/extension-kernel";
-import { createTerminalSupervisor } from "./extension-terminal-runtime";
+import { createEventQueue, createTerminalSupervisor } from "./extension-terminal-runtime";
 
 interface LogRecord {
   message: string;
@@ -57,6 +57,18 @@ const waitForInitialOutput = async (events: TerminalEvent[]) => {
     await Bun.sleep(10);
   }
 };
+
+test("ignores PTY data that arrives after the exit event", async () => {
+  const queue = createEventQueue();
+  const events = queue.drain();
+  const exit = { kind: "exit", code: 0, signal: null } as const;
+  queue.push(exit);
+  queue.close();
+
+  expect(await events.next()).toEqual({ done: false, value: exit });
+  queue.push({ kind: "data", chunk: Uint8Array.of(65) });
+  expect((await events.next()).done).toBe(true);
+});
 
 test("stops accepting terminal input and resize when shutdown begins", async () => {
   const { logger } = createRecordingLogger();
@@ -151,7 +163,7 @@ describe("terminal supervisor", () => {
     }
   });
 
-  test("opens a session, echoes input, and exits cleanly", async () => {
+  test("delivers shell output before reporting a clean exit", async () => {
     const { logger, records } = createRecordingLogger();
     const supervisor = createTerminalSupervisor({ logger });
     const handle = supervisor.api.openSession({ command: shellCommand(), cols: 80, rows: 24 });
@@ -162,9 +174,9 @@ describe("terminal supervisor", () => {
     })();
 
     await waitForInitialOutput(events);
-    handle.write(line("echo hi-marker"));
-    await Bun.sleep(25);
-    handle.write(line("exit"));
+    // Only real command output contains the full marker. The shell exits immediately after writing it.
+    const command = process.platform === "win32" ? "echo hi-^marker & exit 0" : "printf '%s-%s\\n' hi marker; exit 0";
+    handle.write(line(command));
     await consumed;
 
     expect(decode(events)).toContain("hi-marker");

@@ -152,6 +152,8 @@ export interface KanbanRendererCreateRowConfig {
 
 export interface KanbanRendererCreateSubmission {
   onAdmitted?(): void;
+  onOpenSettled?(): void;
+  canOpenCreatedRow?(): boolean;
   onDiscard?(): void;
   onAttachmentSaved?(file: File): void;
   onSettled?(attachmentError?: unknown): void;

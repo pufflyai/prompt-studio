@@ -181,12 +181,15 @@ describe("installExtensionSource replacement", () => {
     expect(lstatSync(join(target, "node_modules")).isSymbolicLink()).toBe(false);
   });
 
-  test("reuses a locked tree across release and host API changes", async () => {
+  test("reuses a locked tree when version, host API, or runtime CLI metadata changes", async () => {
     writeExistingInstall();
     const previous = JSON.parse(readFileSync(join(source, "package.json"), "utf8"));
     previous.version = "0.48.0";
     previous.engines.pstdio = "^0.5.0";
     writeFileSync(join(target, "package.json"), JSON.stringify(previous));
+    const current = JSON.parse(readFileSync(join(source, "package.json"), "utf8"));
+    current.pstdio = { ...current.pstdio, runtimeCli: "example-cli" };
+    writeFileSync(join(source, "package.json"), JSON.stringify(current));
     for (const directory of [target, source]) writeFileSync(join(directory, "bun.lock"), "same locked tree");
     mkdirSync(join(target, "node_modules", "example"), { recursive: true });
     const runCommand = mock(async () => ({ exitCode: 0, stderr: "", stdout: "" }));

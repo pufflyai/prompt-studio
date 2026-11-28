@@ -679,6 +679,7 @@ test.each([false, true])("team choice follows native recovery and scope retireme
       publishExtensionEvent({ id: accountEvents.changed.id }, owner);
       await until(() => choice.entry?.presence === "downloaded");
     });
+    await act(async () => until(() => closed === 1));
     expect(opened).toEqual([
       {
         command: dashboardCommandIds.selectProject,

@@ -1,15 +1,15 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { execFileSync } from "node:child_process";
 import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { TEST_TIMEOUT } from "../cli/timeouts";
-import { buildBinary } from "./packaged-helpers";
+import { runTestCommand } from "../scripts/run-test-command";
+import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
+import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 
 const REPO_ROOT = join(import.meta.dirname, "../../../..");
 const PACKAGE_JSON = join(REPO_ROOT, "packages/pstdio/package.json");
 const BIN_ENTRYPOINT = join(REPO_ROOT, "packages/pstdio/bin/pstdio.cjs");
-const BINARY_PATH = process.env.E2E_PACKAGED_BINARY_PATH ?? join(REPO_ROOT, "dist/pstdio");
 const BUILD_TIMEOUT = 180_000;
 
 let sandbox: string;
@@ -35,7 +35,7 @@ beforeAll(() => {
 
   mkdirSync(pkgDir, { recursive: true });
   writeFileSync(join(pkgDir, "package.json"), JSON.stringify({ name: platformPkg, main: "./index.cjs" }));
-  writeFileSync(join(pkgDir, "index.cjs"), `module.exports = ${JSON.stringify(BINARY_PATH)};\n`);
+  writeFileSync(join(pkgDir, "index.cjs"), `module.exports = ${JSON.stringify(PACKAGED_BINARY_PATH)};\n`);
 }, BUILD_TIMEOUT);
 
 afterAll(() => {
@@ -50,14 +50,13 @@ describe("npm entrypoint (bin/pstdio.cjs via node)", () => {
 
   test(
     "runs --version through the node entrypoint",
-    () => {
-      const output = execFileSync("node", [entrypoint, "--version"], {
+    async () => {
+      const { stdout } = await runTestCommand("node", [entrypoint, "--version"], {
         cwd: sandbox,
-        encoding: "utf8",
         timeout: TEST_TIMEOUT,
       });
-      expect(output.trim()).toMatch(/\d+\.\d+\.\d+/);
+      expect(stdout.trim()).toMatch(/\d+\.\d+\.\d+/);
     },
-    TEST_TIMEOUT,
+    PACKAGED_TEST_TIMEOUT,
   );
 });

@@ -45,9 +45,10 @@ describe.if(enabled)("installed OpenCode CLI", () => {
     expect(await detectOpencode(context)).toMatchObject({ available: true });
   });
 
+  // A cold model lookup initializes OpenCode's catalog before returning any models.
   test("lists its models", async () => {
     expect((await harness.listModels!(context)).length).toBeGreaterThan(0);
-  });
+  }, 30_000);
 
   test("keeps native free models available without sign-in", async () => {
     expect((await harness.getAuthentication!(context, { model: "opencode/big-pickle" })).status).toBe("not_required");

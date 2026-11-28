@@ -139,7 +139,7 @@ export const LongDescription: Story = {
     />
   ),
 };
-/** Submitting: every control is disabled while the create command runs. */
+/** Create and open keeps the form visible until the saved ticket can open. */
 export const Submitting: Story = {
   id: "patterns-kanban-renderer-create-dialog--submitting",
   args: {} as never,
@@ -206,7 +206,8 @@ const PendingCreationFrame = () => {
   return (
     <Harness
       config={{ ...config, fields: [{ ...config.fields[0], defaultValue: "Review project setup" }, config.fields[1]] }}
-      onSubmit={({ values, onAdmitted }) => {
+      onSubmit={({ values, onAdmitted, openCreatedRow }) => {
+        if (openCreatedRow !== false) return new Promise<void>((resolve) => setTimeout(resolve, 1_500));
         setTitle(String(values.content));
         onAdmitted?.();
         return new Promise<void>((resolve) => setConfirm(() => resolve));

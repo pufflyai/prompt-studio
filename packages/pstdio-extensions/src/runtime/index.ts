@@ -41,6 +41,7 @@ export { toSettingDefinitionRecord } from "./normalize/settings";
 export {
   type ExtensionLoadScope,
   getExtensionApiVersionError,
+  isRuntimeCliName,
   type PackageManifest,
   type ReadPackageManifestResult,
   readPackageManifest,

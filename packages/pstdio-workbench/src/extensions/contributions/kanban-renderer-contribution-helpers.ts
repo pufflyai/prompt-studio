@@ -1,5 +1,6 @@
 import type {
   CollectionPage,
+  PageParams,
   KanbanRendererBoardColumnConfig as WireBoardColumnConfig,
   NavigationTarget as WireNavigationTarget,
 } from "@pstdio/sdk/extensions";
@@ -11,8 +12,12 @@ import type {
   ReactAttributeDescriptor as AttributeDescriptor,
   ReactKanbanRendererContribution as KanbanRendererContribution,
 } from "../../react/renderers/kanban/kanban-presentation";
-import type { WorkbenchExtensionCommandContext } from "../host/workbench-extension-command";
-import { createExtensionSlot, executeWorkbenchExtensionCommand } from "../host/workbench-extension-command";
+import {
+  createExtensionSlot,
+  type ExecuteWorkbenchExtensionCommandInput,
+  executeWorkbenchExtensionCommand,
+  type WorkbenchExtensionCommandContext,
+} from "../host/workbench-extension-command";
 export type KanbanRendererRow = Awaited<ReturnType<KanbanRendererContribution["executeQuery"]>>[number];
 export type RowAction = NonNullable<WorkbenchExtensionKanbanRendererRecord["rowActions"]>[number];
 export type QueryResult = {
@@ -220,7 +225,7 @@ const createKanbanRendererSlot = (
 export const prepareKanbanCreationFeedback = (
   submission: import("../../core/registries/renderers/kanban-renderer-registry").KanbanRendererCreateRequest,
 ): import("../host/workbench-create-operation").CreateOperationFeedback => {
-  const { originatingRead, columnId, values } = submission;
+  const { originatingRead, columnId, values, openCreatedRow } = submission;
   const { title, content } = values;
   const label =
     typeof title === "string" ? title : deriveMarkdownTitle(typeof content === "string" ? content : "", "New item");
@@ -228,7 +233,10 @@ export const prepareKanbanCreationFeedback = (
     onAdmitted: submission.onAdmitted,
     onDiscard: submission.onDiscard,
     originatingRead,
-    board: originatingRead && columnId ? { viewKey: originatingRead.key, columnId, title: label } : undefined,
+    board:
+      originatingRead && columnId
+        ? { viewKey: originatingRead.key, columnId, title: label, openCreatedRow: openCreatedRow !== false }
+        : undefined,
   };
 };
 
@@ -238,12 +246,14 @@ export const executeKanbanRendererCommand = (
   commandId: string,
   params: Record<string, unknown>,
   resource?: ResourceRef,
-  signal?: AbortSignal,
-  pageParams?: import("@pstdio/sdk/extensions").PageParams,
-  createFeedback?: import("../host/workbench-create-operation").CreateOperationFeedback,
+  options?: Pick<ExecuteWorkbenchExtensionCommandInput, "signal" | "createFeedback" | "isViewerCurrent"> & {
+    pageParams?: PageParams;
+  },
 ) => {
   const commandResource = resource ?? context.workbench.getPrimaryResource();
+  const { pageParams, ...invocation } = options ?? {};
   return executeWorkbenchExtensionCommand(context, commandId, {
+    ...invocation,
     params: {
       renderer: {
         rendererId: record.id,
@@ -255,8 +265,6 @@ export const executeKanbanRendererCommand = (
       ...params,
     },
     resource: commandResource,
-    signal,
-    createFeedback,
     slot: createKanbanRendererSlot(context, record),
     metadata: { kanbanRendererId: record.id },
   });

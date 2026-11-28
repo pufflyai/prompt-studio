@@ -29,6 +29,13 @@ on:
         description: Git revision packaged apps install core extensions from (defaults to the tag)
         required: false
         type: string
+      harness_smoke:
+        description: Verify the harnesses in the packaged app before publishing
+        type: boolean
+        default: false
+      harness_smoke_baseline:
+        description: Published release whose app home the candidate must reopen
+        type: string
     secrets:
       MACOS_CERTIFICATE:
         required: true
@@ -102,8 +109,8 @@ jobs:
           ref: ${{ inputs.ref }}
           fetch-depth: 0
 
-      # Older patch candidates may contain the Node-specific installer.
-      - name: Check out the workflow's native installer
+      # Older patch candidates may lack the current release tools.
+      - name: Check out the workflow's release tools
         uses: actions/checkout@v5
         with:
           ref: ${{ github.workflow_sha }}
@@ -111,6 +118,18 @@ jobs:
           sparse-checkout: |
             /scripts/ci/install-native-dependencies.ts
             /scripts/ci/native-dependency-environment.ts
+            /clients/desktop/src/e2e/release/
+            /packages/e2e/src/packaged/packaged-codex.fixture.ts
+            /packages/e2e/package.json
+            /packages/e2e/src/cli/timeouts.ts
+            /packages/e2e/src/packaged/packaged-harness-smoke.ts
+            /packages/e2e/src/packaged/packaged-helpers.ts
+            /packages/e2e/src/packaged/packaged-package-cache.ts
+            /packages/e2e/src/packaged/packaged-serve-helpers.ts
+            /packages/e2e/src/scripts/child-process.ts
+            /packages/e2e/src/scripts/pending-test-processes.ts
+            /packages/e2e/src/scripts/process-readiness.ts
+            /packages/e2e/src/scripts/run-test-command.ts
           sparse-checkout-cone-mode: false
 
       - name: Isolate hosted Intel runner indexing
@@ -305,6 +324,75 @@ jobs:
         run: bun scripts/test.ts clients/desktop/src/e2e/upgrade --lane stable --prebuilt
         env:
           PLAN_DISPLAY: ${{ matrix.platform == 'linux' }}
+
+      - name: Verify critical workflows on the packaged desktop before publication
+        shell: bash
+        env:
+          PLAN_DISPLAY: ${{ matrix.platform == 'linux' }}
+          CI_PLAN_OUTPUT_DIR: test-results/ci/critical-workflows
+        run: |
+          set -euo pipefail
+          suite=clients/desktop/src/e2e/release
+          workflow=__test-tmp__/native-installer
+          # Patch candidates can predate the current release checks.
+          mkdir -p "$suite"
+          cp -R "$workflow/$suite/." "$suite/"
+          fixture=packages/e2e/src/packaged/packaged-codex.fixture.ts
+          cp "$workflow/$fixture" "$fixture"
+          mkdir -p "$CI_PLAN_OUTPUT_DIR"
+          bun scripts/test.ts "$suite" --lane stable --prebuilt --out "$CI_PLAN_OUTPUT_DIR/plan.json"
+          bun -e '
+            import { join } from "node:path";
+            const root = process.env.CI_PLAN_OUTPUT_DIR;
+            const { runs } = await Bun.file(join(root, "plan.json")).json();
+            for (const run of runs) {
+              const { cases } = await Bun.file(join(root, run.id, "browser.json")).json();
+              const reportedFiles = new Set(cases.map(({ file }) => file));
+              if (run.quarantineIds.length || !run.files.every((file) => reportedFiles.has(file)) ||
+                  cases.some(({ outcome }) => outcome !== "passed")) {
+                throw new Error(`Critical workflow cases must all pass in ${run.files.join(", ")}`);
+              }
+            }'
+
+      - name: Preserve critical packaged workflow evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: critical-workflows-${{ matrix.target }}-attempt-${{ github.run_attempt }}
+          path: |
+            test-results/ci/critical-workflows
+            clients/desktop/test-results/packaged
+          if-no-files-found: warn
+
+      - name: Smoke test packaged native harnesses before publication
+        if: inputs.harness_smoke && env.PSTDIO_PREBUILD_UPGRADE_TOOLS == '1'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASELINE: ${{ inputs.harness_smoke_baseline }}
+          TARGET: ${{ matrix.target }}
+        run: |
+          set -euo pipefail
+          if [[ "$TARGET" == darwin-arm64 ]]; then
+            candidate="clients/desktop/out/Prompt Studio-darwin-arm64/Prompt Studio.app/Contents/Resources/bin/pstdio"
+          else
+            candidate="clients/desktop/out/prompt-studio-linux-x64/resources/bin/pstdio"
+          fi
+          test -x "$candidate"
+          previous=
+          if [[ -n "$BASELINE" ]]; then
+            baseline_dir="$RUNNER_TEMP/harness-smoke-baseline"
+            asset="pstdio-$TARGET"
+            gh release download "$BASELINE" --pattern "$asset" --pattern checksums.sha256 --dir "$baseline_dir"
+            (
+              cd "$baseline_dir"
+              awk -v asset="$asset" '$2 == asset { print; found=1 } END { if (!found) exit 1 }' checksums.sha256 | shasum -a 256 --check
+            )
+            chmod +x "$baseline_dir/$asset"
+            previous="$baseline_dir/$asset"
+          fi
+          unset GH_TOKEN
+          bun run --cwd __test-tmp__/native-installer/packages/e2e test:packaged:harnesses "$PWD/$candidate" "$previous"
 
       - name: Verify macOS signatures and notarization
         if: matrix.platform == 'darwin' && !cancelled() && success()

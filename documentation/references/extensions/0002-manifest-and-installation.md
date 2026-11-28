@@ -40,6 +40,10 @@ Optional fields:
 - SVG images retain their own colors. For a monochrome `currentColor` SVG, define its color inside the asset. A `prefers-color-scheme` media rule follows the embedding app's light/dark `color-scheme`; it does not inherit the surrounding text color.
 - Catalogs may provide a Lucide name or a public SVG data URL. Repository catalog entries can use the same `./assets/icon.svg` declaration as the manifest: the host build embeds its bytes for discovery independently of source-archive inclusion. Embedded icons are keyed by the exact catalog package origin, full ID, install name, and declared asset path; an operator catalog cannot borrow a stock icon merely by reusing its install name. External catalogs must supply their own display metadata.
 - `pstdio.scope`: install/load scope, either `user` or `repo`. Defaults to `user`.
+- `pstdio.runtimeCli`: executable name for a prebuilt harness, such as `codex`. Declare the private CLI
+  package in `dependencies` and pin it in the Bun lockfile. Before an action needs the CLI, Prompt Studio
+  checks the runtime PATH and then reuses or installs the private dependency tree if needed. The
+  harness retains responsibility for resolving and validating the executable.
 - `pstdio.backendRuntime`: no longer used. Every backend runs in its own worker process; see
   [Process runtime](#process-runtime). Packages that still set it load unchanged, and the host
   ignores the value.

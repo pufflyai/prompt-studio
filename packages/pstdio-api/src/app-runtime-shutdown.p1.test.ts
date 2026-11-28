@@ -51,18 +51,35 @@ test("a blocked shutdown records its entered phase when ordinary request logs ar
   }
 });
 
-test.each([
-  ["cleanup succeeds", false, false],
-  ["process and worker cleanup fail", true, false],
-  ["process, worker, and database cleanup fail", true, true],
-] as const)("an early shutdown failure still closes extension processes when %s", async (_, stopFails, dbFails) => {
+const harnessShutdownCases: Array<
+  [
+    string,
+    { runtimeFails?: boolean; stopFails?: boolean; dbFails?: boolean; harnessOutcome?: "rejected" | "timed_out" },
+  ]
+> = [
+  ["the runtime stops cleanly", {}],
+  ["the runtime fails to stop", { runtimeFails: true }],
+  ["runtime, process, and worker cleanup fail", { runtimeFails: true, stopFails: true }],
+  ["runtime, process, worker, and database cleanup fail", { runtimeFails: true, stopFails: true, dbFails: true }],
+  ["harness cleanup fails", { harnessOutcome: "rejected" }],
+  ["harness cleanup misses its deadline", { harnessOutcome: "timed_out" }],
+];
+
+test.each(
+  harnessShutdownCases,
+)("shutdown keeps backend workers available during the harness cleanup allowance when %s", async (_, options) => {
+  const { runtimeFails, stopFails, dbFails, harnessOutcome } = options;
   const runtimeFailure = new Error("extension runtime did not stop");
   const processFailure = new Error("process cleanup failed");
+  const harnessFailure = new Error("harness cleanup failed");
   const workerFailure = new Error("worker cleanup failed");
   const databaseFailure = new Error("database cleanup failed");
+  const harnessEntered = Promise.withResolvers<void>();
+  const releaseHarness = Promise.withResolvers<void>();
   const order: string[] = [];
   const done = async () => {};
   const close = createAppCloser({
+    harnessShutdownGraceMs: harnessOutcome === "timed_out" ? 0 : undefined,
     closeBackendWorkers: async () => {
       order.push("workers");
       if (stopFails) throw workerFailure;
@@ -75,7 +92,7 @@ test.each([
     unsubscribeExtensionEvents: () => {},
     extensionRuntime: {
       dispose: async () => {
-        throw runtimeFailure;
+        if (runtimeFails) throw runtimeFailure;
       },
     },
     extensionScheduler: { dispose: done },
@@ -98,13 +115,40 @@ test.each([
     },
     stopQueueReadiness: done,
     sessionQueueLifecycle: { close: done } as never,
-    harnessRegistry: { dispose: done } as never,
+    harnessRegistry: {
+      dispose: async () => {
+        harnessEntered.resolve();
+        await releaseHarness.promise;
+        order.push("harness");
+        if (harnessOutcome) throw harnessFailure;
+      },
+    } as never,
     extensionInstallations: { dispose: done } as never,
     nativeDocuments: { dispose: done },
     textEditing: { dispose: done },
   });
-  const failure = await close().catch((error) => error);
-  expect(order).toEqual(["processes", "workers", "account", "database"]);
+  const closing = close().catch((error) => error);
+  try {
+    await harnessEntered.promise;
+    if (harnessOutcome === "timed_out") {
+      // Missing the allowance is not a failure: shutdown stops waiting and exits cleanly.
+      expect(await closing).toBeUndefined();
+      expect(order).toEqual(["processes", "workers", "account", "database"]);
+      releaseHarness.resolve();
+      // The late harness failure is logged, not recorded or left unhandled.
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      expect(order).toEqual(["processes", "workers", "account", "database", "harness"]);
+      return;
+    }
+    // Give synchronous cleanup and its promise continuations a turn while the harness is held.
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    expect(order).toEqual(["processes"]);
+  } finally {
+    releaseHarness.resolve();
+    await closing;
+  }
+  const failure = await closing;
+  expect(order).toEqual(["processes", "harness", "workers", "account", "database"]);
   if (stopFails) {
     expect(failure).toBeInstanceOf(AggregateError);
     expect(failure.cause).toBe(runtimeFailure);
@@ -114,7 +158,10 @@ test.each([
       workerFailure,
       ...(dbFails ? [databaseFailure] : []),
     ]);
-  } else expect(failure).toBe(runtimeFailure);
+  } else {
+    const failureBeforeHarnesses = runtimeFails ? runtimeFailure : undefined;
+    expect(failure).toBe(harnessOutcome === "rejected" ? harnessFailure : failureBeforeHarnesses);
+  }
 });
 
 test("a forced shutdown still stops terminals and jobs when a session's harness fails to stop", async () => {

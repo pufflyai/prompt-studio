@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { access, readFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { resolvePstdioHome } from "pstdio-paths";
 import type { ExtensionDiagnostic } from "../types/runtime";
@@ -12,6 +13,10 @@ import { runtimeHostKey } from "./runtime-cache";
 export const PREPARATION_FORMAT = 4;
 export const preparationHostIdentity = () =>
   `${PREPARATION_FORMAT}:${EXTENSION_API_VERSION}:${runtimeHostKey}:${process.platform}:${process.arch}`;
+// A release runtime is compiled once for every executable sharing this identity.
+export const releaseBundleHost = () =>
+  [PREPARATION_FORMAT, EXTENSION_API_VERSION, Bun.version, Bun.revision, process.platform, process.arch].join(":");
+export const releaseBundleManifest = "release-bundle.json";
 export const revisionDigest = (value: string) => createHash("sha256").update(value).digest("hex");
 export const preparedCacheRoot = () => join(resolvePstdioHome(), "cache", "extension-revisions");
 export const acceptedRevisionPath = (sourcePath: string) =>
@@ -38,12 +43,26 @@ export interface PreparedExtensionRevision {
   webviews?: Record<string, { id: string; distDir: string }>;
 }
 
+// A release install has no dependency tree to rebuild from. Its runtime stays valid for a
+// new executable while that executable still matches the bundle host the release was verified for.
+export const runsOnThisHost = (revision: PreparedExtensionRevision | null) => {
+  if (!revision) return false;
+  if (revision.host === preparationHostIdentity()) return true;
+  if (!revision.prebuiltRelease) return false;
+  try {
+    const bundle = JSON.parse(readFileSync(join(dirname(revision.packagePath), releaseBundleManifest), "utf8"));
+    return bundle.host === releaseBundleHost();
+  } catch {
+    return false;
+  }
+};
+
 // This is deliberately the entire foreground cache check. Freshness is checked later in the
 // worker; source hashing here would put the same scan back on the startup critical path.
 export const readAcceptedRevision = async (sourcePath: string) => {
   try {
     const revision: PreparedExtensionRevision = JSON.parse(await readFile(acceptedRevisionPath(sourcePath), "utf8"));
-    if (revision.host !== preparationHostIdentity()) return null;
+    if (!runsOnThisHost(revision)) return null;
     await Promise.all([
       access(revision.entryPath),
       access(join(revision.packagePath, "package.json")),

@@ -86,7 +86,12 @@ export const RendererCreateDialog = (props: RendererCreateDialogProps) => {
         draftKey={JSON.stringify([contribution.id, contribution.storageScope, draftAuthority, "create"])}
         filter={contribution.defaultFilter}
         onClose={onClose}
-        onSubmit={(submission) => contribution.onCreateRow!({ ...submission, canOpenCreatedRow })}
+        onSubmit={(submission) =>
+          contribution.onCreateRow!({
+            ...submission,
+            canOpenCreatedRow: () => submission.canOpenCreatedRow?.() !== false && canOpenCreatedRow(),
+          })
+        }
       />
     );
   return (

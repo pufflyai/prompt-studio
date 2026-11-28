@@ -56,10 +56,13 @@ test("makes notifications opt-in and reflects settings from another client", asy
   await expect(page.getByRole("alert").filter({ hasText: "Save failed" })).toHaveCount(0);
   await page.keyboard.press("Escape");
   await expect(toggle).not.toBeVisible();
-  const activity = page.locator('[data-status-bar-item="workbench.system-activity"]');
-  await activity.click();
-  await expect(page.getByRole("button", { name: "Copy draft" })).toBeVisible();
-  await page.getByRole("button", { name: "Return to source" }).click();
+  await page.keyboard.press("Alt+Shift+K");
+  const palette = page.getByRole("dialog", { name: "Command palette" });
+  await palette.getByRole("textbox").fill(">Recover changes");
+  await palette.getByRole("option", { name: "Recover changes", exact: true }).click();
+  const recovery = page.getByRole("dialog", { name: "Recover changes" });
+  await expect(recovery.getByRole("button", { name: "Copy draft" })).toBeVisible();
+  await recovery.getByRole("button", { name: "Return to source" }).click();
   await expect(toggle).toBeVisible();
   await page.locator("label").filter({ has: toggle }).click();
   await expect(nav).toBeVisible();

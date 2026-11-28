@@ -70,6 +70,19 @@ describe("readPackageManifest", () => {
     expect(result.diagnostics).toEqual([]);
   });
 
+  test.each(["../runner", "runner --flag"])("rejects an invalid runtime CLI name %s", (runtimeCli) => {
+    const dir = createPackage({
+      name: "example-harness",
+      version: "1.0.0",
+      publisher: "example",
+      main: "./extension.ts",
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
+      pstdio: { runtimeCli },
+    });
+
+    expect(readPackageManifest(dir).manifest).toBeNull();
+  });
+
   test("reads repo file tracking when declared", () => {
     const dir = createPackage({
       name: "repo-extension",

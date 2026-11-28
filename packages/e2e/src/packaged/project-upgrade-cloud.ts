@@ -4,10 +4,11 @@ import { join } from "node:path";
 import { expect } from "@playwright/test";
 import { createClient, PstdioConnectionError } from "@pstdio/sdk/client";
 import { signInDevice, writeCertificate } from "./packaged-folder-recovery.fixture";
-import { startPackagedServe, stopProcess } from "./packaged-serve-helpers";
+import { startPackagedServe } from "./packaged-serve-helpers";
 import { createPackagedSyncPeer } from "./packaged-sync-relay.fixture";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 import { installUpgradePlanner, planner, seedUpgradeProject, upgradeApi } from "./project-upgrade-fixture";
+import { stopUpgradeProcess } from "./project-upgrade-shutdown";
 
 export const checkCloudProjectUpgrade = async (
   home: string,
@@ -41,12 +42,12 @@ export const checkCloudProjectUpgrade = async (
     return { home: directory, host, client: createClient({ baseUrl: host.baseUrl, token: host.descriptor.token }) };
   };
   const stop = async (device: Awaited<ReturnType<typeof start>>) => {
-    await stopProcess(device.host.child);
+    await stopUpgradeProcess(device.host.child);
     running.delete(device.host);
   };
   const stopAll = async () => {
     try {
-      const stopped = await Promise.allSettled([...running].map((host) => stopProcess(host.child)));
+      const stopped = await Promise.allSettled([...running].map((host) => stopUpgradeProcess(host.child)));
       return stopped.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
     } finally {
       peer.stop();
@@ -54,7 +55,6 @@ export const checkCloudProjectUpgrade = async (
   };
   try {
     let a = await start("a", baseline, "baseline");
-    let b = await start("b", baseline, "baseline");
     const seed = await seedUpgradeProject(upgradeApi(a.host.descriptor), { home: a.home, evidence, profile: "active" });
     const commands = (device: typeof a) => planner(upgradeApi(device.host.descriptor), seed.id);
     const content = async (device: typeof a, ticket = seed.firstTicket) =>
@@ -70,6 +70,9 @@ export const checkCloudProjectUpgrade = async (
         timeout: PACKAGED_TEST_TIMEOUT,
       })
       .toBe(true);
+    // Released hosts provision their default tools on first launch. Finish the first
+    // device's project setup before the second cold install competes for the runner.
+    let b = await start("b", baseline, "baseline");
     await signInDevice(b, peer.origin);
     await expect
       .poll(async () => (await b.client.projects.query()).items.some((p) => p.id === seed.id), {
