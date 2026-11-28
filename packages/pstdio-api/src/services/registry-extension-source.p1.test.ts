@@ -472,7 +472,13 @@ test("switches one project to a separate published provider and preserves the lo
   expect(await applied.json()).toMatchObject({
     upgrade: { changed: true, extension: { version: "0.45.2", enabled: true } },
   });
-  expect((await service.getProjectExtensionInstance(primary, local.instance.id))?.instance.enabled).toBe(false);
+  const primaryExtensions = (await service.listProjectExtensionInstances(primary)).filter(
+    ({ instance }) => instance.extension_id === local.instance.extension_id,
+  );
+  expect(primaryExtensions).toMatchObject([
+    { instance: { enabled: true }, installedSource: { source_kind: "registry", version: "0.45.2" } },
+  ]);
+  expect(await service.getProjectExtensionInstance(primary, local.instance.id)).toBeNull();
   expect((await service.getProjectExtensionInstance(secondary, other.instance.id))?.instance.enabled).toBe(true);
   expect(await readFile(localNote, "utf8")).toBe("edited during review");
 });

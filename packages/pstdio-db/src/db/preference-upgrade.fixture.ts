@@ -10,7 +10,7 @@ import { restoreTextStorageOwners } from "./storage-owner-upgrade.fixture";
 // Released homes could attach several sources for one extension. Seed those
 // rows directly so migration fixtures exercise that shape through startup.
 export const seedLegacyProjectExtension = async (
-  connection: Awaited<ReturnType<typeof createDb>>,
+  connection: Pick<Awaited<ReturnType<typeof createDb>>, "db">,
   input: Pick<typeof project_extensions.$inferInsert, "project_id" | "extension_ref" | "enabled" | "config_json">,
 ) => {
   const timestamp = new Date().toISOString();

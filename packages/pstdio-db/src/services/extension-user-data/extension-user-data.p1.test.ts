@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { createDb } from "../../db/connection.pglite";
+import { seedLegacyProjectExtension } from "../../db/preference-upgrade.fixture";
 import { files, projects } from "../../db/schemas.pg";
 import { createExtensionFilesDBService } from "../extension-files/extension-files";
 import { createExtensionInstancesDBService } from "../extension-instances/extension-instances";
@@ -83,7 +84,7 @@ afterEach(async () => {
 });
 
 describe("extensionUserDataService", () => {
-  test("removing one provider preserves the stable owner while another disabled provider references it", async () => {
+  test("removing a legacy duplicate preserves data for the remaining installation", async () => {
     const source = await createInstalledExtensionSourcesDBService(db).register({
       install_name: "other",
       extension_id: "ext.example",
@@ -91,12 +92,14 @@ describe("extensionUserDataService", () => {
       source_kind: "local_path",
       source_path: "/builtin/other",
     });
-    const other = await createExtensionInstancesDBService(db).create({
-      installed_extension_id: source.id,
-      scope_type: "project",
-      scope_id: projectId,
-      enabled: false,
-    });
+    const other = await seedLegacyProjectExtension(
+      { db },
+      {
+        extension_ref: source.id,
+        project_id: projectId,
+        enabled: false,
+      },
+    );
     const storage = createExtensionStorageDBService(db);
     const scope = { extension_instance_id: other.id, scope_type: "project", scope_id: projectId };
     await storage.setKv({ ...scope, key: "retained-by-second", value_json: "keep" });

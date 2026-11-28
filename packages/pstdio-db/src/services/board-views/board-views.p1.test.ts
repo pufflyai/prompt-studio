@@ -169,7 +169,7 @@ test("saved defaults remain unique and built-in defaults stay scoped", async () 
   expect(await service.getDefault({ ...scope, board_id: "other" })).toBeNull();
 });
 
-test("removing one provider preserves shared board views and defaults for the remaining provider", async () => {
+test("replacing the selected source preserves its shared board views and defaults", async () => {
   const source = await createInstalledExtensionSourcesDBService(connection.db).register({
     install_name: "alternate-boards",
     extension_id: "test.boards",
@@ -177,16 +177,18 @@ test("removing one provider preserves shared board views and defaults for the re
     source_kind: "local_path",
     source_path: "/alternate-boards",
   });
-  await createExtensionInstancesDBService(connection.db).create({
-    installed_extension_id: source.id,
-    scope_type: "project",
-    scope_id: scope.project_id,
-    enabled: false,
-  });
   const view = await service.create({ ...scope, title: "Shared custom view", settings, ...unfiltered });
   await service.setDefault(scope, view.id);
-  await createExtensionUserDataDBService(connection.db).deleteForInstance(instanceId);
-  await createExtensionInstancesDBService(connection.db).remove(instanceId);
+  const instances = createExtensionInstancesDBService(connection.db);
+  const [replacement] = await instances.activateProjectSources([
+    {
+      projectId: scope.project_id,
+      extensionId: scope.extension_id,
+      installedSourceId: source.id,
+      instanceId,
+    },
+  ]);
+  expect(await instances.list({ scope_id: scope.project_id })).toEqual([replacement!.instance]);
   expect(await service.get(scope.project_id, view.id)).not.toBeNull();
   expect((await service.getDefault(scope))?.default_view_id).toBe(view.id);
 });

@@ -6,27 +6,27 @@ import { createInstalledExtensionSourcesDBService } from "../installed-extension
 import { createProjectsDBService } from "../projects/projects";
 import { createExtensionFilesDBService } from "./extension-files";
 
-test("extension files remain accessible through another provider for the same stable owner", async () => {
+test("extension files remain accessible after selecting another source for the same stable owner", async () => {
   const store = await createDb({ path: ":memory:" });
   try {
     const project = await createProjectsDBService(store.db).create({ name: "Files" });
-    const instances = [];
-    for (const suffix of ["a", "b"]) {
-      const source = await createInstalledExtensionSourcesDBService(store.db).register({
+    const sources = createInstalledExtensionSourcesDBService(store.db);
+    const register = (suffix: string) =>
+      sources.register({
         install_name: `files-${suffix}`,
         extension_id: "example.files",
         display_name: "Files",
         source_kind: "local_path",
         source_path: `/files-${suffix}`,
       });
-      instances.push(
-        await createExtensionInstancesDBService(store.db).create({
-          installed_extension_id: source.id,
-          scope_type: "project",
-          scope_id: project.id,
-        }),
-      );
-    }
+    const initial = await register("a");
+    const alternate = await register("b");
+    const instances = createExtensionInstancesDBService(store.db);
+    const before = await instances.create({
+      installed_extension_id: initial.id,
+      scope_type: "project",
+      scope_id: project.id,
+    });
     const stamp = "2026-11-20T12:00:00.000Z";
     const file = {
       id: crypto.randomUUID(),
@@ -44,13 +44,24 @@ test("extension files remain accessible through another provider for the same st
     const service = createExtensionFilesDBService(store.db);
     const scope = {
       project_id: project.id,
-      extension_instance_id: instances[0].id,
+      extension_instance_id: before.id,
       scope_type: "resource",
       scope_id: "drawing",
     };
     await service.attach({ ...scope, file_id: file.id });
-    expect(await service.list({ ...scope, extension_instance_id: instances[1].id })).toEqual([file]);
-    expect(await service.getOwnedFile({ ...scope, extension_instance_id: instances[1].id, file_id: file.id })).toEqual({
+    const [replacement] = await instances.activateProjectSources([
+      {
+        projectId: project.id,
+        extensionId: alternate.extension_id,
+        installedSourceId: alternate.id,
+        instanceId: before.id,
+      },
+    ]);
+    expect(await instances.list({ scope_id: project.id })).toEqual([replacement!.instance]);
+    expect(await service.list({ ...scope, extension_instance_id: replacement!.instance.id })).toEqual([file]);
+    expect(
+      await service.getOwnedFile({ ...scope, extension_instance_id: replacement!.instance.id, file_id: file.id }),
+    ).toEqual({
       ...file,
       scope_type: "resource",
       scope_id: "drawing",
