@@ -1,6 +1,6 @@
 import { Stack } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { KanbanRenderer } from "./kanban-renderer";
 import type { AttributeDescriptor } from "./types";
 
@@ -25,7 +25,15 @@ const rows = Array.from({ length: 250 }, (_, index) => ({
 }));
 const PagedBoard = () => {
   const [loaded, setLoaded] = useState(100);
-  const [onLoadMore] = useState(() => () => setLoaded((count) => Math.min(rows.length, count + 50)));
+  const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    if (!loading) return;
+    const timer = setTimeout(() => {
+      setLoaded((count) => Math.min(rows.length, count + 50));
+      setLoading(false);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [loading]);
   return (
     <Stack height="600px">
       <KanbanRenderer
@@ -45,8 +53,8 @@ const PagedBoard = () => {
               { field: "status", value: "todo", count: 75 },
             ],
           },
-          loading: false,
-          onLoadMore,
+          loading,
+          onLoadMore: () => setLoading(true),
           onPageChange: () => {},
           onPageSizeChange: () => {},
           onSearchChange: () => {},
@@ -65,5 +73,6 @@ export default meta;
 type Story = CanvasFrame<typeof meta>;
 export const UnloadedColumn: Story = {
   id: "patterns-kanban-renderer-paged-board--unloaded-column",
-  description: "A visible empty column loads through successive pages. Scroll near the last card to continue.",
+  description:
+    "A visible empty column shows a card skeleton while it loads. Dragging a card pauses the loading indicator.",
 };

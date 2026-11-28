@@ -178,6 +178,7 @@ test("status moves keep loaded pages visible and the next scroll still appends",
   });
   expect(refreshStarted).toBe(true);
   expect(board.page?.loading).toBe(false);
+  expect(board.page?.onLoadMore).toBeUndefined();
   expect(board.rows.map(({ id }) => id)).toEqual(["0", "1", "2", "3"]);
   expect(board.rows[0].attributes.status).toBe("done");
   expect(board.rows[2]).toBe(untouched);
@@ -192,6 +193,7 @@ test("status moves keep loaded pages visible and the next scroll still appends",
   });
   expect(revision).toBe(2);
   expect(board.rows[2]).toBe(untouched);
+  expect(board.page?.onLoadMore).toBeFunction();
   await act(async () => board.page?.onLoadMore?.());
   expect(board.rows.map(({ id }) => id)).toEqual(["0", "1", "2", "3", "4", "5"]);
 });

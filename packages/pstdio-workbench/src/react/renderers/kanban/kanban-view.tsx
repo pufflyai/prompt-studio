@@ -271,7 +271,7 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
     <WorkbenchKanbanViewFrame>
       {read.value ? readNotice : null}
       <Renderer
-        page={pages.controls(read.value?.page, read.loading, paged, read.value?.position)}
+        page={pages.controls(read.value?.page, read.loading, paged, read.value?.position, mutations.isSaving())}
         itemLabel={
           contribution.resourceKind ? workbench.resources.getKind(contribution.resourceKind)?.label : undefined
         }

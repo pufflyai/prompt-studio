@@ -5,7 +5,7 @@ import { ensureTicketStorage } from "../data/read-migrated-tickets";
 import { ticketWithAttributes } from "../data/ticket-attributes";
 import type { Ticket } from "../data/types";
 import { readWorkflowStatuses, usableWorkflowStatuses } from "../data/workflow-statuses";
-import { withWriteGuard } from "../data/write-guard";
+import { withQueuedWriteGuard, withWriteGuard } from "../data/write-guard";
 import { emitPlannerTicketsChanged } from "../events";
 import { initializePlanPlacements } from "../timeline/commands/initialize-placements";
 import { movePlanPlacement, planPlacements, readPlanMetadata } from "../timeline/commands/placement-store";
@@ -18,7 +18,7 @@ export const moveTicketOnBoard = async (
   >,
   input: KanbanRendererMove,
 ) =>
-  withWriteGuard(ctx, "ticket-order", async () => {
+  withQueuedWriteGuard(ctx, "ticket-order", async () => {
     const collection = ticketsCollection(ctx);
     await ensureTicketStorage(ctx);
     const existing = await collection.get(input.rowId);

@@ -106,6 +106,7 @@ export const KanbanRendererBoard = (props: KanbanRendererBoardProps) => {
   const handleDrop = (columnId: string) => (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     setActiveColumn(null);
+    setDraggedKey(null);
 
     const itemId = event.dataTransfer.getData("text/plain");
     if (!itemId) return;

@@ -7,6 +7,7 @@ import { useVirtualizer } from "@/utils/use-virtualizer";
 import { CollectionPageBoundary } from "../collection-view/collection-page-boundary";
 import type { AttributeBadge } from "./kanban-renderer-helpers";
 import { KanbanRendererListRow } from "./kanban-renderer-list-row";
+import { KanbanListRowSkeleton } from "./kanban-renderer-skeleton";
 import { shouldVirtualizeKanban } from "./kanban-renderer-virtualization";
 
 export interface KanbanRendererListItem {
@@ -161,11 +162,12 @@ export const KanbanRendererList = (props: KanbanRendererListProps) => {
           );
         })}
       </Box>
-      {props.onLoadMore ? (
+      {props.onLoadMore && !draggedItemId ? (
         <CollectionPageBoundary
           key={props.pageCursor ?? rows.length}
           loading={props.loadingMore}
           onLoadMore={props.onLoadMore}
+          placeholder={<KanbanListRowSkeleton />}
         />
       ) : null}
     </ScrollArea>

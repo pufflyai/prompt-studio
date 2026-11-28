@@ -1,13 +1,14 @@
-import { Box, Spinner } from "@chakra-ui/react";
-import { useEffect, useEffectEvent, useRef } from "react";
+import { Box } from "@chakra-ui/react";
+import { type ReactNode, useEffect, useEffectEvent, useRef } from "react";
 
 interface CollectionPageBoundaryProps {
   loading?: boolean;
+  placeholder: ReactNode;
   onLoadMore: () => void;
 }
 
 export const CollectionPageBoundary = (props: CollectionPageBoundaryProps) => {
-  const { loading, onLoadMore } = props;
+  const { loading, onLoadMore, placeholder } = props;
   const boundary = useRef<HTMLDivElement>(null);
   const loadMore = useEffectEvent(onLoadMore);
 
@@ -22,7 +23,12 @@ export const CollectionPageBoundary = (props: CollectionPageBoundaryProps) => {
   }, [loading]);
 
   return (
-    <Box position="relative" minH="1px" role="status">
+    <Box
+      position="relative"
+      minH="1px"
+      role={loading ? "status" : undefined}
+      aria-label={loading ? "Loading more items" : undefined}
+    >
       <Box
         ref={boundary}
         aria-hidden="true"
@@ -32,7 +38,7 @@ export const CollectionPageBoundary = (props: CollectionPageBoundaryProps) => {
         insetInline="0"
         height="64px"
       />
-      {loading && <Spinner size="xs" aria-label="Loading more items" />}
+      {loading && <Box aria-hidden="true">{placeholder}</Box>}
     </Box>
   );
 };

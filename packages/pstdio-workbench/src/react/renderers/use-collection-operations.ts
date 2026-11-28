@@ -7,6 +7,7 @@ import {
 import { useEffect, useSyncExternalStore } from "react";
 import type { WorkbenchCore } from "../../core";
 import { classifyApiWrite } from "../../core/registries/mutations/operation-failures";
+import { recoveryStatus } from "../../core/registries/mutations/operation-state";
 import { getWorkbenchOperations } from "../../core/registries/mutations/operations";
 import { getRendererReadCache } from "../../core/registries/views/renderer-read-registry";
 import { getWorkbenchQueries } from "../../core/workbench-queries";
@@ -57,6 +58,11 @@ export const useCollectionOperations = (
   );
   return {
     pending,
+    isSaving: () =>
+      pending.some(
+        (operation) =>
+          !recoveryStatus(operation.status) && collectionReadMatches(operation, rows, read.sourceId, projectId),
+      ),
     originatingRead: observedRead(workbench, read),
     submit: async (
       move: KanbanRendererMove,

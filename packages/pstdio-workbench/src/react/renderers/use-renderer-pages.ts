@@ -99,6 +99,7 @@ export const useRendererPages = <TRow>(input: {
       loading: boolean,
       enabled: boolean,
       displayed?: CollectionPageRequest,
+      pauseContinuation = false,
     ) => {
       if (!enabled) return undefined;
       const loadingNextPage = current.offset > (displayed?.offset ?? 0);
@@ -106,7 +107,7 @@ export const useRendererPages = <TRow>(input: {
         request,
         result,
         displayed,
-        loading: loading && (!input.rowId || loadingNextPage),
+        loading: !pauseContinuation && loading && (!input.rowId || loadingNextPage),
         onSearchChange: setSearch,
         onPageSizeChange: (size: number) => setLimit(clampCollectionPageSize(size)),
         onCollapsedGroupsChange: setCollapsedGroups,
@@ -116,7 +117,7 @@ export const useRendererPages = <TRow>(input: {
         // A new query can return the same cursor. Remount its boundary so a viewport
         // already at the end can request that query's next page.
         onLoadMore:
-          input.rowId && loading && !loadingNextPage
+          pauseContinuation || (input.rowId && loading && !loadingNextPage)
             ? undefined
             : () => {
                 if (result?.cursor) go(Math.floor(current.offset / limit) + 1);
