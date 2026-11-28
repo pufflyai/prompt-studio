@@ -4,16 +4,19 @@ import {
   defineView,
   type Localizable,
   l10n,
+  type PlacementTabPresentation,
   params,
   workbenchModes,
 } from "@pstdio/sdk/extensions";
 import { refresh } from "./commands";
-import { cancelDeployedWorkspace, getDeployed } from "./deployed-controller";
+import { cancelDeployedWorkspace, deployedName, getDeployed } from "./deployed-controller";
 import { readTestOutput, readWorkspaceLogs } from "./deployed-machine-output";
 import { projectDeployedMachineResource } from "./deployed-machine-resource";
-import { deployedMachinePageRef, deployedPageRef } from "./lab-navigation";
+import { deployedInstanceTarget, deployedMachinePageRef, deployedPageRef } from "./lab-navigation";
 import { type ControllerMachine, isTerminal, machinePath } from "./machines";
 import { changed, deployedMachineActionsSlot, deployedMachineKind } from "./resources";
+import { monitoringRangeParam } from "./workspace-monitoring-range";
+import { workspaceMonitoringDetailView } from "./workspace-monitoring-view";
 
 export const openDeployedMachine = defineCommand({
   id: "deployed.machine-open",
@@ -25,11 +28,15 @@ export const openDeployedMachine = defineCommand({
   async run(ctx, input) {
     const machineId = input.machineId ?? ctx.resource?.id;
     if (!machineId) throw new Error("Choose a deployed machine.");
-    const machine = await getDeployed<ControllerMachine>(ctx.connections, machinePath(machineId));
+    const [settings, machine] = await Promise.all([
+      ctx.settings.all(),
+      getDeployed<ControllerMachine>(ctx.connections, machinePath(machineId)),
+    ]);
     ctx.navigation.open({
       kind: "page",
       page: deployedMachinePageRef,
       resource: projectDeployedMachineResource(ctx, machine),
+      parent: deployedInstanceTarget(ctx, deployedName(settings)),
     });
     return { machineId: machine.id };
   },
@@ -73,10 +80,11 @@ export const stopDeployedWorkspaceWorker = defineCommand({
 
 export const stopDeployedWorkspace = defineCommand({
   id: "deployed.machine-stop",
-  title: l10n("cloud-workspaces.stop-workspace", "Stop workspace"),
+  title: l10n("cloud-workspaces.stop-workspace", "Shut down workspace"),
   mutating: true,
   menus: [{ slot: deployedMachineActionsSlot, icon: "square", when: { metadata: { canStop: true } } }],
   params: {
+    machineId: params.text({ label: l10n("cloud-workspaces.machine-id", "Machine ID"), resolvedFrom: "resource" }),
     confirmed: params.boolean({ label: l10n("cloud-workspaces.confirm-stop", "Confirm stop"), default: false }),
   },
   confirmation: {
@@ -86,19 +94,19 @@ export const stopDeployedWorkspace = defineCommand({
       "cloud-workspaces.this-stops-the-workspace-and-any-app-or-test-running-inside-it",
       "This stops the workspace and any app or test running inside it.",
     ),
-    buttonLabel: l10n("cloud-workspaces.stop-workspace", "Stop workspace"),
+    buttonLabel: l10n("cloud-workspaces.stop-workspace", "Shut down workspace"),
   },
-  async run(ctx, { confirmed }) {
-    const resource = ctx.resource;
-    if (resource?.type !== deployedMachineKind.id) throw new Error("Choose a deployed workspace.");
+  async run(ctx, { machineId, confirmed }) {
+    const id = machineId ?? (ctx.resource?.type === deployedMachineKind.id ? ctx.resource.id : undefined);
+    if (!id) throw new Error("Choose a deployed workspace.");
     if (!confirmed) throw new Error("Confirm that you want to stop this workspace.");
 
     const run = await ctx.automation.enqueue({
       command: stopDeployedWorkspaceWorker.ref,
-      input: { params: { machineId: resource.id } },
-      key: `deployed-stop:${resource.id}:${crypto.randomUUID()}`,
+      input: { params: { machineId: id } },
+      key: `deployed-stop:${id}:${crypto.randomUUID()}`,
     });
-    return { machineId: resource.id, runId: run.id };
+    return { machineId: id, runId: run.id };
   },
 });
 
@@ -148,25 +156,40 @@ export const deployedWorkspaceLogsView = logView(
   "No logs yet",
 );
 
-const logTab = (label: Localizable<string>) => ({
-  query() {
-    return {
-      label,
-      menu: [
-        {
-          id: "logs",
-          rows: [
-            {
-              id: "refresh",
-              label: l10n("cloud-workspaces.refresh", "Refresh"),
-              action: { kind: "command" as const, target: { command: refresh.ref } },
-            },
-          ],
-        },
-      ],
-    };
-  },
-});
+const machineTab = (label: Localizable<string>) =>
+  ({
+    query(_ctx, { renderer }) {
+      const machineId = renderer.resource?.id;
+      return {
+        label,
+        menu: [
+          {
+            id: "actions",
+            rows: [
+              ...(renderer.resource?.metadata?.canStop === true && machineId
+                ? [
+                    {
+                      id: "stop",
+                      label: l10n("cloud-workspaces.stop-workspace", "Shut down workspace"),
+                      icon: "square",
+                      action: {
+                        kind: "command" as const,
+                        target: { command: stopDeployedWorkspace.ref, params: { machineId } },
+                      },
+                    },
+                  ]
+                : []),
+              {
+                id: "refresh",
+                label: l10n("cloud-workspaces.refresh", "Refresh"),
+                action: { kind: "command" as const, target: { command: refresh.ref } },
+              },
+            ],
+          },
+        ],
+      };
+    },
+  }) satisfies PlacementTabPresentation;
 
 export const deployedMachinePage = definePage({
   id: "deployed-machine",
@@ -176,21 +199,29 @@ export const deployedMachinePage = definePage({
   mode: workbenchModes.project,
   parent: deployedPageRef,
   resource: { kinds: [deployedMachineKind.ref] },
+  params: { "monitoring-range": monitoringRangeParam },
   main: { kind: "panels", landing: "output" },
   slots: [
     {
       id: "output",
       region: "main",
       order: 0,
-      tab: logTab(l10n("cloud-workspaces.test-output", "Test output")),
+      tab: machineTab(l10n("cloud-workspaces.test-output", "Test output")),
       item: { kind: "view", view: deployedTestOutputView.ref, presence: "open" },
     },
     {
       id: "logs",
       region: "main",
       order: 1,
-      tab: logTab(l10n("cloud-workspaces.workspace-logs", "Workspace logs")),
+      tab: machineTab(l10n("cloud-workspaces.workspace-logs", "Workspace logs")),
       item: { kind: "view", view: deployedWorkspaceLogsView.ref, presence: "open" },
+    },
+    {
+      id: "monitoring",
+      region: "main",
+      order: 2,
+      tab: machineTab(l10n("cloud-workspaces.monitoring", "Monitoring")),
+      item: { kind: "view", view: workspaceMonitoringDetailView.ref, presence: "open" },
     },
   ],
 });

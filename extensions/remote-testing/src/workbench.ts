@@ -1,11 +1,8 @@
 import {
   type DataTableRendererRowActivationHandler,
-  defineNavigationItem,
-  definePage,
   defineView,
   l10n,
   viewDataEvents,
-  workbenchModes,
   workbenchPages,
 } from "@pstdio/sdk/extensions";
 import { runPromptStudio } from "./branch-commands";
@@ -178,38 +175,4 @@ export const environmentsView = defineView({
       };
     },
   },
-});
-
-export const remoteTestsPage = definePage({
-  id: "remote-tests",
-  title: l10n("remote-testing.remote-tests", "Remote tests"),
-  icon: "flask-conical",
-  path: "remote-tests",
-  mode: workbenchModes.project,
-  main: { kind: "panels", landing: "runs", empty: runsView.ref },
-  slots: [
-    {
-      id: "runs",
-      region: "main",
-      tab: { query: () => ({ label: l10n("remote-testing.runs", "Runs") }) },
-      order: 1,
-      item: { kind: "view", view: runsView.ref, presence: "open" },
-    },
-    {
-      id: "environments",
-      region: "main",
-      tab: { query: () => ({ label: l10n("remote-testing.environments", "Environments") }) },
-      order: 2,
-      item: { kind: "view", view: environmentsView.ref, presence: "open" },
-    },
-  ],
-});
-
-export const navigation = defineNavigationItem({
-  id: "remote-tests",
-  label: l10n("remote-testing.remote-tests", "Remote tests"),
-  icon: "flask-conical",
-  owner: workbenchModes.project,
-  slot: "content",
-  action: { kind: "page", page: remoteTestsPage.ref },
 });

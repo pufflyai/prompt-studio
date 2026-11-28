@@ -7,14 +7,14 @@ import {
   workbenchModes,
 } from "@pstdio/sdk/extensions";
 import { catalogView } from "./catalog-view";
-import { deployedInstancesView, deployedMachinesView, deployedTemplatesView } from "./deployed-workbench";
+import { deployedMachinesView, deployedTemplatesView } from "./deployed-workbench";
 import { startInstance, stopInstance } from "./instance-commands";
 import { removeInstance } from "./instance-removal";
 import { instancesFor } from "./instances";
 import { labCommands } from "./lab-commands";
 import { instancesPageRef } from "./lab-navigation";
-import { instancesView, machinesView, templatesView } from "./native-tables";
-import { changed, instanceKind } from "./resources";
+import { machinesView, templatesView, workspacesView } from "./native-tables";
+import { changed, deployedInstanceKind, instanceKind } from "./resources";
 import { monitoringRangeParam } from "./workspace-monitoring-range";
 import { workspaceMonitoringView } from "./workspace-monitoring-view";
 
@@ -94,54 +94,44 @@ const instanceTab = (label: Localizable<string>) =>
       };
     },
   }) satisfies PlacementTabPresentation;
+
 export const instancesPage = definePage({
   id: "instances",
   title: l10n("cloud-workspaces.title", "Cloud Workspaces"),
-  icon: "server",
+  icon: "cloud",
   path: "pocketcoder",
   mode: workbenchModes.project,
-  main: { kind: "panels", landing: "local" },
-  slots: [
-    { id: "local", region: "main", order: 0, item: { kind: "view", view: instancesView.ref, presence: "open" } },
-    {
-      id: "deployed",
-      region: "main",
-      order: 1,
-      item: { kind: "view", view: deployedInstancesView.ref, presence: "open" },
-    },
-  ],
+  main: { kind: "view", view: workspacesView.ref, presentation: "page", cardinality: "one" },
+  slots: [],
 });
 export const deployedPage = definePage({
   id: "deployed",
-  title: l10n("cloud-workspaces.deployed-pocketcoder", "Deployed PocketCoder"),
+  title: l10n("cloud-workspaces.workspace-deployment", "Workspace deployment"),
   icon: "cloud",
   path: "pocketcoder-deployed",
   mode: workbenchModes.project,
-  parent: instancesPage.ref,
-  params: {
-    "monitoring-range": monitoringRangeParam,
-    "monitoring-name": { type: "string" },
-    "monitoring-filter": { type: "string" },
-  },
-  main: { kind: "panels", landing: "workspace-history" },
+  parent: instancesPageRef,
+  params: { "monitoring-range": monitoringRangeParam },
+  resource: { kinds: [deployedInstanceKind.ref] },
+  main: { kind: "panels", landing: "monitoring" },
   slots: [
+    {
+      id: "monitoring",
+      region: "main",
+      order: 0,
+      item: { kind: "view", view: workspaceMonitoringView.ref, presence: "open" },
+    },
     {
       id: "machines",
       region: "main",
-      order: 0,
+      order: 1,
       item: { kind: "view", view: deployedMachinesView.ref, presence: "open" },
     },
     {
       id: "templates",
       region: "main",
-      order: 1,
-      item: { kind: "view", view: deployedTemplatesView.ref, presence: "open" },
-    },
-    {
-      id: "workspace-history",
-      region: "main",
       order: 2,
-      item: { kind: "view", view: workspaceMonitoringView.ref, presence: "open" },
+      item: { kind: "view", view: deployedTemplatesView.ref, presence: "open" },
     },
   ],
 });
@@ -151,7 +141,7 @@ export const catalogPage = definePage({
   icon: "package",
   path: "pocketcoder-templates",
   mode: workbenchModes.project,
-  parent: instancesPage.ref,
+  parent: instancesPageRef,
   main: { kind: "view", presentation: "page", view: catalogView.ref, cardinality: "one" },
   slots: [],
 });
@@ -161,30 +151,30 @@ export const instancePage = definePage({
   icon: "server",
   path: "pocketcoder-instance",
   mode: workbenchModes.project,
-  parent: instancesPage.ref,
+  parent: instancesPageRef,
   resource: { kinds: [instanceKind.ref] },
   main: { kind: "panels", landing: "machines" },
   slots: [
     {
-      id: "templates",
-      region: "main",
-      order: 0,
-      tab: instanceTab(l10n("cloud-workspaces.templates", "Templates")),
-      item: { kind: "view", view: templatesView.ref, presence: "open" },
-    },
-    {
       id: "machines",
       region: "main",
-      order: 1,
+      order: 0,
       tab: instanceTab(l10n("cloud-workspaces.machines", "Machines")),
       item: { kind: "view", view: machinesView.ref, presence: "open" },
+    },
+    {
+      id: "templates",
+      region: "main",
+      order: 1,
+      tab: instanceTab(l10n("cloud-workspaces.templates", "Templates")),
+      item: { kind: "view", view: templatesView.ref, presence: "open" },
     },
   ],
 });
 export const navigation = defineNavigationItem({
   id: "pocketcoder",
   label: l10n("cloud-workspaces.title", "Cloud Workspaces"),
-  icon: "server",
+  icon: "cloud",
   owner: workbenchModes.project,
   slot: "content",
   action: { kind: "page", page: instancesPage.ref, intent: "restore" },

@@ -1,18 +1,10 @@
-import {
-  defineExtension,
-  defineKeybinding,
-  defineSchedule,
-  defineSkill,
-  l10n,
-  packageAsset,
-} from "@pstdio/sdk/extensions";
+import { defineExtension, defineSchedule, defineSkill, l10n, packageAsset } from "@pstdio/sdk/extensions";
 import { createBranchTemplate, openPromptStudio, runPromptStudio } from "./src/branch-commands";
 import { commands } from "./src/commands";
 import { connection, templatePublisher } from "./src/connection";
 import { recoverEnvironmentCleanup } from "./src/environment-cleanup";
 import { runRecoveryIndex } from "./src/run-recovery";
 import { settingsSchema } from "./src/settings";
-import { environmentsView, navigation, remoteTestsPage, runsView } from "./src/workbench";
 
 export default defineExtension({
   translations: { fr: packageAsset("./l10n/fr.json", import.meta.url) },
@@ -27,12 +19,6 @@ export default defineExtension({
       schedule: "* * * * *",
       command: recoverEnvironmentCleanup.ref,
     }),
-  ],
-  views: [runsView, environmentsView],
-  pages: [remoteTestsPage],
-  navigationItems: [navigation],
-  keybindings: [
-    defineKeybinding({ id: "go-remote-tests", layer: "go", key: "R", sticky: true, action: navigation.action }),
   ],
   skills: [
     defineSkill({

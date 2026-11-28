@@ -13,23 +13,18 @@ import {
   stopDeployedWorkspace,
   stopDeployedWorkspaceWorker,
 } from "./src/deployed-machine";
+import { deployedMachinesCommands } from "./src/deployed-machines-commands";
 import { openDeployedPreview } from "./src/deployed-preview";
 import { deployedSelectionCommands } from "./src/deployed-selection";
-import {
-  deployedInstancesView,
-  deployedMachinesView,
-  deployedTemplatesView,
-  openDeployed,
-  readDeployed,
-} from "./src/deployed-workbench";
+import { deployedMachinesView, deployedTemplatesView, openDeployed, readDeployed } from "./src/deployed-workbench";
 import { launchInstance } from "./src/instance-commands";
 import { launchMachine } from "./src/machine-commands";
 import { relaunchMachine, resumeMachine } from "./src/machine-lifecycle";
 import { machineLifecycleActions } from "./src/machine-lifecycle-actions";
 import { watchMachine } from "./src/machine-watch";
 import { createMachineProvider } from "./src/machines";
-import { instancesView, machinesView, templatesView } from "./src/native-tables";
-import { deployedMachineKind, instanceKind, machineKind, templateKind } from "./src/resources";
+import { machinesView, templatesView, workspacesView } from "./src/native-tables";
+import { deployedInstanceKind, deployedMachineKind, instanceKind, machineKind, templateKind } from "./src/resources";
 import { selectionCommands } from "./src/selection-commands";
 import { tableCommands } from "./src/table-commands";
 import { deleteTemplateRow, openCatalog, saveTemplate, viewTemplateRow } from "./src/template-commands";
@@ -37,11 +32,8 @@ import { templateFileView, templatePage } from "./src/template-view";
 import { catalogPage, deployedPage, instancePage, instancesPage, navigation } from "./src/workbench";
 import { workspaceHistoryCommands } from "./src/workspace-history-view";
 import { monitoringCommands } from "./src/workspace-monitoring-commands";
-import {
-  workspaceMonitoringDetailPage,
-  workspaceMonitoringDetailView,
-  workspaceMonitoringView,
-} from "./src/workspace-monitoring-view";
+import { workspaceMonitoringDetailView, workspaceMonitoringView } from "./src/workspace-monitoring-view";
+import { openCloudWorkspace } from "./src/workspaces-commands";
 
 export default defineExtension({
   translations: { fr: packageAsset("./l10n/fr.json", import.meta.url) },
@@ -73,6 +65,8 @@ export default defineExtension({
     readDeployed,
     ...Object.values(workspaceHistoryCommands),
     ...Object.values(monitoringCommands),
+    ...Object.values(deployedMachinesCommands),
+    openCloudWorkspace,
     openDeployedMachine,
     openDeployedPreview,
     ...deployedSelectionCommands,
@@ -93,14 +87,13 @@ export default defineExtension({
   ],
   workspaceTypes: [createMachineProvider()],
   harnesses: [createMachineHarness()],
-  resourceKinds: [instanceKind, machineKind, templateKind, deployedMachineKind],
+  resourceKinds: [instanceKind, deployedInstanceKind, machineKind, templateKind, deployedMachineKind],
   views: [
-    instancesView,
+    workspacesView,
     templatesView,
     machinesView,
     catalogView,
     templateFileView,
-    deployedInstancesView,
     deployedMachinesView,
     deployedTemplatesView,
     deployedTestOutputView,
@@ -108,15 +101,7 @@ export default defineExtension({
     workspaceMonitoringView,
     workspaceMonitoringDetailView,
   ],
-  pages: [
-    instancesPage,
-    instancePage,
-    deployedPage,
-    deployedMachinePage,
-    workspaceMonitoringDetailPage,
-    catalogPage,
-    templatePage,
-  ],
+  pages: [instancesPage, instancePage, deployedPage, deployedMachinePage, catalogPage, templatePage],
   navigationItems: [navigation],
   keybindings: [
     defineKeybinding({ id: "go-cloud-workspaces", layer: "go", key: "C", sticky: true, action: navigation.action }),

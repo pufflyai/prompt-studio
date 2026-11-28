@@ -5,6 +5,11 @@ export const instanceKind = defineResourceKind({
   label: l10n("cloud-workspaces.pocketcoder-instance", "PocketCoder instance"),
   icon: "server",
 });
+export const deployedInstanceKind = defineResourceKind({
+  id: "deployed-instance",
+  label: l10n("cloud-workspaces.cloud-workspace", "Cloud workspace"),
+  icon: "cloud",
+});
 export const machineKind = defineResourceKind({
   id: "machine",
   label: l10n("cloud-workspaces.pocketcoder-machine", "PocketCoder machine"),
