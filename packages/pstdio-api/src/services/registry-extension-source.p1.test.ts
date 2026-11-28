@@ -473,7 +473,7 @@ test("switches one project to a separate published provider and preserves the lo
     upgrade: { changed: true, extension: { version: "0.45.2", enabled: true } },
   });
   const primaryExtensions = (await service.listProjectExtensionInstances(primary)).filter(
-    ({ instance }) => instance.extension_id === local.instance.extension_id,
+    ({ installedSource }) => installedSource.extension_id === local.installedSource.extension_id,
   );
   expect(primaryExtensions).toMatchObject([
     { instance: { enabled: true }, installedSource: { source_kind: "registry", version: "0.45.2" } },
