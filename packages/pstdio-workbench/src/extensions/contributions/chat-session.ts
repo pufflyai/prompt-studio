@@ -4,6 +4,7 @@ import { chatRendererSnapshotSchema } from "pstdio-api-contracts";
 import { type ChatActionOperations, executeChatAction, trackChatActionExecution } from "./chat-action-operations";
 import { createChatDraftRestoration, hasUnresolvedChatSubmission } from "./chat-draft-restoration";
 import { createChatEventReader } from "./chat-event-reader";
+import { returnFailedChatInput } from "./chat-failed-submission";
 import { type ChatQueryContext, createChatFiniteRead } from "./chat-finite-read";
 import { type ChatPendingSubmission, createChatSubmissionPresentation } from "./chat-pending-submission";
 import { createChatSessionDraft } from "./chat-session-draft";
@@ -174,6 +175,11 @@ export const createChatSession = (input: ChatSessionInput) => {
     reserve: () => ++clock,
     merge,
     messages: () => state.conversation.messages ?? [],
+    // An accepted native command can fail later; its input comes back like a failed send.
+    recover: (failed) => {
+      const returned = returnFailedChatInput(state.draft, failed);
+      if (returned !== state.draft) drafts.change(returned);
+    },
   });
   const pin = () => (finite.query.isDisposed() ? () => {} : finite.query.subscribe(() => {}, { automatic: false }));
   const drafts = createChatSessionDraft({

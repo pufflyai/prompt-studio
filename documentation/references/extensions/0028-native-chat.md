@@ -122,7 +122,10 @@ retaining displayed history and drafts. It never replays user actions or agent w
 and stops when the observation is released. A late overflow clears only the
 incomplete-event error still owned by that watch; newer action errors remain visible.
 Other connection errors offer Retry.
-Refresh events follow the normal native renderer path.
+Refresh events follow the normal native renderer path. When an accepted operation fails
+later, the watch can write a versioned `recoverDraft` event with that input. The host
+returns its text and files to the composer ahead of any newer typing, as for a failed
+send; input already in the composer is left alone. There is no restore prompt.
 
 Use `ctx.sessions.getConversation`, `getConversationSources`, `stream`,
 `getQueuedMessages` and `getHarnessCommands`; do not duplicate transcripts or

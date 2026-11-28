@@ -194,6 +194,8 @@ export const chatRendererActionResultSchema = z.strictObject({
 const revision = z.number().int().nonnegative();
 export const chatRendererEventSchema = z.union([
   z.strictObject({ revision, snapshot: chatRendererSnapshotSchema }),
+  /** Return the input of an accepted operation that failed later to the composer, ahead of newer typing. */
+  z.strictObject({ revision, recoverDraft: chatDraftSchema }),
   z.strictObject({
     revision,
     patch: z

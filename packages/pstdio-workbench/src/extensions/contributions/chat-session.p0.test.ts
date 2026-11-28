@@ -670,6 +670,26 @@ test("an explicit submitted-input result finishes an operation without manufactu
   expect(session.getSnapshot().conversation.notice).toBe("Operation complete");
 });
 
+test("an accepted native command that fails later returns its input to the composer ahead of newer typing", async () => {
+  const session = createChatSession({
+    query: async () => ({}),
+    action: async () => ({ snapshot: { sentTag: null } }),
+  });
+  const failed = { text: "/fail", attachments: [{ id: "A", name: "A.txt" }], values: { model: "old" } };
+  session.changeDraft(failed);
+  await session.run({ type: "submit", ...failed });
+  expect(session.getSnapshot().draft.text).toBe("");
+  session.changeDraft({ text: "Newer", values: { model: "new" } });
+  session.accept({ revision: 0, recoverDraft: failed });
+  expect(session.getSnapshot().draft).toEqual({
+    text: "/fail\n\nNewer",
+    attachments: [failed.attachments[0]],
+    values: { model: "new" },
+  });
+  session.accept({ revision: 1, recoverDraft: failed });
+  expect(session.getSnapshot().draft.text).toBe("/fail\n\nNewer");
+});
+
 test("consecutive identical submissions keep distinct pending rows and consume separate canonical echoes", async () => {
   const session = createChatSession({ query: async () => ({}), action: async () => ({}) });
   const action = { type: "submit" as const, text: "Same", attachments: [], values: {} };
