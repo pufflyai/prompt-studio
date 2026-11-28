@@ -92,9 +92,9 @@ Keep the returned request ID. Stop work that depends on the answer. After the pe
 
 ## Cloud tests and previews
 
-Prefer configured cloud test workspaces and cloud app previews when they can run the required workload. Check the available cloud skills and provider before choosing local execution. Use `run-cloud-tests` and `launch-cloud-demo` when installed.
+Run agent tests primarily in configured cloud workspaces, including focused red/green checks and `test:review`. Prefer cloud app previews for app checks. Check the available cloud skills and provider before choosing local execution. Use `run-cloud-tests` and `launch-cloud-demo` when installed.
 
-Before choosing a cloud runner for `test:review`, confirm it provides the required Git base history and Docker daemon. A source-only upload and an image without Docker cannot run that review gate; focused cloud checks do not replace it.
+The equipped cloud test runtime provides a dedicated Docker daemon and self-contained Git history with comparison refs. Commit the candidate, fetch the intended base on the host, and select `--ref <commit>` for review. On older deployments, check `docker info` and `git merge-base origin/main HEAD`; upgrade missing prerequisites before review. Focused checks do not replace the gate.
 
 Run tests against the intended branch or working tree. Keep the required suites and prerequisites. Record the source revision, cloud workspace and run IDs, result, and full log path. Collect the result and verify test workspaces stop when finished, including failed runs.
 
