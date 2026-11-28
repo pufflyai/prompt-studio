@@ -16,14 +16,13 @@ const previewChange = (kind: "archive" | "remove" | "rename", label: unknown): R
   return { label: (label as string).trim() };
 };
 
+const isPlannerDelete = (commandId?: string) =>
+  commandId === "pstdio.planner.command.delete-ticket" || commandId === "pstdio.pstdio-planner.command.delete-ticket";
+
 export const resolveWorkbenchResourceMutation = (command: ExtensionCommand | undefined) => {
   if (command?.resourceMutation) return command.resourceMutation;
   // Older Planner builds predate the declarative Delete preview.
-  if (
-    command?.id === "pstdio.planner.command.delete-ticket" ||
-    command?.id === "pstdio.pstdio-planner.command.delete-ticket"
-  )
-    return { kind: "remove", resourceType: "ticket", idParam: "id" } as const;
+  if (isPlannerDelete(command?.id)) return { kind: "remove", resourceType: "ticket", idParam: "id" } as const;
   // Planner archives keep the ticket accessible and change its board filter value.
   if (
     command?.id === "pstdio.planner.command.archive-ticket" ||
@@ -69,7 +68,7 @@ export const runResourceMutation = async (
 ) => {
   const withoutPreview = () =>
     command.confirmation
-      ? runCommandConfirmation(context, command, params, persist, undefined, execution?.signal)
+      ? runCommandConfirmation(context, command, params, persist, { signal: execution?.signal })
       : persist();
   const mutation = resolveWorkbenchResourceMutation(command);
   if (!mutation) return withoutPreview();
@@ -99,5 +98,9 @@ export const runResourceMutation = async (
     return result;
   };
   if (mutation.kind !== "remove" && !command.confirmation) return mutate();
-  return runCommandConfirmation(context, command, params, mutate, resource.label, execution?.signal);
+  return runCommandConfirmation(context, command, params, mutate, {
+    resourceLabel: resource.label,
+    signal: execution?.signal,
+    closeOnConfirm: mutation.kind === "remove" && isPlannerDelete(command.id),
+  });
 };

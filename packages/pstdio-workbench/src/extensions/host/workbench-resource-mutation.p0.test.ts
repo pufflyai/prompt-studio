@@ -210,6 +210,34 @@ test("canonical and provider-owned commands serialize writes on the same resourc
   expect(writes).toEqual(["first", "second"]);
 });
 
+test("Planner Delete closes confirmation while the write is pending and restores a rejected ticket", async () => {
+  const context = setup();
+  const ticket = { ...resource, type: "ticket", extensionId: "pstdio.planner" };
+  const save = Promise.withResolvers<void>();
+  const started = Promise.withResolvers<void>();
+  const pending = runResourceMutation(
+    context,
+    { id: "pstdio.planner.command.delete-ticket", extensionId: "pstdio.planner", title: "Delete ticket" },
+    { id: ticket.id },
+    { resource: ticket },
+    () => {
+      started.resolve();
+      return save.promise;
+    },
+  );
+  const confirmation = context.workbench.commandPalette.store.getState().confirmation!;
+  expect(confirmation.onConfirm).toBeUndefined();
+  expect(context.workbench.resources.preview.resolve(ticket)).toEqual(ticket);
+  confirmation.resolve(true);
+  await started.promise;
+  expect(context.workbench.commandPalette.store.getState().confirmation).toBeNull();
+  expect(context.workbench.resources.preview.resolve(ticket)).toBeUndefined();
+  save.reject(new Error("Delete failed"));
+  await expect(pending).rejects.toThrow("Delete failed");
+  expect(context.workbench.resources.preview.resolve(ticket)).toEqual(ticket);
+  await context.workbench.dispose();
+});
+
 test("removal confirmation names its resource and keeps failed saves available for retry", async () => {
   const context = setup();
   let writes = 0;
