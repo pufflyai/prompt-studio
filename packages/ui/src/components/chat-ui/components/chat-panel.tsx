@@ -30,8 +30,11 @@ import { WorkingIndicator } from "./working-indicator";
 export interface ChatPanelProps extends ChatLinkProps {
   /** Stable conversation identity used to reset ready state when switching sessions. */
   conversationKey?: string;
-  /** Change to remount the transcript viewport while keeping the composer mounted. */
-  transcriptRevision?: number;
+  /**
+   * Whether the reader is viewing this conversation. Defaults to true. When the reader returns,
+   * the transcript scrolls to the latest reply only if messages changed while they were away.
+   */
+  reading?: boolean;
   messages: SessionMessage[];
   /** IDs intersecting the settled conversation viewport, excluding virtual overscan. */
   onVisibleMessageIdsChange?: (ids: string[]) => void;
@@ -131,9 +134,6 @@ const agentQuestionComposerProps = (
   };
 };
 
-const transcriptKey = (key: string | undefined, revision: number | undefined) =>
-  revision ? JSON.stringify([key, revision]) : key;
-
 export const ChatPanel = (props: ChatPanelProps) => {
   const {
     conversationKey,
@@ -197,7 +197,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
   const panelStyles = useRecipe({ recipe: chatPanelRecipe })();
   const merged = useMemo(() => normalizeChatMessagesForDisplay(messages, { streaming }), [messages, streaming]);
   const hasMessages = merged.length > 0;
-  const messageListKey = transcriptKey(conversationKey ?? merged[0]?.id, props.transcriptRevision);
+  const messageListKey = conversationKey ?? merged[0]?.id;
   const messageListIdentity = hasMessages ? (messageListKey ?? "active-conversation") : null;
   const userMessageCount = merged.reduce((count, message) => count + (message.role === "user" ? 1 : 0), 0);
   const { groups, leadingResponses } = groupMessagesByTurn(merged);
@@ -248,18 +248,12 @@ export const ChatPanel = (props: ChatPanelProps) => {
     onDiscard: onQueuedFollowUpDiscard,
   });
 
-  const toggleStickyMessageExpanded = (messageId: string) => {
+  const toggleStickyMessageExpanded = (messageId: string) =>
     setExpandedStickyMessageIds((current) => {
       const next = new Set(current);
-      if (next.has(messageId)) {
-        next.delete(messageId);
-      } else {
-        next.add(messageId);
-      }
-
+      if (!next.delete(messageId)) next.add(messageId);
       return next;
     });
-  };
 
   return (
     <ChatImageHistoryContext value={indexChatImageSources(messages, linkHandler)}>
@@ -268,7 +262,12 @@ export const ChatPanel = (props: ChatPanelProps) => {
           <Flex className="ps-chat-panel" css={panelStyles}>
             <ChatPrimitives.Root key={messageListKey} containerType="inline-size">
               <ChatOutlineHost enabled={merged.length > 2} onAvailable={setOutlineHost} />
-              <AutoScroll conversationKey={messageListKey ?? null} userMessageCount={userMessageCount} />
+              <AutoScroll
+                conversationKey={messageListKey ?? null}
+                userMessageCount={userMessageCount}
+                reading={props.reading}
+                latest={merged.at(-1)}
+              />
               <ChatPrimitives.Viewport visibility={isMessageViewportReady ? "visible" : "hidden"}>
                 {hasMessages ? (
                   <>
