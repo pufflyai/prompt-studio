@@ -131,9 +131,12 @@ export const WorkbenchPanelMenuButton = (props: {
                   css={
                     floatingMenu.size.height
                       ? {
-                          "& iframe, & [data-workbench-region-scroll] > [data-part=viewport]": {
-                            maxHeight: `${Math.max(0, floatingMenu.size.height - 2)}px`,
-                          },
+                          // Bound the shared region scroller, plus trees: a tree scrolls its own virtualized
+                          // list, so neither its host nor its viewport may grow to every row.
+                          "& iframe, & [data-workbench-region-scroll] > [data-part=viewport], & [data-workbench-view-kind=tree], & [data-workbench-view-kind=tree] [data-scope=scroll-area][data-part=viewport]":
+                            {
+                              maxHeight: `${Math.max(0, floatingMenu.size.height - 2)}px`,
+                            },
                         }
                       : undefined
                   }

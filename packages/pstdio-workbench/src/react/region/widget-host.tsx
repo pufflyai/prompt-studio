@@ -128,6 +128,7 @@ export const WorkbenchWidgetHost = (props: WorkbenchWidgetHostProps) => {
     <Box
       data-workbench-presentation={placement.widgetId}
       data-workbench-view={view?.id ?? placement.contributionId}
+      data-workbench-view-kind={view?.body.kind}
       data-workbench-renderer={renderer ? "mounted" : "missing"}
       display="flex"
       flexDirection="column"
