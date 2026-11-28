@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
-import { access, mkdir, mkdtemp, readdir, rm, symlink } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { delimiter, dirname, join, resolve } from "node:path";
+import { startHarnessModelFixture } from "./packaged-harness-model.fixture";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
 const harnesses = [
@@ -24,12 +25,13 @@ const withRuntime = async <T>(
   home: string,
   path: string,
   run: (runtime: Runtime) => Promise<T>,
-  options: { defaults?: string[]; log?: string } = {},
+  options: { defaults?: string[]; log?: string; env?: Record<string, string> } = {},
 ) => {
   await mkdir(home, { recursive: true });
   const runtime = await startPackagedServe(
     home,
     {
+      ...options.env,
       PATH: path,
       PSTDIO_LOG_LEVEL: "info",
       PSTDIO_LOG_PATH: join(home, options.log ?? "smoke.jsonl"),
@@ -158,6 +160,59 @@ const createProject = async (runtime: Runtime, folder: string) => {
   return project.id;
 };
 
+const checkConversation = async (
+  runtime: Runtime,
+  projectId: string,
+  harness: (typeof upgradeHarnesses)[number],
+  fixture: ReturnType<typeof startHarnessModelFixture>,
+) => {
+  const agent = harnessId(harness);
+  const provider = harness.executable === "codex" ? "codex" : "claude";
+  const prompts = ["First message after upgrade", "Follow-up after upgrade"];
+  type Session = { id: string; status: string; agent_session_id: string | null };
+  const created = await getJson<Session>(runtime, "/v1/sessions", {
+    method: "POST",
+    body: { title: "Release harness smoke", project_id: projectId, agent, prompt: prompts[0] },
+  });
+  const path = `/v1/sessions/${encodeURIComponent(created.id)}`;
+  const readConversation = () =>
+    getJson<{ messages: { role: string; parts: { type: string; text?: string }[] }[] }>(
+      runtime,
+      `${path}/conversation`,
+    );
+  const waitForReply = async (turn: number) => {
+    const expected = fixture.reply(provider, turn);
+    const deadline = performance.now() + 45_000;
+    while (performance.now() < deadline) {
+      const session = await getJson<Session>(runtime, path);
+      if (session.status === "failed") {
+        const { messages } = await readConversation();
+        throw new Error(`${agent} failed before replying to message ${turn}: ${JSON.stringify(messages)}`);
+      }
+      if (session.status === "completed") {
+        const conversation = await readConversation();
+        const texts = (role: string) =>
+          conversation.messages
+            .filter((message) => message.role === role)
+            .flatMap(({ parts }) => parts.filter(({ type }) => type === "text").map(({ text }) => text));
+        if (texts("assistant").includes(expected)) {
+          assert.ok(session.agent_session_id, `${agent} did not retain a native session ID`);
+          assert.ok(texts("user").includes(prompts[turn - 1]), `${agent} did not retain the prompt for turn ${turn}`);
+          if (turn === 2) {
+            assert.ok(texts("assistant").includes(fixture.reply(provider, 1)), `${agent} lost the first reply`);
+          }
+          return session.agent_session_id;
+        }
+      }
+      await Bun.sleep(200);
+    }
+    throw new Error(`${agent} did not produce reply ${turn}`);
+  };
+  const first = await waitForReply(1);
+  await getJson(runtime, `${path}/follow-up`, { method: "POST", body: { prompt: prompts[1] } });
+  assert.equal(await waitForReply(2), first, `${agent} opened a new native session for the follow-up`);
+};
+
 const checkUpgrade = async (previous: string, candidate: string, home: string, path: string) => {
   const defaults = upgradeHarnesses.map(({ extension }) => extension);
   const projectId = await withRuntime(
@@ -172,35 +227,66 @@ const checkUpgrade = async (previous: string, candidate: string, home: string, p
     },
     { defaults, log: "previous.jsonl" },
   );
-  await withRuntime(
-    candidate,
-    home,
-    path,
-    async (runtime) => {
-      const route = `/v1/projects/${encodeURIComponent(projectId)}/extensions`;
-      const installed = await projectHarnesses(runtime, projectId);
-      await Promise.all(
-        installed
-          .filter(({ canUpgrade }) => canUpgrade)
-          .map(async ({ id, installName }) => {
-            const result = await getJson<{ changed: boolean }>(runtime, `${route}/${encodeURIComponent(id)}/upgrade`, {
-              method: "POST",
-            });
-            assert.ok(result.changed, `${installName} did not upgrade`);
-          }),
-      );
-      for (const { installName, version } of await projectHarnesses(runtime, projectId))
-        console.log(`Candidate profile has ${installName} ${version}`);
-      // A real workspace provision starts the upgraded harness workers before our first CLI request.
-      // Workers are shared by source revision across projects on the same desktop runtime.
-      await createProject(runtime, join(home, "project-to-provision"));
-      await checkAvailability(runtime, upgradeHarnesses, projectId);
-      await checkModels(runtime, upgradeHarnesses, projectId);
-    },
-    { defaults, log: "upgrade.jsonl" },
-  );
+  const fixture = startHarnessModelFixture();
+  try {
+    const codexHome = join(home, "codex-config");
+    await mkdir(codexHome);
+    await writeFile(
+      join(codexHome, "config.toml"),
+      `model_provider = "release_fixture"
+[model_providers.release_fixture]
+name = "Release fixture"
+base_url = ${JSON.stringify(fixture.env.OPENAI_BASE_URL)}
+env_key = "OPENAI_API_KEY"
+wire_api = "responses"
+supports_websockets = false
+`,
+    );
+    await withRuntime(
+      candidate,
+      home,
+      path,
+      async (runtime) => {
+        const route = `/v1/projects/${encodeURIComponent(projectId)}/extensions`;
+        const installed = await projectHarnesses(runtime, projectId);
+        await Promise.all(
+          installed
+            .filter(({ canUpgrade }) => canUpgrade)
+            .map(async ({ id, installName }) => {
+              const result = await getJson<{ changed: boolean }>(
+                runtime,
+                `${route}/${encodeURIComponent(id)}/upgrade`,
+                {
+                  method: "POST",
+                },
+              );
+              assert.ok(result.changed, `${installName} did not upgrade`);
+            }),
+        );
+        for (const { installName, version } of await projectHarnesses(runtime, projectId))
+          console.log(`Candidate profile has ${installName} ${version}`);
+        // A real workspace provision starts the upgraded harness workers before our first CLI request.
+        // Workers are shared by source revision across projects on the same desktop runtime.
+        await createProject(runtime, join(home, "project-to-provision"));
+        await checkAvailability(runtime, upgradeHarnesses, projectId);
+        await checkModels(runtime, upgradeHarnesses, projectId);
+        const conversations = await Promise.allSettled(
+          upgradeHarnesses.map((harness) => checkConversation(runtime, projectId, harness, fixture)),
+        );
+        const failures = conversations.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
+        if (failures.length) throw new Error(failures.map(String).join("\n"));
+      },
+      {
+        defaults,
+        log: "upgrade.jsonl",
+        env: { ...fixture.env, CODEX_HOME: codexHome, CLAUDE_CONFIG_DIR: join(home, "claude-config") },
+      },
+    );
+  } finally {
+    fixture.close();
+  }
   console.log(
-    "Codex and Claude Code detected their native CLIs and listed models on the first launch of the upgraded profile",
+    "Codex and Claude Code listed models, replied to a message and handled a follow-up on the first launch after upgrade",
   );
 };
 
