@@ -95,7 +95,7 @@ const barRows = (theme: Theme, tile: BarsTile, x: number, y: number, width: numb
       const color = row.strong ? theme.text : theme.muted;
       const weight = row.strong ? 600 : 400;
       const text = (textX: number, value: string) =>
-        `<text x="${textX}" y="${rowY + 28}" font-size="24" font-weight="${weight}" fill="${color}">${escape(value)}</text>`;
+        `<text x="${textX}" y="${rowY + 28}" font-size="24" font-weight="${weight}" fill="${color}">${escapeXml(value)}</text>`;
       return [
         text(x + PAD, row.name),
         bar(x + PAD + labelWidth, rowY, barWidth, barHeight, row.fill),
@@ -117,15 +117,15 @@ const render = (theme: Theme, tiles: Tile[]) => {
     const x = column * (COLUMN_WIDTH + GAP);
     const y = row * (ROW_HEIGHT + GAP);
     const width = span * COLUMN_WIDTH + (span - 1) * GAP;
-    const title = `<text x="${x + PAD}" y="${y + PAD + 22}" font-size="28" font-weight="600" fill="${theme.text}">${escape(tile.title)}</text>`;
+    const title = `<text x="${x + PAD}" y="${y + PAD + 22}" font-size="28" font-weight="600" fill="${theme.text}">${escapeXml(tile.title)}</text>`;
     const content =
       tile.kind === "number"
-        ? `<text x="${x + PAD}" y="${y + ROW_HEIGHT - PAD - 6}" font-size="84" font-weight="600" letter-spacing="-2" fill="${theme.accent}">${escape(tile.value)}</text>`
+        ? `<text x="${x + PAD}" y="${y + ROW_HEIGHT - PAD - 6}" font-size="84" font-weight="600" letter-spacing="-2" fill="${theme.accent}">${escapeXml(tile.value)}</text>`
         : barRows(theme, tile, x, y, width);
     return `<rect x="${x}" y="${y}" width="${width}" height="${ROW_HEIGHT}" rx="20" fill="${theme.tile}"/>${title}${content}`;
   });
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${height}" viewBox="0 0 ${WIDTH} ${height}" role="img" ${FONT}>
-<title>${escape(tiles.map(describe).join("; "))}</title>
+<title>${escapeXml(tiles.map(describe).join("; "))}</title>
 <rect width="${WIDTH}" height="${height}" fill="${theme.surface}"/>
 ${body.join("\n")}
 </svg>
