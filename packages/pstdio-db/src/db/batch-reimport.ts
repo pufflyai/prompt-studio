@@ -12,6 +12,7 @@ import {
   recoverBatchHome,
   writeDurably,
 } from "./batch-reimport-home";
+import { neededDocument, partialTables, pendingOperation, stagePendingRecords } from "./batch-reimport-pending";
 import { exportSettledRecords, NeedsRecordAdmission } from "./batch-reimport-records";
 import { releasedJournalDocument } from "./local-upgrade-documents";
 import { stageLocalTransfers } from "./local-upgrade-transfers";
@@ -24,14 +25,9 @@ import { hasUpgradeSnapshots } from "./upgrade-snapshot";
 const quote = (id: string) => `"${id.replaceAll('"', '""')}"`;
 const recordFile = "records.copy";
 const skipped = new Set([
-  "storage_current_records",
-  "storage_ordered_records",
   "storage_personal_history_sources",
   "storage_record_sync",
   "storage_record_outbox",
-  "storage_ordered_operations",
-  "storage_ordered_touches",
-  "storage_ordered_receipts",
   "storage_document_operations",
 ]);
 const retainedDocument = `NOT ${releasedJournalDocument("document_id")}
@@ -39,6 +35,20 @@ const retainedDocument = `NOT ${releasedJournalDocument("document_id")}
     (SELECT o.workbench_id,o.extension_id FROM storage_ordered_owners o WHERE NOT EXISTS
       (SELECT 1 FROM storage_documents d WHERE d.workbench_id=o.workbench_id AND d.extension_id=o.extension_id
         AND d.document_id IN ('["ordered-conversion"]','resource-identities'))))`;
+
+function tableSource(name: string, hasPending: boolean) {
+  if (skipped.has(name)) return;
+  const table = quote(name);
+  const partial = partialTables.get(name);
+  if (partial) return hasPending ? `${table} WHERE ${partial}` : undefined;
+  if (name === "storage_ordered_owners" && hasPending) return "pg_temp.reimport_ordered_owners";
+  if (name === "asset_transfers")
+    return `${table} WHERE cancelled_at IS NULL AND
+    (project_id,extension_id,operation_id) IN (SELECT * FROM pg_temp.local_upgrade_transfers)`;
+  if (name === "storage_documents" || name === "storage_document_updates")
+    return `${table} WHERE (${retainedDocument})${hasPending ? ` OR ${neededDocument}` : ""}`;
+  return table;
+}
 
 async function copyBinary(source: PGlite, path: string, select: string, destination: string) {
   const temporary = join(path, "pstdio-reimport-048.tmp");
@@ -53,7 +63,14 @@ async function copyBinary(source: PGlite, path: string, select: string, destinat
 
 // COPY each table after its parents so PostgreSQL checks every foreign key. Generated count-index
 // tables are rebuilt from their declarations and restored records by the normal owner migration.
-async function copySmallTables(source: PGlite, path: string, dest: PGlite, candidate: string, signal?: AbortSignal) {
+async function copySmallTables(
+  source: PGlite,
+  path: string,
+  dest: PGlite,
+  candidate: string,
+  hasPending: boolean,
+  signal?: AbortSignal,
+) {
   const tables = (
     await dest.query<{ tablename: string }>("SELECT tablename FROM pg_tables WHERE schemaname='public'")
   ).rows.map((r) => r.tablename);
@@ -81,24 +98,17 @@ async function copySmallTables(source: PGlite, path: string, dest: PGlite, candi
       const next = [...known].find((t) => !deps.some((d) => d.child === t && known.has(d.parent)));
       if (!next) throw new NeedsRecordAdmission("Released tables require cyclic foreign key admission");
       known.delete(next);
-      if (skipped.has(next)) continue;
+      const from = tableSource(next, hasPending);
+      if (!from) continue;
       signal?.throwIfAborted();
-      const table = quote(next);
-      let where = "";
-      if (next === "asset_transfers")
-        where =
-          " WHERE cancelled_at IS NULL AND (project_id,extension_id,operation_id) IN (SELECT * FROM pg_temp.local_upgrade_transfers)";
-      if (["storage_documents", "storage_document_updates"].includes(next)) where = ` WHERE ${retainedDocument}`;
-      if (
-        !(await source.query<{ present: boolean }>(`SELECT EXISTS(SELECT 1 FROM ${table}${where}) AS present`)).rows[0]!
-          .present
-      )
-        continue;
-      await copyBinary(source, path, `SELECT * FROM ${table}${where}`, file);
-      await tx.exec(`COPY ${table} FROM '/pglite/data/batch-table.copy' WITH (FORMAT binary)`);
+      const { rows } = await source.query<{ present: boolean }>(`SELECT EXISTS(SELECT 1 FROM ${from}) AS present`);
+      if (!rows[0]!.present) continue;
+      await copyBinary(source, path, `SELECT * FROM ${from}`, file);
+      await tx.exec(`COPY ${quote(next)} FROM '/pglite/data/batch-table.copy' WITH (FORMAT binary)`);
       await rm(file);
     }
-    await tx.exec("UPDATE storage_ordered_owners SET receipt_root=NULL WHERE receipt_root IS NOT NULL");
+    if (!hasPending)
+      await tx.exec("UPDATE storage_ordered_owners SET receipt_root=NULL WHERE receipt_root IS NOT NULL");
     const sequences = (
       await source.query<{ sequencename: string }>("SELECT sequencename FROM pg_sequences WHERE schemaname='public'")
     ).rows;
@@ -140,9 +150,10 @@ export async function stageBatchReimport(
     !history.every((r, i) => r.hash === journal[i]?.hash && Number(r.created_at) === journal[i]?.folderMillis)
   )
     return false;
-  const [{ eligible }] = (
-    await source.query<{ eligible: boolean }>(`SELECT EXISTS(SELECT 1 FROM storage_ordered_records)
-    AND NOT EXISTS(SELECT 1 FROM storage_ordered_operations WHERE settled_epoch IS NULL AND (envelope IS NOT NULL OR admission IS NOT NULL))
+  const [{ eligible, pending }] = (
+    await source.query<{ eligible: boolean; pending: boolean }>(`WITH queue AS
+      (SELECT EXISTS(SELECT 1 FROM storage_ordered_operations WHERE ${pendingOperation}) AS pending)
+    SELECT pending, (pending OR EXISTS(SELECT 1 FROM storage_ordered_records))
     AND NOT EXISTS(SELECT 1 FROM storage_record_outbox)
     AND NOT EXISTS(
       -- The document key is indexed within each project and extension. Visit every such prefix,
@@ -156,7 +167,7 @@ export async function stageBatchReimport(
       SELECT 1 FROM owners o JOIN storage_documents d USING(workbench_id,extension_id)
       WHERE d.document_id='["ordered-conversion"]')
     AND NOT EXISTS(SELECT 1 FROM storage_record_projections p WHERE NOT EXISTS
-      (SELECT 1 FROM storage_ordered_owners o WHERE (o.workbench_id,o.extension_id)=(p.workbench_id,p.extension_id))) AS eligible`)
+      (SELECT 1 FROM storage_ordered_owners o WHERE (o.workbench_id,o.extension_id)=(p.workbench_id,p.extension_id))) AS eligible FROM queue`)
   ).rows;
   if (!eligible) return false;
   const candidate = await beginBatchHome(path);
@@ -172,7 +183,8 @@ export async function stageBatchReimport(
     try {
       await applyPgliteMigrations(dest, journal.slice(0, history.length));
       await stageLocalTransfers(source, storageRoot);
-      await copySmallTables(source, path, dest, candidate, signal);
+      if (pending) await stagePendingRecords(source, candidate);
+      await copySmallTables(source, path, dest, candidate, pending, signal);
       const payload = join(candidate, batchPayload);
       await mkdir(payload, { mode: 0o700 });
       await source.exec(`CREATE TEMP TABLE reimport_owners AS SELECT row_number() OVER (ORDER BY project_id COLLATE "C",extension_id COLLATE "C")::int AS id, project_id,extension_id
@@ -183,7 +195,7 @@ export async function stageBatchReimport(
         "SELECT id,project_id,extension_id FROM pg_temp.reimport_owners",
         join(payload, "owners.copy"),
       );
-      await exportSettledRecords(source, join(payload, recordFile), signal);
+      await exportSettledRecords(source, join(payload, recordFile), pending, signal);
       {
         const f = await open(join(payload, "owners.copy"), "r+");
         try {
@@ -207,7 +219,12 @@ export async function stageBatchReimport(
     if (error instanceof NeedsRecordAdmission) return false;
     throw error;
   } finally {
-    if (!sealed) await recoverBatchHome(path);
+    try {
+      if (!sealed) await recoverBatchHome(path);
+    } finally {
+      await source.exec(`DROP TABLE IF EXISTS pg_temp.reimport_owners, pg_temp.reimport_pending_records,
+        pg_temp.reimport_needed_operations, pg_temp.reimport_needed_documents, pg_temp.reimport_ordered_owners`);
+    }
   }
 }
 

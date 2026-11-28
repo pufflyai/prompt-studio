@@ -1,10 +1,18 @@
 import { expect, test } from "bun:test";
 import { existsSync } from "node:fs";
-import { mkdir, mkdtemp, rename, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, realpath, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import {
+  type OrderedRecord,
+  orderedProjection,
+  prepareOrderedOperation,
+  prepareOrderedText,
+  projectOrderedOperation,
+} from "pstdio-sync/records";
+import { withOrderedOwner } from "../services/extension-storage/ordered-journal";
 import { stageBatchReimport } from "./batch-reimport";
-import { batchBackup, batchPayload, recoverBatchHome } from "./batch-reimport-home";
+import { batchBackup, batchPayload, beginBatchHome, recoverBatchHome } from "./batch-reimport-home";
 import { createDb, resolvePgliteOptions } from "./connection.pglite";
 import { createTextLogOwnerFixture } from "./log-owner-upgrade.fixture";
 import { openPglite } from "./open-pglite";
@@ -111,6 +119,95 @@ for (const lastMigration of [7, 9, 10]) {
     }
   }, 15_000);
 }
+
+test("bulk upgrades a local project with queued creations, edits and deletions", async () => {
+  const root = await mkdtemp(join(tmpdir(), "reimport-local-edits-"));
+  try {
+    let expectedEdit: OrderedRecord | undefined;
+    const old = await createTextLogOwnerFixture(root, 9);
+    try {
+      await seed(old);
+      const confirmed = new Map<string, OrderedRecord>();
+      for (const recordId of ["edited", "removed"]) {
+        const record = {
+          recordId,
+          value: { value: { title: "original" } },
+          deleted: false,
+          lifetime: "initial",
+          stamps: {},
+        };
+        confirmed.set(recordId, record);
+        await old.pglite.query("INSERT INTO storage_ordered_records VALUES ('p','example.records',$1,$2)", [
+          recordId,
+          Buffer.from(JSON.stringify(record)),
+        ]);
+      }
+      const text = await prepareOrderedText({
+        recordId: "edited",
+        lifetime: "initial",
+        path: ["value", "title"],
+        value: confirmed.get("edited")!.value,
+        replace: "changed",
+      });
+      const operation = await prepareOrderedOperation(
+        {
+          operationId: "offline",
+          edits: [
+            { recordId: "created", replace: { value: { title: "new" } } },
+            { recordId: "edited", changes: [], texts: [text] },
+            { recordId: "removed", deleted: true },
+          ],
+        },
+        confirmed,
+      );
+      await old.pglite.query(
+        `INSERT INTO storage_ordered_operations(workbench_id,extension_id,operation_id,fingerprint,local_sequence,envelope)
+        VALUES ('p','example.records','offline',$1,100,$2)`,
+        [operation.fingerprint, Buffer.from(JSON.stringify(operation))],
+      );
+      for (const record of projectOrderedOperation(confirmed, operation)) {
+        if (record.recordId === "edited") expectedEdit = { ...record, stamps: {} };
+        const projected = await orderedProjection(record);
+        await old.pglite.query(
+          `INSERT INTO storage_current_records(workbench_id,extension_id,record_id,deleted,value,revision,record_lifetime)
+          VALUES ('p','example.records',$1,$2,$3,$4,$5)`,
+          [record.recordId, record.deleted, JSON.stringify(projected.value), projected.revision, record.lifetime],
+        );
+        await old.pglite.query("INSERT INTO storage_ordered_touches VALUES ('p','example.records',$1,'offline',100)", [
+          record.recordId,
+        ]);
+      }
+    } finally {
+      await old.close();
+    }
+    // A process can stop after the first source-queue snapshot write but before sealing the candidate.
+    const interrupted = await beginBatchHome(await realpath(old.path));
+    await writeFile(join(interrupted, "queue-ordered-queue-dependencies-upgrade.jsonl.tmp"), "partial");
+    const db = await createDb({ path: old.path });
+    try {
+      expect(existsSync(batchBackup(old.path))).toBe(true);
+      expect((await db.pglite.query("SELECT count(*)::int n FROM operations")).rows).toEqual([{ n: 0 }]);
+    } finally {
+      await db.close();
+    }
+    const reopened = await createDb({ path: old.path });
+    try {
+      expect((await reopened.pglite.query("SELECT record_id,value FROM records ORDER BY record_id")).rows).toEqual([
+        { record_id: "created", value: { title: "new" } },
+        { record_id: "edited", value: { title: "changed" } },
+        { record_id: "r", value: { title: "saved" } },
+      ]);
+      await withOrderedOwner(reopened.db, { workbenchId: "p", extensionId: "example.records" }, async (journal) => {
+        expect(expectedEdit?.texts).toBeDefined();
+        expect((await journal.canonical(["edited"])).get("edited")).toEqual(expectedEdit);
+      });
+    } finally {
+      await reopened.close();
+    }
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}, 15_000);
 
 test("reopens the original after an unsupported pair and preserves a projection-only record", async () => {
   const root = await mkdtemp(join(tmpdir(), "reimport-admission-"));
