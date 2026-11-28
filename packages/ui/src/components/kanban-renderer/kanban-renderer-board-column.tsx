@@ -6,6 +6,7 @@ import { useVirtualizer } from "@/utils/use-virtualizer";
 import { CollectionPageBoundary } from "../collection-view/collection-page-boundary";
 import type { KanbanRendererBoardColumn } from "./kanban-renderer-board";
 import { BoardEntry, type BoardEntryData } from "./kanban-renderer-board-entry";
+import { KanbanCardSkeleton } from "./kanban-renderer-skeleton";
 import { shouldVirtualizeKanban } from "./kanban-renderer-virtualization";
 
 interface BoardColumnCardsProps {
@@ -176,8 +177,17 @@ export const BoardColumnCards = (props: BoardColumnCardsProps) => {
           );
         })}
       </Box>
-      {props.onLoadMore && hasMoreCards ? (
-        <CollectionPageBoundary key={props.loadedPage} loading={props.loadingMore} onLoadMore={props.onLoadMore} />
+      {props.onLoadMore && !draggedKey && hasMoreCards ? (
+        <CollectionPageBoundary
+          key={props.loadedPage}
+          loading={props.loadingMore}
+          onLoadMore={props.onLoadMore}
+          placeholder={
+            <Box css={styles.entry}>
+              <KanbanCardSkeleton />
+            </Box>
+          }
+        />
       ) : null}
     </ScrollArea>
   );

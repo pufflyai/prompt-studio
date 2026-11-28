@@ -55,6 +55,7 @@ export const FittingCards: CanvasFrame = {
 };
 export const OverflowingCards: CanvasFrame = {
   id: "patterns-kanban-renderer-column-scrolling--overflowing-cards",
+  description: "A card dragged from the edge of the viewport keeps its full outline and content in the drag preview.",
   render: () => <ColumnExample count={60} />,
 };
 export const GroupedCards: CanvasFrame = {

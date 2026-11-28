@@ -1,6 +1,7 @@
 import type { StorageComputedField, StorageExpression, StoragePredicate } from "@pstdio/sdk/extensions";
 import { ticketTagAttributeId } from "../../data/mappers";
 import type { readTicketViewPage } from "../../data/query-ticket-page";
+import { ticketViewComputedFields } from "../../data/ticket-view-fields";
 import { activeTicket } from "../../data/ticket-view-state";
 import type { PlanPace } from "../contracts";
 
@@ -9,24 +10,6 @@ type Storage = Parameters<typeof readTicketViewPage>[0]["storage"];
 const together = (...parts: (StoragePredicate | undefined)[]): StoragePredicate => ({
   all: parts.filter((part) => part !== undefined),
 });
-
-const selectionComputedFields = (view: View, values: unknown[]) => {
-  const selected: NonNullable<View["scope"]["computed"]> = {};
-  const visit = (value: unknown) => {
-    if (!value || typeof value !== "object") return;
-    if (Array.isArray(value)) return value.forEach(visit);
-    for (const [key, child] of Object.entries(value)) {
-      if (key === "literal") continue;
-      if (key === "field" && typeof child === "string" && view.computed[child] && !selected[child]) {
-        selected[child] = view.computed[child];
-        visit(selected[child]);
-      }
-      visit(child);
-    }
-  };
-  values.forEach(visit);
-  return selected;
-};
 
 const complexityExpression = (view: View): StorageExpression => {
   const tag =
@@ -86,7 +69,7 @@ export const planQuerySummary = async (storage: Storage, view: View, selectsAllA
       { type: "number", cases: [{ when, value: 1 }], otherwise: 0 } satisfies StorageComputedField,
     ]),
   );
-  const flags = selectionComputedFields(view, [filtered]);
+  const flags = ticketViewComputedFields(view.computed, [filtered]);
   const countMetrics = Object.fromEntries(
     Object.keys(conditions).map((name) => [name, { operation: "sum" as const, field: `count:${name}` }]),
   );

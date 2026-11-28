@@ -27,7 +27,6 @@ import { NativeChatWorkspace } from "./native-chat-workspace";
 import { useNativeChatActions } from "./use-native-chat-actions";
 import { useNativeChatObservation } from "./use-native-chat-observation";
 import { type NativeChatPresentation, useNativeChatPresentation } from "./use-native-chat-presentation";
-import { useNativeChatTranscript } from "./use-native-chat-transcript";
 
 interface NativeChatViewProps extends NativeChatHostServices {
   workbench?: import("../../../core").WorkbenchCore;
@@ -101,7 +100,8 @@ export const NativeChatView = (props: NativeChatViewProps) => (
 );
 
 const NativeChatContent = (props: NativeChatViewProps) => {
-  const transcriptRevision = useNativeChatTranscript(props);
+  // The reader is on this conversation only while its placement is open, selected and shown.
+  const reading = props.visible !== false && props.placementOpen !== false && props.placementSelected !== false;
   const { key, ...presentation } = useNativeChatPresentation({
     initial: {
       session: props.session,
@@ -120,7 +120,7 @@ const NativeChatContent = (props: NativeChatViewProps) => {
       {...props}
       {...presentation}
       conversationKey={key}
-      transcriptRevision={transcriptRevision}
+      reading={reading}
       unresolved={unresolved}
     />
   );
@@ -144,13 +144,14 @@ const useUnresolvedSubmission = (session: ChatSession) => {
 const runQueueGesture = (work: () => Promise<unknown>, report: (error: unknown) => void) =>
   void Promise.resolve().then(work).catch(report);
 
-const NativeChatConversation = (props: NativeChatViewProps & { transcriptRevision: number; unresolved: boolean }) => {
+const NativeChatConversation = (props: NativeChatViewProps & { reading: boolean; unresolved: boolean }) => {
   const { session, conversationKey, renderParamField, unresolved, sourceRegion, sourcePlacement } = props;
   const state = useSyncExternalStore(session.subscribeToView, session.getSnapshot, session.getSnapshot);
   const { conversation: confirmed, draft, messages, queuedFollowUps, pending, loading, initializing, sending } = state;
   const observation = useNativeChatObservation(props, state);
   const pendingActions = useNativeChatActions(session, confirmed);
-  const conversation = pendingActions.queue ? { ...confirmed, queueReadOnly: true } : confirmed;
+  // Queue changes show immediately and run in order; the queue stays editable meanwhile.
+  const conversation = confirmed;
   const run: ChatSession["run"] = (action) => runNativeChatAction(session, action, props.action, Boolean(selected));
   const [uploading, setUploading] = useState(0);
   const [selected, setSelected] = useState<ChatQueuedRequest | null>(null);
@@ -233,7 +234,7 @@ const NativeChatConversation = (props: NativeChatViewProps & { transcriptRevisio
         return (
           <ChatPanel
             conversationKey={conversationKey}
-            transcriptRevision={props.transcriptRevision}
+            reading={props.reading}
             onVisibleMessageIdsChange={observation.onVisibleMessageIdsChange}
             onVisibleQuestionChange={observation.onVisibleQuestionChange}
             linkHandler={host.linkHandler ?? props.linkHandler}
@@ -291,7 +292,7 @@ const NativeChatConversation = (props: NativeChatViewProps & { transcriptRevisio
               />
             }
             actions={<NativeChatControls {...controlProps} />}
-            composerHeader={<NativeChatComposerHeader state={state} session={session} pending={pendingActions} />}
+            composerHeader={<NativeChatComposerHeader state={state} session={session} />}
             conversationNotices={<NativeChatNotices host={host} state={state} />}
             {...nativeChatAttachmentHandlers(conversation.readOnly, upload)}
             attachmentActions={

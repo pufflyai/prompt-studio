@@ -17,7 +17,8 @@ export interface Entry {
   controller: AbortController;
   execute?: () => Promise<void>;
   check?: () => Promise<void>;
-  reject: (error: unknown) => void;
+  completion: { promise: Promise<unknown>; reject: (reason: unknown) => void };
+  recoveryAttempt?: ReturnType<typeof Promise.withResolvers<void>>;
   source?: ResourceRef;
   sourceCommand?: OperationInput<unknown>["sourceCommand"];
   recoverySource?: OperationRecoverySource;
@@ -37,6 +38,40 @@ export const emptySnapshot: OperationSnapshot = { pending: [], recovery: [] };
 export const recoveryStatus = (status: OperationPreview["status"]) =>
   status === "unknown" || status === "rejected" || status === "unconfirmed" ? status : undefined;
 
+export const findRecoveryEntry = (entry: Entry | undefined, owner: string, disposed: boolean) =>
+  entry?.owner === owner && recoveryStatus(entry.preview.status) && !disposed ? entry : undefined;
+
+export const checkRecoveryEntry = (entry: Entry | undefined) => {
+  if (!entry?.check || entry.controller.signal.aborted) return;
+  // The original submitter already got its failure. Dependent operations wait for this check.
+  const attempt = Promise.withResolvers<void>();
+  entry.recoveryAttempt = attempt;
+  void attempt.promise.catch(() => {});
+  return entry.check();
+};
+
+export const settleRecoveryAttempt = (entry: Entry, failure?: { error: unknown }) => {
+  const attempt = entry.recoveryAttempt;
+  entry.recoveryAttempt = undefined;
+  if (failure) attempt?.reject(failure.error);
+  else attempt?.resolve();
+};
+
+export const waitForPendingOperations = async (
+  entries: Iterable<Entry>,
+  owner: string,
+  matches: (operation: OperationPreview) => boolean,
+) => {
+  const pending = [...entries].filter(
+    (entry) =>
+      entry.owner === owner &&
+      !entry.controller.signal.aborted &&
+      !recoveryStatus(entry.preview.status) &&
+      matches(entry.preview),
+  );
+  await Promise.all(pending.map((entry) => entry.recoveryAttempt?.promise ?? entry.completion.promise));
+};
+
 export const dismissOperationProgress = (entry: Entry | undefined, owner: string) => {
   if (entry?.owner !== owner || !entry.preview.showPending || recoveryStatus(entry.preview.status)) return false;
   entry.preview = { ...entry.preview, showPending: undefined };
@@ -53,13 +88,14 @@ export const retireEntry = (entry: Entry) => {
   entry.preview = { ...entry.preview, intent: undefined };
   entry.execute = undefined;
   entry.check = undefined;
+  settleRecoveryAttempt(entry, { error });
   const { status } = entry.preview;
   if (recoveryStatus(status)) return;
 
   const interrupted = entry.acknowledged ? "unconfirmed" : "unknown";
   changeStatus(entry, status === "queued" ? "rejected" : interrupted);
   entry.error = error;
-  entry.reject(error);
+  entry.completion.reject(error);
 };
 
 export const retireOperations = (entries: Iterable<Entry>, retired: Partial<QueryScope>, returningOwner?: string) => {

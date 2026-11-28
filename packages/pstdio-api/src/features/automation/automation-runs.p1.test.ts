@@ -381,15 +381,17 @@ test("removing a Cloud copy cancels a blocking automation before draining finite
         body: JSON.stringify({ discardUnsynced: true }),
       }),
     );
+    // The blocking command only ends when cancelled, so any finite bound tells removal apart from waiting on it.
+    // Loaded Windows runners have needed more than 500 ms to finish the removal itself.
     expect(
-      await Promise.race([pending.then((response) => response.status), Bun.sleep(500).then(() => "blocked")]),
+      await Promise.race([pending.then((response) => response.status), Bun.sleep(5_000).then(() => "blocked")]),
     ).toBe(200);
     expect(await appDeps.projectService.get(projectId)).toBeNull();
   } finally {
-    if (runId && (await appDeps.projectService.get(projectId)))
-      await appDeps.automationService.cancelProjectRuns(projectId);
+    // Cancel even when removal already hid the project, so a regression reports "blocked" instead of hanging here.
+    if (runId) await appDeps.automationService.cancelProjectRuns(projectId);
     await pending;
     work.run = original;
     await manager.stop(true);
   }
-});
+}, 15_000);

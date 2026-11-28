@@ -63,3 +63,21 @@ export const ticketViewFields = (
   }
   return fields;
 };
+
+export const ticketViewComputedFields = (computed: NonNullable<StorageRecordQuery["computed"]>, inputs: unknown[]) => {
+  const selected: NonNullable<StorageRecordQuery["computed"]> = {};
+  const visit = (input: unknown) => {
+    if (!input || typeof input !== "object") return;
+    if (Array.isArray(input)) return input.forEach(visit);
+    for (const [key, value] of Object.entries(input)) {
+      if (key === "literal") continue;
+      if (key === "field" && typeof value === "string" && computed[value] && !selected[value]) {
+        selected[value] = computed[value];
+        visit(selected[value]);
+      }
+      visit(value);
+    }
+  };
+  inputs.forEach(visit);
+  return selected;
+};

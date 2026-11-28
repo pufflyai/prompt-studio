@@ -2,15 +2,26 @@ import { createScopedQueryClient, type ResourceRef } from "@pstdio/sdk/extension
 import { createDisposable } from "../../shared/disposable";
 import { createWorkbenchStore } from "../../shared/store/workbench-store";
 import { classifyApiWrite } from "../mutations/operation-failures";
+import type { OperationPreview } from "../mutations/operation-types";
 import { getWorkbenchOperations, resourceOperationSubject, type WorkbenchOperations } from "../mutations/operations";
 
-type ResourceChange = { label: string } | { removed: true; label?: never };
+export type ResourceChange =
+  | { label: string }
+  | { removed: true; label?: never }
+  | { archived: true; attributeId: string; value: string; label?: never };
 interface ResourceIntent {
   resource: ResourceRef;
   change: ResourceChange;
 }
 
 export type ResourcePreviewChanges = ReadonlyMap<symbol, ResourceIntent>;
+const domain = "resource.presentation";
+
+const pendingResourceIntent = (entry: OperationPreview) => {
+  if (entry.domain !== domain || !entry.intent) return undefined;
+  const intent = entry.intent as ResourceIntent;
+  return "archived" in intent.change && entry.status === "unknown" ? undefined : intent;
+};
 
 const removalObservers = new WeakMap<object, (resource: ResourceRef) => void>();
 export const observeResourceRemoval = (preview: object, resource: ResourceRef) =>
@@ -21,7 +32,9 @@ export const resolveResourcePreview = (resource: ResourceRef, changes: ResourceP
   const subject = resourceOperationSubject(resource);
   for (const intent of changes.values()) {
     if (resourceOperationSubject(intent.resource) !== subject) continue;
-    result = "removed" in intent.change ? undefined : { ...resource, label: intent.change.label };
+    if (!result || "removed" in intent.change) result = undefined;
+    else if ("archived" in intent.change) result = { ...result, metadata: { ...result.metadata, archived: true } };
+    else result = { ...result, label: intent.change.label };
   }
   return result;
 };
@@ -31,8 +44,7 @@ const createPreview = (operations: WorkbenchOperations) => {
     name: "workbench.resource-preview",
     initialState: { changes: new Map() },
   });
-  const domain = "resource.presentation";
-  const refreshers = new Set<(resource: ResourceRef) => Promise<void>>();
+  const refreshers = new Set<(resource: ResourceRef, change: ResourceChange) => Promise<void>>();
   const local = new Map<symbol, ResourceIntent>();
   const removals = new Map<symbol, { subject: string; observed: boolean; uncertain: boolean }>();
   const publish = () => {
@@ -41,8 +53,8 @@ const createPreview = (operations: WorkbenchOperations) => {
     const retired = new Set(removals.keys());
     for (const entry of pending) {
       retired.delete(entry.id);
-      if (entry.domain !== domain || !entry.intent) continue;
-      const intent = entry.intent as ResourceIntent;
+      const intent = pendingResourceIntent(entry);
+      if (!intent) continue;
       const removal = removals.get(entry.id);
       if (removal && entry.status === "unknown") removal.uncertain = true;
       if (!removal?.uncertain || removal.observed) changes.set(entry.id, intent);
@@ -54,8 +66,8 @@ const createPreview = (operations: WorkbenchOperations) => {
     }
   };
   operations.subscribe(publish);
-  const refresh = async (resource: ResourceRef) => {
-    await Promise.all([...refreshers].map((read) => read(resource)));
+  const refresh = async (resource: ResourceRef, change: ResourceChange) => {
+    await Promise.all([...refreshers].map((read) => read(resource, change)));
   };
   const assertCanRename = (subject: string) => {
     const blocked = operations
@@ -87,7 +99,7 @@ const createPreview = (operations: WorkbenchOperations) => {
       intent: change ? { resource, change } : undefined,
       draft,
       write: save,
-      reconcile: change ? () => refresh(resource) : undefined,
+      reconcile: change ? () => refresh(resource, change) : undefined,
       classify: classifyApiWrite,
       check:
         removal || verifyRename
@@ -113,7 +125,7 @@ const createPreview = (operations: WorkbenchOperations) => {
     },
     submit,
     persist: <T>(resource: ResourceRef, save: () => Promise<T>) => submit(resource, save),
-    subscribeRefresh(read: (resource: ResourceRef) => Promise<void>) {
+    subscribeRefresh(read: (resource: ResourceRef, change: ResourceChange) => Promise<void>) {
       refreshers.add(read);
       return createDisposable(() => refreshers.delete(read));
     },
@@ -129,7 +141,7 @@ const createPreview = (operations: WorkbenchOperations) => {
         rollback: remove,
         async commit() {
           // This API previews a change whose persistence is managed by its caller.
-          await Promise.allSettled([...refreshers].map((read) => read(resource)));
+          await Promise.allSettled([...refreshers].map((read) => read(resource, change)));
           remove();
         },
       };

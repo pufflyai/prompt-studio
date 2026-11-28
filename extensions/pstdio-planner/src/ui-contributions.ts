@@ -33,6 +33,7 @@ import { ticketNavigationStructure } from "./ticket-navigation-structure";
 import { createTicketPages } from "./ticket-pages";
 import { timelineViewSchema } from "./timeline/commands/view-schema";
 import { planChanged } from "./timeline/contracts";
+import { timelineTicketAttributes } from "./timeline/model/ticket-properties";
 import { queryWorkflowSettings, saveWorkflowSettings } from "./views/workflow-settings";
 
 export { ticketResourceKind } from "./resource-kinds";
@@ -120,7 +121,7 @@ export const createPlannerUi = (baseUrl: string) => {
       kind: "kanban",
       queryMode: "paged",
       initialPageSize: 50,
-      attributes: buildTicketAttributes([]),
+      attributes: [...buildTicketAttributes([]), ...timelineTicketAttributes([])],
       query: queryTicketRenderer,
       schemaRefreshEvents: [plannerSchemaChanged],
       refreshEvents: [

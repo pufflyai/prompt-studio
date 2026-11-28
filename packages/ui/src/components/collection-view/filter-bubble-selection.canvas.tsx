@@ -13,7 +13,8 @@ export const CompleteNumberEntry: Story = {
 };
 export const ChooseValueThenContinue: Story = {
   id: "patterns-collection-view-filter-bubble-selection--choose-value-then-continue",
-  render: () => <Bar storageKey="preview-value-handoff" />,
+  description: "Filter options show the number of matching records across all pages.",
+  render: () => <Bar storageKey="preview-value-handoff" largeCollection />,
 };
 export const TextEntry: Story = {
   id: "patterns-collection-view-filter-bubble-selection--text-entry",

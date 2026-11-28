@@ -1,4 +1,6 @@
 import { expect, test } from "bun:test";
+import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { packagedExtensionCatalog } from "../features/extensions/extension-catalog";
@@ -30,4 +32,27 @@ test("keeps a compatible local copy's published alternative on its release", asy
   });
   expect(input.source).toBe("harness-codex");
   expect(input.ref).toBe("pstdio@0.48.0");
+});
+
+test("offers a published alternative only for a local copy the review can keep", async () => {
+  const alternative = createPublishedExtensionAlternative(Promise.resolve(packagedExtensionCatalog), {
+    source: "workspace",
+    root: "/workspace/repo",
+    ref: "pstdio@0.48.0",
+  });
+  const root = mkdtempSync(join(tmpdir(), "published-alternative-"));
+  try {
+    const plain = join(root, "plain");
+    const checkout = join(root, "checkout");
+    mkdirSync(plain);
+    mkdirSync(join(checkout, ".git"), { recursive: true });
+    const source = { source_kind: "local_path", extension_id: "pstdio.harness-codex" };
+    expect(await alternative.available({ ...source, source_path: plain })).toBe(false);
+    expect(await alternative.available({ ...source, source_path: checkout })).toBe(true);
+    expect(await alternative.available({ ...source, extension_id: "acme.local-only", source_path: checkout })).toBe(
+      false,
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });

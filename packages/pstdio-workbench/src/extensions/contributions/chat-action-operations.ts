@@ -1,4 +1,10 @@
-import type { ChatRendererAction, ChatRendererSnapshot, ResourceRef, ScopedQueryClient } from "@pstdio/sdk/extensions";
+import type {
+  ChatQueuedRequest,
+  ChatRendererAction,
+  ChatRendererSnapshot,
+  ResourceRef,
+  ScopedQueryClient,
+} from "@pstdio/sdk/extensions";
 import { chatRendererActionResultSchema, chatRendererActionSchema } from "pstdio-api-contracts";
 import { classifyApiWrite } from "../../core/registries/mutations/operation-failures";
 import type { OperationPreview } from "../../core/registries/mutations/operation-types";
@@ -32,6 +38,34 @@ const draftFor = (action: TrackedChatAction) => {
   };
 };
 
+// Queue changes for one conversation run one after another, across every view of it.
+const queueTails = new Map<string, Promise<boolean>>();
+let queueSequence = 0;
+
+const sameFiles = (left: ChatQueuedRequest, right: ChatQueuedRequest) =>
+  (left.attachments ?? []).map((file) => file.id).join() === (right.attachments ?? []).map((file) => file.id).join();
+
+/** The queue addresses messages by position and revision, which change after every move. */
+const findQueuedRequest = (item: ChatQueuedRequest, queue: readonly ChatQueuedRequest[]) => {
+  if (queue.some((entry) => entry.position === item.position && entry.revision === item.revision)) return item;
+  const matches = queue.filter((entry) => entry.prompt === item.prompt && sameFiles(entry, item));
+  if (matches.length !== 1) throw new Error("The queue changed. Try again.");
+  return matches[0]!;
+};
+
+const rebaseQueueAction = <A extends Extract<ChatRendererAction, { type: "queue" }>>(
+  action: A,
+  queue: readonly ChatQueuedRequest[],
+): A => {
+  // A new item is created from the request's content; it addresses no existing message.
+  if (!queue.length || action.operation === "create") return action;
+  return {
+    ...action,
+    item: findQueuedRequest(action.item, queue),
+    ...(action.target ? { target: findQueuedRequest(action.target, queue) } : {}),
+  };
+};
+
 export const createChatActionOperations = (queries: ScopedQueryClient, source: ResourceRef, projectId: string) => {
   const operations = getWorkbenchOperations(queries);
   const resource = resourceOperationSubject(source);
@@ -50,10 +84,49 @@ export const createChatActionOperations = (queries: ScopedQueryClient, source: R
         snapshot = relevant;
       return snapshot;
     },
-    async run<T>(action: ChatRendererAction, runStartedAt: number | undefined, execute: () => Promise<T>) {
-      if (action.type !== "queue" && action.type !== "stop" && action.type !== "approve") return execute();
+    async run<T>(
+      action: ChatRendererAction,
+      runStartedAt: number | undefined,
+      execute: (action: ChatRendererAction) => Promise<T>,
+      readQueue: () => readonly ChatQueuedRequest[] = () => [],
+    ) {
+      if (action.type !== "queue" && action.type !== "stop" && action.type !== "approve") return execute(action);
       const intent = { resource, action, runStartedAt: action.type === "stop" ? runStartedAt : undefined };
+      if (action.type === "queue") {
+        // Each queue change shows at once and waits for the one before it, then finds its
+        // message again in the queue that change returned.
+        const waiting = queueTails.get(resource);
+        const previous = waiting ?? Promise.resolve(true);
+        const settled = Promise.withResolvers<boolean>();
+        queueTails.set(resource, settled.promise);
+        const result = operations.submit({
+          domain,
+          projectId,
+          source,
+          title: titles.queue,
+          subjects: [operationSubject(domain, resource, "queue", `${++queueSequence}`)],
+          draft: draftFor(action),
+          intent,
+          releaseOnDiscard: true,
+          classify: classifyApiWrite,
+          write: async () => {
+            if (!(await previous)) throw new Error("An earlier queue change did not go through. Try again.");
+            // Only a change that waited behind another one can address a moved message.
+            return execute(waiting ? rebaseQueueAction(action, readQueue()) : action);
+          },
+        }).result;
+        // A lost response counts as failed for the changes waiting behind it.
+        result.then(
+          () => settled.resolve(true),
+          () => settled.resolve(false),
+        );
+        void settled.promise.then(() => {
+          if (queueTails.get(resource) === settled.promise) queueTails.delete(resource);
+        });
+        return result;
+      }
       const subject = keyFor(intent);
+      // A second approval or Stop for the same target is refused.
       if (operations.getSnapshot().pending.some((entry) => entry.subjects.includes(subject)))
         throw new Error("This conversation action is still pending. See System activity if its result is unconfirmed.");
       return operations.submit({
@@ -66,7 +139,7 @@ export const createChatActionOperations = (queries: ScopedQueryClient, source: R
         intent,
         releaseOnDiscard: true,
         classify: classifyApiWrite,
-        write: execute,
+        write: () => execute(action),
       }).result;
     },
   };
@@ -94,8 +167,9 @@ export const trackChatActionExecution = async <T>(
   operations: ChatActionOperations | undefined,
   action: ChatRendererAction,
   conversation: ChatRendererSnapshot,
-  execute: () => Promise<T>,
+  execute: (action: ChatRendererAction) => Promise<T>,
+  readQueue?: () => readonly ChatQueuedRequest[],
 ) => {
   assertChatActionAvailable(conversation, action);
-  return operations ? operations.run(action, conversation.streamingStartedAt, execute) : execute();
+  return operations ? operations.run(action, conversation.streamingStartedAt, execute, readQueue) : execute(action);
 };

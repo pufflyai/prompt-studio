@@ -11,6 +11,8 @@ const decode = (value: string) =>
   });
 const attribute = (source: string, name: string) => decode(source.match(new RegExp(`\\b${name}="([^"]*)"`))?.[1] ?? "");
 
+const MAX_ERROR_MESSAGE_LENGTH = 4_000;
+
 export const junitCases = (xml: string) => {
   const summary = xml.match(/<testsuites\b[^>]*>/)?.[0];
   if (!summary) throw new Error("Missing JUnit testsuites summary");
@@ -27,6 +29,10 @@ export const junitCases = (xml: string) => {
     let outcome = "success";
     if (/<(?:failure|error)\b/.test(body)) outcome = "failure";
     else if (/<skipped\b/.test(body)) outcome = "skipped";
+    // Quarantine failure signatures match these messages, as they do for Playwright cases.
+    const errorMessages = [...body.matchAll(/<(failure|error)\b([^>]*?)(?:\/>|>([\s\S]*?)<\/\1>)/g)].map((failure) =>
+      (decode(failure[3] ?? "") || attribute(failure[2]!, "message")).slice(0, MAX_ERROR_MESSAGE_LENGTH),
+    );
     return {
       id: `${key}#${occurrence}`,
       file,
@@ -34,6 +40,7 @@ export const junitCases = (xml: string) => {
       line,
       outcome,
       durationMs: Number(attribute(attributes, "time")) * 1000,
+      ...(errorMessages.length ? { errorMessages } : {}),
     };
   });
   if (Number(attribute(summary, "tests")) !== cases.length) throw new Error("Incomplete JUnit case report");

@@ -29,6 +29,7 @@ interface BarProps {
   sorts?: ViewSort[];
   /** Applied after the view loads, so the tab shows unsaved changes. */
   editedSorts?: ViewSort[];
+  largeCollection?: boolean;
 }
 
 export const Bar = (props: BarProps) => {
@@ -87,7 +88,11 @@ export const Bar = (props: BarProps) => {
         views={views.views}
         viewsSource={viewsSource}
         fields={storyFields}
-        optionsFor={storyOptions}
+        optionsFor={(field) =>
+          storyOptions(field).map((option) =>
+            props.largeCollection && option.count ? { ...option, count: option.count * 137 } : option,
+          )
+        }
         search={search}
         onSearchChange={setSearch}
         searchResultLabel={search ? "4 of 10" : undefined}

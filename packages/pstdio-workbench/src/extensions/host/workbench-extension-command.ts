@@ -16,7 +16,7 @@ import { checkExactGateLaunch, readAndSettleGateLaunch } from "./planner-gate-la
 import { remoteWorkspaceLaunchCommand, runRemoteWorkspaceLaunch } from "./remote-workspace-launch";
 import { plannerGateLaunch, plannerGateLaunchCheck, runWorkbenchCommandOperation } from "./workbench-command-operation";
 import { type CreateOperationFeedback, runCreateOperation } from "./workbench-create-operation";
-import { runResourceMutation } from "./workbench-resource-mutation";
+import { resolveWorkbenchResourceMutation, runResourceMutation } from "./workbench-resource-mutation";
 export interface WorkbenchExtensionCommandContext {
   metadata?: Pick<WorkbenchExtensionMetadata, "commands">;
   createCommandIds?: ReadonlySet<string>;
@@ -176,7 +176,7 @@ export const executeWorkbenchExtensionCommand = async (
   }
   const create = context.createCommandIds?.has(commandId);
   const foreground = input.foreground || input.slot?.kind === "menu";
-  if (operations && command?.mutating && !command.resourceMutation && !create && foreground)
+  if (operations && command?.mutating && !resolveWorkbenchResourceMutation(command) && !create && foreground)
     return runWorkbenchCommandOperation({
       operations,
       projectId: context.projectId,

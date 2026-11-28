@@ -33,8 +33,8 @@ export const publishTicketChanges = async (
   );
   if (!fields.length) return;
   const [statuses, storedTags] = await Promise.all([
-    readStatusDefinitions(ctx.storage),
-    readTagDefinitions(ctx.storage),
+    fields.includes("statusId") ? readStatusDefinitions(ctx.storage) : [],
+    fields.includes("tags") ? readTagDefinitions(ctx.storage) : [],
   ]);
   const tags = [...preservedTags, ...storedTags.filter((tag) => !preservedTags.some((old) => old.id === tag.id))];
   const display = async (field: keyof typeof labels, ticket: StoredTicket) => {

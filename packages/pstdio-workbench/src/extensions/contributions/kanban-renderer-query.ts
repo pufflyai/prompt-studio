@@ -26,7 +26,8 @@ export const createKanbanRendererQuery = (input: {
   return {
     original: (row: KanbanRendererRow) => originalRows.get(row) ?? row,
     read: async (state: KanbanRendererQueryState, signal: AbortSignal) => {
-      const queryId = ++latestQueryId;
+      const metadataOnly = state.page?.limit === 0;
+      const queryId = metadataOnly ? undefined : ++latestQueryId;
       const value = await executeKanbanRendererCommand(
         context,
         record,
@@ -40,9 +41,9 @@ export const createKanbanRendererQuery = (input: {
         state.resource ?? resource,
         { signal, pageParams: state.pageParams },
       );
-      let wireRows: unknown[] = [];
-      if (Array.isArray(value)) wireRows = value;
-      else if (isQueryResult(value)) wireRows = value.rows ?? [];
+      const result = isQueryResult(value) ? value : undefined;
+      if (metadataOnly) return { rows: [], page: result?.page };
+      const wireRows = Array.isArray(value) ? value : (result?.rows ?? []);
       const nextCache = new Map<string, { signature: string; row: KanbanRendererRow }>();
       const mapRow = (row: unknown): KanbanRendererRow => {
         const candidate = row as KanbanRendererRow;
@@ -72,14 +73,12 @@ export const createKanbanRendererQuery = (input: {
       const rows = wireRows.map(mapRow);
       if (queryId === latestQueryId) {
         rowCache = nextCache;
-        if (isQueryResult(value)) onMetadata(value);
+        if (result) onMetadata(result);
       }
       return {
         rows,
-        page: isQueryResult(value) ? value.page : undefined,
-        metadata: isQueryResult(value)
-          ? { attributes: value.attributes, boardColumnConfigs: value.boardColumnConfigs }
-          : undefined,
+        page: result?.page,
+        metadata: result && { attributes: result.attributes, boardColumnConfigs: result.boardColumnConfigs },
       };
     },
   };

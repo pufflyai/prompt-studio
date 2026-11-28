@@ -15,7 +15,8 @@ export const useNativeChatActions = (session: ChatSession, conversation: ChatRen
     actions?.getSnapshot ?? noActions,
   );
   return {
-    queue: pending.find(({ intent }) => intent.action.type === "queue"),
+    /** Every queue change still running, in submission order. */
+    queue: pending.filter(({ intent }) => intent.action.type === "queue"),
     approval: pending.find(
       ({ intent }) => intent.action.type === "approve" && conversation.approval?.id === intent.action.id,
     ),
