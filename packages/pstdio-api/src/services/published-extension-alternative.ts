@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { ExtensionRelease } from "../app-config";
@@ -5,6 +6,10 @@ import type { ExtensionCatalog } from "../features/extensions/extension-catalog"
 import type { InstallExtensionSourceInput } from "../features/extensions/install-extension-source";
 import { compatibilityError } from "../features/extensions/project-extension-instance";
 import { ExtensionUpgradeUnavailableError } from "./extension-upgrade-unavailable-error";
+
+// A local copy can only switch to its published release when the review keeps the
+// folder as a separate provider, which it does for a folder that is its own git checkout.
+export const keepsLocalCheckout = (path: string) => existsSync(join(path, ".git"));
 
 export const createPublishedExtensionAlternative = (
   catalog: Promise<ExtensionCatalog>,
@@ -17,8 +22,11 @@ export const createPublishedExtensionAlternative = (
         entry.extensionId &&
         canonicalExtensionId(entry.extensionId) === canonicalExtensionId(id),
     );
-  const available = async (source: { source_kind?: string; extension_id: string }) =>
-    source.source_kind === "local_path" && (await lookup(source.extension_id)) !== undefined && Boolean(release);
+  const available = async (source: { source_kind?: string; extension_id: string; source_path: string }) =>
+    source.source_kind === "local_path" &&
+    Boolean(release) &&
+    keepsLocalCheckout(source.source_path) &&
+    (await lookup(source.extension_id)) !== undefined;
 
   const input = async (
     id: string,
