@@ -61,11 +61,18 @@ export const expectPackagedChatHistory = async (
     logTestPhase("Packaged chat history: reopen");
     await replayTab.click();
     await expect(replayTab).toHaveAttribute("aria-selected", "true");
-    // Selecting the retained session starts at latest without reloading its history owner.
+    // Nothing new arrived: selecting the retained session keeps its view and reading position.
     await expect
-      .poll(() => viewport.evaluate((element) => element.scrollHeight - element.clientHeight - element.scrollTop))
-      .toBeLessThanOrEqual(2);
-    await expect(page.getByRole("button", { name: "Scroll to latest message", exact: true })).toBeHidden();
+      .poll(() =>
+        viewport.evaluate((element) => {
+          const user = element.querySelector('[data-chat-message-list-item="user"]');
+          return user
+            ? Math.abs(user.getBoundingClientRect().top - element.getBoundingClientRect().top)
+            : Number.POSITIVE_INFINITY;
+        }),
+      )
+      .toBeLessThan(20);
+    await page.getByRole("button", { name: "Scroll to latest message", exact: true }).click();
     logTestPhase("Packaged chat history: show final response");
     await expect(page.getByText(/^Step 30\./).filter({ visible: true })).toBeVisible();
     expect(historyReads).toBe(0);
