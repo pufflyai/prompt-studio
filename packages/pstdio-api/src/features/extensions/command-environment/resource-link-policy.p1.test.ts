@@ -41,8 +41,9 @@ test("resource links use the enabled owner after replacing an extension source",
     const original = await install("original");
     const replacement = await install("replacement");
     const records = await app.deps.extensionService.listProjectExtensionInstances(project.id);
-    expect(records.find(({ instance }) => instance.id === original.instance.id)?.instance.enabled).toBe(false);
-    expect(records.find(({ instance }) => instance.id === replacement.instance.id)?.instance.enabled).toBe(true);
+    expect(replacement.instance.id).not.toBe(original.instance.id);
+    expect(records).toEqual([replacement]);
+    expect(replacement.instance.enabled).toBe(true);
     const api = createResourcesApi(app.deps, { projectId: project.id, extensionId: "example.notes" });
     const source = { type: "item", id: "source" };
     await api.addAnchors(source, [{ type: "item", id: "target", role: "context" }]);

@@ -11,6 +11,7 @@ import {
   createInstalledExtensionSourcesDBService,
   createProjectsDBService,
 } from "pstdio-db";
+import { seedLegacyProjectExtension } from "pstdio-db/test-fixtures";
 import { createFilesStorageService } from "pstdio-storage";
 import { EventBus } from "../features/sync/event-bus";
 import { uninstallProjectExtension } from "./extension-uninstall";
@@ -41,6 +42,7 @@ for (const mode of ["storage-failure", "delete-failure", "other-provider"]) {
       });
       let remainingInstance = instance;
       if (anotherProvider) {
+        // Retained same-ID attachments may exist in data written by earlier hosts.
         const other = await sources.register({
           install_name: "alternate-files",
           extension_id: "example.files",
@@ -48,10 +50,9 @@ for (const mode of ["storage-failure", "delete-failure", "other-provider"]) {
           source_kind: "local_path",
           source_path: join(root, "other"),
         });
-        remainingInstance = await instances.create({
-          installed_extension_id: other.id,
-          scope_type: "project",
-          scope_id: project.id,
+        remainingInstance = await seedLegacyProjectExtension(store, {
+          extension_ref: other.id,
+          project_id: project.id,
           enabled: false,
         });
       }

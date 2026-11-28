@@ -12,7 +12,7 @@ import { createProjectsDBService } from "../services/projects/projects";
 import { createSkillsDBService } from "../services/skills/skills";
 import { createDb } from "./connection.pglite";
 import { prepareFileOwnersUpgrade } from "./file-owners-upgrade";
-import { restoreReleasedPreferenceTables } from "./preference-upgrade.fixture";
+import { restoreReleasedPreferenceTables, seedLegacyProjectExtension } from "./preference-upgrade.fixture";
 import { prepareProjectExtensionsUpgrade } from "./project-extensions-upgrade";
 import { files, skills } from "./schemas.pg";
 
@@ -52,10 +52,9 @@ for (const interruption of ["normal", "schema", "restore", "mappings"])
           source_path: `/files-${suffix}`,
         });
         instances.push(
-          await createExtensionInstancesDBService(store.db).create({
-            installed_extension_id: source.id,
-            scope_type: "project",
-            scope_id: project.id,
+          await seedLegacyProjectExtension(store, {
+            extension_ref: source.id,
+            project_id: project.id,
             enabled: suffix === "a",
           }),
         );
@@ -172,9 +171,11 @@ for (const interruption of ["normal", "schema", "restore", "mappings"])
       const second = (await skillService.getByName(project.id, "shared-b"))!.files[0].file_id;
       expect(first).not.toBe(second);
       const service = createExtensionFilesDBService(store.db);
+      const retained = await createExtensionInstancesDBService(store.db).list({ scope_id: project.id });
+      expect(retained.map(({ id }) => id)).toEqual([instances[0].id]);
       const scope = {
         project_id: project.id,
-        extension_instance_id: instances[1].id,
+        extension_instance_id: instances[0].id,
         scope_type: "resource",
         scope_id: "first",
       };

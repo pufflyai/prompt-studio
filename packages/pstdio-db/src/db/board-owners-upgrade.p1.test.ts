@@ -10,7 +10,7 @@ import { createProjectsDBService } from "../services/projects/projects";
 import { prepareBoardDefaultsUpgrade } from "./board-defaults-upgrade";
 import { prepareBoardOwnersUpgrade } from "./board-owners-upgrade";
 import { createDb } from "./connection.pglite";
-import { restoreReleasedPreferenceTables } from "./preference-upgrade.fixture";
+import { restoreReleasedPreferenceTables, seedLegacyProjectExtension } from "./preference-upgrade.fixture";
 import { prepareProjectExtensionsUpgrade } from "./project-extensions-upgrade";
 import { board_views } from "./schemas.pg";
 
@@ -43,10 +43,9 @@ for (const interrupted of [false, true])
           source_path: `/boards-${suffix}`,
         });
         instances.push(
-          await createExtensionInstancesDBService(store.db).create({
-            installed_extension_id: source.id,
-            scope_type: "project",
-            scope_id: project.id,
+          await seedLegacyProjectExtension(store, {
+            extension_ref: source.id,
+            project_id: project.id,
           }),
         );
       }

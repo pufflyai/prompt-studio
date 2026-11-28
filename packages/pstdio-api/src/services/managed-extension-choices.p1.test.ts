@@ -48,17 +48,12 @@ test("team policy protects a required tool from disable, removal and provider re
   };
   const installed = await service.enableInstalledSourceForProject({ ...source, projectId: project.id });
   const personalInstance = await service.enableInstalledSourceForProject({ ...source, projectId: personal.id });
-  const alternate = await service.registerInstalledSource({
+  const replacement = {
     ...source,
     installName: "replacement",
     sourcePath: "/managed-extension-test/replacement",
-  });
-  const alternateInstance = await instances.create({
-    installed_extension_id: alternate.id,
-    scope_id: project.id,
-    scope_type: "project",
-    enabled: false,
-  });
+  };
+  const alternate = await service.registerInstalledSource(replacement);
   required = true;
 
   await expect(service.removeProjectExtensionInstance(installed.instance.id)).rejects.toBeInstanceOf(
@@ -70,9 +65,9 @@ test("team policy protects a required tool from disable, removal and provider re
   await expect(
     service.uninstallProjectExtension({ projectId: project.id, instanceId: installed.instance.id }),
   ).rejects.toBeInstanceOf(AlwaysEnabledExtensionError);
-  await expect(service.setProjectExtensionEnabled(alternateInstance.id, true)).rejects.toBeInstanceOf(
-    AlwaysEnabledExtensionError,
-  );
+  await expect(
+    service.enableInstalledSourceForProject({ ...replacement, projectId: project.id }),
+  ).rejects.toBeInstanceOf(AlwaysEnabledExtensionError);
   await expect(
     service.enableInstalledSourceForProject({
       ...source,
@@ -83,7 +78,7 @@ test("team policy protects a required tool from disable, removal and provider re
   ).rejects.toBeInstanceOf(AlwaysEnabledExtensionError);
   expect(await sources.getByInstallName("new-copy")).toBeNull();
   expect((await instances.get(installed.instance.id))?.enabled).toBe(true);
-  expect((await instances.get(alternateInstance.id))?.enabled).toBe(false);
+  expect(await instances.list({ scope_id: project.id })).toEqual([installed.instance]);
   expect(await instances.hasProjectDefaultChoice(project.id, source.extensionId)).toBe(false);
   expect(await service.adoptDefaultSourceForProject(project.id, alternate.id)).toBeNull();
   await expect(service.registerInstalledSource({ ...source, sourceHash: "substitute" })).rejects.toBeInstanceOf(

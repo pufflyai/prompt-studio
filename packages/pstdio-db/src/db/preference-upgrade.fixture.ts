@@ -7,6 +7,24 @@ import type { createDb } from "./connection.pglite";
 import { project_extensions } from "./schemas.pg";
 import { restoreTextStorageOwners } from "./storage-owner-upgrade.fixture";
 
+// Released homes could attach several sources for one extension. Seed those
+// rows directly so migration fixtures exercise that shape through startup.
+export const seedLegacyProjectExtension = async (
+  connection: Awaited<ReturnType<typeof createDb>>,
+  input: Pick<typeof project_extensions.$inferInsert, "project_id" | "extension_ref" | "enabled" | "config_json">,
+) => {
+  const timestamp = new Date().toISOString();
+  const [row] = await connection.db
+    .insert(project_extensions)
+    .values({
+      ...input,
+      created_at: timestamp,
+      updated_at: timestamp,
+    })
+    .returning();
+  return projectExtensionRow(row!);
+};
+
 const restoreReleasedInstances = async (
   connection: Awaited<ReturnType<typeof createDb>>,
   folder: string,

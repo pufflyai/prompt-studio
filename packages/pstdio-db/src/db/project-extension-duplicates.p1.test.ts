@@ -7,7 +7,7 @@ import { createExtensionSettingsDBService } from "../services/extension-settings
 import { createInstalledExtensionSourcesDBService } from "../services/installed-extension-sources/installed-extension-sources";
 import { createProjectsDBService } from "../services/projects/projects";
 import { createDb } from "./connection.pglite";
-import { project_extensions } from "./schemas.pg";
+import { seedLegacyProjectExtension } from "./preference-upgrade.fixture";
 
 test("startup retires duplicate installations, preserving the selected source and saved choices", async () => {
   const root = await mkdtemp(join(tmpdir(), "project-extension-duplicates-"));
@@ -39,16 +39,12 @@ test("startup retires duplicate installations, preserving the selected source an
     });
     expect(await instances.attach({ ...input, installed_extension_id: previous.id, enabled: false })).toBeNull();
 
-    const timestamp = new Date().toISOString();
-    await store.db.insert(project_extensions).values({
+    const retired = await seedLegacyProjectExtension(store, {
       project_id: project.id,
       extension_ref: previous.id,
       enabled: false,
       config_json: { selected: "previous", extra: true },
-      created_at: timestamp,
-      updated_at: timestamp,
     });
-    const retired = (await instances.findByScopeInstalledSource("project", project.id, previous.id))!;
     const settings = createExtensionSettingsDBService(store.db);
     const choice = { owner_type: "extension_instance" as const, extension_id: "example.tool", key: "pin" };
     await settings.setValue({ ...choice, owner_id: retired.id, value_json: true });
