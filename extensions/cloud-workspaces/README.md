@@ -21,9 +21,13 @@ Use `templates:read`, `workspaces:read`, `conversations:read`, and `logs:read` t
 
 Deployment endpoints and credentials belong in host-managed connection settings. Keep Google authentication, provider credentials, operator helpers, and deployment configuration outside the repository. Shared packages contain source and dependency manifests. Workspace credentials must be scoped to that workspace and expire with it.
 
+## Browse cloud workspaces
+
+Open **Cloud Workspaces** to see every connected workspace: the deployed controller and any local PocketCoder instances. Open a row to reach its workspace deployment page. A deployed workspace has **Monitoring**, **Machines**, and **Templates** tabs. The Machines tab filters by one state, reason, or template at a time and can launch or shut down a workspace. Shut down is also available from a workspace page's tab menu.
+
 ## Workspace Monitoring
 
-Open **Cloud Workspaces → Deployed PocketCoder → Workspace Monitoring**. The overview covers the last hour, 24 hours, or seven days. Use the shared search and filter controls to find workspaces by exact name or state, then select a workspace to see its timeline, ready time, and estimate. Use **Open output and logs** to inspect its operational details.
+Open a workspace deployment and select **Monitoring**. The overview covers the last hour, 24 hours, or seven days. The monitoring panel shows running and peak counts, ready time, estimated cost, and the activity chart. The machine list lives in the **Machines** tab.
 
 Set **Default workspace hourly rate (USD)** in the extension settings to apply one rate across the controller. To enter different rates on controllers that report activity by template, use **Workspace hourly rates (USD)**. Enter a JSON object with template names and USD per ready hour, for example `{"app-preview": 0.22, "test-runner": 0.55}`. A rate applies to every version of that template and to retained activity. The estimate covers ready time. The dashboard labels unpriced usage and shows a partial subtotal when some rates are missing. Aggregate estimates with different template rates require activity by template.
 
@@ -61,11 +65,9 @@ pst pocketcoder.remote-testing preview open --workspace-id <workspace-id>
 
 Login links are private task output. Keep them out of commits and public PR text.
 
-## Dashboard
+## Workspace deployment
 
-Open **Deployed instance** to browse Machines and Templates. The tables read the controller directly. Machines show their state and creation time. Open a workspace to inspect test output and controller logs. The Activity view reads cloud history from the controller.
-
-Use **Launch workspace** to choose a published template. Select several machines to **Stop selected** or **Delete selected**. Actions run in the background. Delete stops execution and dismisses the row from this project; controller audit history and saved logs remain available.
+A workspace deployment page has **Monitoring**, **Machines**, and **Templates** tabs. The tables read the controller directly. The Machines tab shows state, creation time, reason, and template, with single-select filters for each. Use **Launch workspace** to choose a published template. **Shut down** stops the workspace and anything running inside it; the action runs in the background. Opening a machine shows its test output, controller logs, and monitoring detail.
 
 ## Local controllers
 

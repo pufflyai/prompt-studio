@@ -9,52 +9,16 @@ files that are not ignored. It starts an isolated test environment, runs the tes
 command there, stops the environment when the run finishes, and saves the full log under
 `.pstdio/extension-storage/pocketcoder.remote-testing/runs/`.
 
-## Remote tests page
+## Collection
 
-**Remote tests** in the project sidebar has two tabs:
-
-- **Runs**: every run with its status, command, the session that started it, environment,
-  start time, duration, exit code and log. Prompt Studio collects results in the background
-  after the CLI returns. If a runner disappears without a final receipt, collection marks
-  the run timed out after its command duration and the existing 30-minute source-transfer
-  and log-collection allowance, then
-  queues independent workspace cleanup and log collection, with the existing once-per-minute
-  recovery schedule as a fallback. Confirmed runner timeouts also save their actual result
-  before shutdown or log-service retries. Cleanup admission and workers both require the
-  durable timeout summary, including after a restart between intent and result writes. Uploaded timeout logs are backfilled without changing the
-  saved outcome or duration. A durable result checkpoint survives summary-write or ownership-release
-  failures; recovery completes it even when the host labels the failed worker non-retryable.
-  Incomplete cleanup and log intents also recover from those failures, preserving the original
-  job error. Cleanup checks controller state before retrying a stop. Missing logs from unfinalized timeouts get a fixed 30-second
-  upload grace period, including a final read after restart. Setup claims carry a finite
-  recovery window; the next launch,
-  Runs access, or assigned recovery schedule fences submission before cleaning an interrupted
-  setup. Explicit `runs show` and collector entry also wait for setup activation or recover
-  its expiry; they preserve the setup's keep policy without requiring an assigned schedule.
-  Without an assigned schedule, other recovery starts on the next launch or Runs access;
-  reuse stays blocked until its asynchronous cleanup finishes. Workspace ownership
-  remains held until cleanup accepts the stop; elapsed time never makes it reusable.
-  Expired claims saved by older versions without a run record are reconciled against this
-  project's managed workspace inventory and stopped before ownership is released. Recovery
-  prioritizes cleanup and logs and admits at most 20 background jobs per rolling minute
-  (8 cleanup, 8 log, 4 collection), leaving room within the host's 60-job limit for launches.
-  Durable sweep cursors rotate admission so failing earlier intents cannot starve later work.
-  An explicitly kept environment stays open; collection
-  cancels its overdue request when the controller can return its receipt and retains the
-  workspace claim until a terminal receipt confirms cancellation. If an unacknowledged
-  submission still has no receipt at the deadline, collection stops even a kept workspace
-  before releasing ownership, because admission may still be in flight. A documented
-  `attachment.unsupported` registration rejection precedes admission: it preserves the
-  original error and releases a reused workspace without stopping it. Ambiguous responses
-  and lost replies retain request identity and ownership for reconciliation. A receipt that
-  already finished retains its actual result. Double-click a run, or use its menu, to
-  open its session. The menu also cancels a running run.
-- **Environments**: running test environments, whether each is free or which run holds it,
-  whether it uses the current template, and when it stops. Start one ahead of time, stop one
-  from its menu, or stop all.
-
-`pst` passes the calling agent's session to `run` automatically, so agents do not need to do
-anything for the link. Runs started outside a session show "Not recorded".
+Prompt Studio collects results in the background after the CLI returns. If a runner
+disappears without a final receipt, collection marks the run timed out after its command
+duration and the existing 30-minute source-transfer and log-collection allowance, then
+queues independent workspace cleanup and log collection. The recovery schedule is a
+fallback; an explicit `runs show` always resumes collection for the saved run ID.
+Uploaded timeout logs are backfilled without changing the saved outcome or duration.
+A durable result checkpoint survives summary-write or ownership-release failures.
+Workspace ownership remains held until cleanup accepts the stop.
 
 ## Commands
 
@@ -67,7 +31,7 @@ pst pocketcoder.remote-testing environments list | create | stop --environment <
 
 ## Branch and workspace templates
 
-Use **Remote tests → Runs → Run tests** or **Run Prompt Studio**. An agent can also launch from this project's CLI and pass another repository or worktree with `--path`.
+Launch a test or preview from the CLI. Pass another repository or worktree with `--path`.
 
 ```sh
 pst pocketcoder.remote-testing run --path /path/to/worktree --ref feature/my-branch

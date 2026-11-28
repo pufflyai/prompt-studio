@@ -4,7 +4,7 @@ import { createWebviewClient, defineExtensionView, type PageParams } from "@pstd
 import { psTheme } from "@pstdio/ui";
 import { useState, useSyncExternalStore } from "react";
 import { createRoot } from "react-dom/client";
-import { deployedMachinePageRef, monitoringDetailPageRef } from "./lab-navigation";
+import { deployedMachineKind } from "./resources";
 import type { monitoringCommands } from "./workspace-monitoring-commands";
 import { WorkspaceMonitoringDashboard } from "./workspace-monitoring-dashboard";
 import { WorkspaceMonitoringDetail } from "./workspace-monitoring-detail";
@@ -20,6 +20,7 @@ export default defineExtensionView({
     function Monitoring() {
       const props = useSyncExternalStore(propsStore.subscribe, propsStore.get);
       const { resource, pageParams: params } = props;
+      const machine = resource?.type === deployedMachineKind.id ? resource : undefined;
       const range = monitoringRange(params?.["monitoring-range"]);
       const locale = context.locale;
       const [error, setError] = useState<string>();
@@ -32,18 +33,15 @@ export default defineExtensionView({
         <Box h="100dvh" display="flex" flexDirection="column" minW="0" bg="bg" color="fg">
           {error && <MonitoringError message={error} t={t} dismiss={() => setError(undefined)} />}
           <Box flex="1" minH="0">
-            {resource ? (
+            {machine ? (
               <WorkspaceMonitoringDetail
-                key={`${resource.id}:${range}`}
+                key={`${machine.id}:${range}`}
                 client={client}
-                machineId={resource.id}
+                machineId={machine.id}
                 range={range}
                 changeRange={(value) => update({ "monitoring-range": value })}
                 locale={locale}
                 t={t}
-                openOutput={(resource) =>
-                  void client.navigation.open({ kind: "page", page: deployedMachinePageRef, resource }).catch(showError)
-                }
               />
             ) : (
               <WorkspaceMonitoringDashboard
@@ -53,20 +51,6 @@ export default defineExtensionView({
                 locale={locale}
                 t={t}
                 update={update}
-                filterValue={
-                  typeof params?.["monitoring-filter"] === "string" ? params["monitoring-filter"] : undefined
-                }
-                name={typeof params?.["monitoring-name"] === "string" ? params["monitoring-name"] : undefined}
-                open={(resource) =>
-                  void client.navigation
-                    .open({
-                      kind: "page",
-                      page: monitoringDetailPageRef,
-                      resource,
-                      params: { "monitoring-range": range },
-                    })
-                    .catch(showError)
-                }
               />
             )}
           </Box>

@@ -37,7 +37,7 @@ Without `--command`, the run uses the project's configured test command (`testCo
 pst pocketcoder.remote-testing run --path "$(git rev-parse --show-toplevel)" --command "bun install --frozen-lockfile && bun run test:unit"
 ```
 
-The run is linked to your session automatically, and the user can follow it on the **Remote tests** page.
+The run is linked to your session automatically. List runs with `pst pocketcoder.remote-testing runs list` and read one with `runs show`.
 
 A run starts an isolated environment unless you select one with `--environment <id>`. It stops the environment after the result is finalized, including when the suite fails. Pass `--keep-environment true` to keep it warm, then select its ID explicitly for another run.
 

@@ -1,9 +1,9 @@
 import { defineView, l10n } from "@pstdio/sdk/extensions";
 import { refresh } from "./commands";
-import { launchInstance, startInstance, stopInstance } from "./instance-commands";
-import { removeInstance } from "./instance-removal";
+import { deployedConnection, deployedName, deployedStatus } from "./deployed-controller";
+import { launchInstance } from "./instance-commands";
 import { instancesFor } from "./instances";
-import { labCommands } from "./lab-commands";
+import { deployedInstanceResource } from "./lab-navigation";
 import { projectMachineRow, readyMachineCheckpoint } from "./machine-row";
 import { ensureMachineWatch } from "./machine-watch";
 import type { ControllerMachine } from "./machines";
@@ -16,6 +16,7 @@ import {
   publishSelectedTemplate,
 } from "./table-commands";
 import { openCatalog, saveTemplate } from "./template-commands";
+import { openCloudWorkspace } from "./workspaces-commands";
 
 const refreshAction = {
   id: "refresh",
@@ -32,17 +33,17 @@ const launchInstanceAction = {
   submitLabel: "Launch instance",
 };
 
-export const instancesView = defineView({
-  id: "instances",
-  title: l10n("cloud-workspaces.instances", "Instances"),
-  icon: "server",
+export const workspacesView = defineView({
+  id: "workspaces",
+  title: l10n("cloud-workspaces.workspaces", "Cloud workspaces"),
+  icon: "cloud",
   body: {
     kind: "dataTable",
     refreshEvents: [changed],
-    emptyTitle: l10n("cloud-workspaces.launch-a-pocketcoder-instance", "Launch a PocketCoder instance"),
+    emptyTitle: l10n("cloud-workspaces.no-cloud-workspaces", "No cloud workspaces connected"),
     emptyDescription: l10n(
-      "cloud-workspaces.save-a-template-then-launch-an-instance-with-the-local-executable",
-      "Save a template, then launch an instance with the local executable.",
+      "cloud-workspaces.configure-the-deployed-controller-or-launch-a-local-instance",
+      "Configure the deployed controller or launch a local PocketCoder instance.",
     ),
     toolbarActions: [
       launchInstanceAction,
@@ -55,85 +56,65 @@ export const instancesView = defineView({
       refreshAction,
     ],
     columns: [
-      { id: "name", label: l10n("cloud-workspaces.instance", "Instance") },
+      { id: "name", label: l10n("cloud-workspaces.workspace", "Workspace") },
+      { id: "type", label: l10n("cloud-workspaces.type", "Type") },
       { id: "state", label: l10n("cloud-workspaces.state", "State") },
       { id: "connection", label: l10n("cloud-workspaces.connection", "Connection") },
-      { id: "url", label: l10n("cloud-workspaces.operator-api", "Operator API") },
-      { id: "error", label: l10n("cloud-workspaces.error", "Error") },
-    ],
-    selectionMode: "multiple",
-    selectionActions: [
-      {
-        id: "start",
-        label: l10n("cloud-workspaces.start", "Start"),
-        icon: "play",
-        command: selectionCommands.startSelected.ref,
-      },
-      {
-        id: "stop",
-        label: l10n("cloud-workspaces.stop", "Stop"),
-        icon: "square",
-        command: selectionCommands.stopSelected.ref,
-      },
-      {
-        id: "remove",
-        label: l10n("cloud-workspaces.remove", "Remove"),
-        icon: "trash-2",
-        destructive: true,
-        command: selectionCommands.removeSelected.ref,
-      },
+      { id: "details", label: l10n("cloud-workspaces.details", "Details") },
     ],
     rowActions: [
       {
         id: "open",
-        label: l10n("cloud-workspaces.browse-instance", "Browse instance"),
-        icon: "server",
-        command: labCommands["lab.select"].ref,
-      },
-      {
-        id: "start",
-        label: l10n("cloud-workspaces.start-instance", "Start instance"),
-        icon: "play",
-        command: startInstance.ref,
-      },
-      {
-        id: "stop",
-        label: l10n("cloud-workspaces.stop-instance", "Stop instance"),
-        icon: "square",
-        command: stopInstance.ref,
-      },
-      {
-        id: "remove",
-        label: l10n("cloud-workspaces.remove-instance", "Remove instance"),
-        icon: "trash-2",
-        destructive: true,
-        command: removeInstance.ref,
+        label: l10n("cloud-workspaces.open-workspace", "Open workspace"),
+        icon: "arrow-up-right",
+        command: openCloudWorkspace.ref,
       },
     ],
+    async onRowActivate(ctx, { row }) {
+      await ctx.commands.execute(openCloudWorkspace.ref, { params: { rowId: row.id } });
+    },
     async query(ctx) {
       const instances = instancesFor(ctx.projectId);
-      return {
-        rows: await Promise.all(
-          (await instances.list()).map(async (instance) => ({
-            id: instance.id,
-            resource: { type: instanceKind.id, id: instance.id, label: instance.name },
-            values: {
-              name: instance.name,
-              state: instance.state,
-              connection: await instances.connection(instance.id),
-              url: instance.url,
-              error: instance.error ?? "",
-            },
-          })),
-        ),
+      const [settings, status, localInstances] = await Promise.all([
+        ctx.settings.all(),
+        deployedStatus(ctx.connections),
+        instances.list(),
+      ]);
+      const deployedWorkspace = {
+        id: `deployed:${deployedConnection.id}`,
+        resource: deployedInstanceResource(ctx, deployedName(settings)),
+        values: {
+          name: deployedName(settings),
+          type: "Deployed",
+          state: status.state,
+          connection: status.state,
+          details: status.error,
+        },
       };
-    },
-    async onRowActivate(ctx, { row }) {
-      await ctx.commands.execute(labCommands["lab.select"].ref, { params: { instance: row.id } });
+      const localRows = await Promise.all(
+        localInstances.map(async (instance) => ({
+          id: `local:${instance.id}`,
+          resource: {
+            type: instanceKind.id,
+            extensionId: ctx.extensionId,
+            projectId: ctx.projectId,
+            id: instance.id,
+            label: instance.name,
+            icon: "server",
+          },
+          values: {
+            name: instance.name,
+            type: "Local",
+            state: instance.state,
+            connection: await instances.connection(instance.id),
+            details: instance.error || instance.url,
+          },
+        })),
+      );
+      return { rows: [deployedWorkspace, ...localRows] };
     },
   },
 });
-
 export const templatesView = defineView({
   id: "templates",
   title: l10n("cloud-workspaces.templates", "Templates"),

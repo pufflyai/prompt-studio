@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import type { ExtensionConnectionsApi, NavigationTarget } from "@pstdio/sdk/extensions";
 import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
 import { openDeployedMachine } from "./deployed-machine";
-import { deployedMachinesView } from "./deployed-workbench";
+import { listDeployedMachines } from "./deployed-machines-commands";
 import type { ControllerMachine } from "./machines";
 
 function fixture(state: ControllerMachine["state"], preview: boolean) {
@@ -45,8 +45,7 @@ function fixture(state: ControllerMachine["state"], preview: boolean) {
     },
   });
   const row = async () => {
-    if (deployedMachinesView.body.kind !== "dataTable") throw new Error("Expected deployed machines table");
-    const result = await deployedMachinesView.body.query(ctx);
+    const result = await listDeployedMachines.run(ctx, {});
     return result.rows[0]?.resource;
   };
   const open = async () => {
@@ -58,6 +57,10 @@ function fixture(state: ControllerMachine["state"], preview: boolean) {
       label: machine.external_id,
       extensionId: ctx.extensionId,
       projectId: ctx.projectId,
+    });
+    expect(target.parent).toMatchObject({
+      page: { id: "deployed", extensionId: ctx.extensionId },
+      resource: { type: "deployed-instance", label: "Deployed PocketCoder" },
     });
     return target.resource;
   };

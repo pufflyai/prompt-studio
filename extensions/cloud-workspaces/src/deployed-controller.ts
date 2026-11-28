@@ -4,10 +4,11 @@ import {
   type ExtensionConnectionsApi,
   l10n,
 } from "@pstdio/sdk/extensions";
+import { deployedConnectionId } from "./lab-navigation";
 import { type ControllerMachine, machinePath } from "./machines";
 
 export const deployedConnection = defineConnection({
-  id: "deployed-controller",
+  id: deployedConnectionId,
   scope: "global",
   label: l10n("cloud-workspaces.deployed-pocketcoder-controller", "Deployed PocketCoder controller"),
   transport: "http",

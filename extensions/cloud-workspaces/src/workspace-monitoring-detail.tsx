@@ -1,5 +1,4 @@
 import { Flex, Grid, Stack, Text } from "@chakra-ui/react";
-import type { ResourceRef } from "@pstdio/sdk/extensions";
 import { ScrollArea, SimpleCard, SimpleCardBody } from "@pstdio/ui";
 import { useEffect, useState } from "react";
 import type { MonitoringClient, MonitoringDetail } from "./workspace-monitoring-client";
@@ -17,13 +16,12 @@ interface DetailProps {
   machineId: string;
   range: string;
   changeRange(value: string): void;
-  openOutput(resource: ResourceRef): void;
   locale: string;
   t: Translate;
 }
 
 export function WorkspaceMonitoringDetail(props: DetailProps) {
-  const { client, machineId, range, changeRange, openOutput, locale, t } = props;
+  const { client, machineId, range, changeRange, locale, t } = props;
   const [detail, setDetail] = useState<MonitoringDetail>();
   const [error, setError] = useState<string>();
   const [dismissed, setDismissed] = useState(false);
@@ -80,13 +78,6 @@ export function WorkspaceMonitoringDetail(props: DetailProps) {
               icon="refresh"
               label={t("cloud-workspaces.refresh", "Refresh")}
               onClick={() => setRetry((value) => value + 1)}
-            />
-          )}
-          {detail && (
-            <MonitoringAction
-              icon="file-text"
-              label={t("cloud-workspaces.monitoring-open-output", "Open output and logs")}
-              onClick={() => openOutput(detail.resource)}
             />
           )}
         </Flex>
