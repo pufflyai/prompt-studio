@@ -1,5 +1,14 @@
 # pstdio-onboarding
 
+## 0.3.1
+
+_2026-11-28_
+
+### Patch Changes
+
+- 958363f: Keep extensions available on the next host API while retaining compatibility with previously supported hosts.
+- 962fa6d: Update i18next and Claude Code to patched releases and require Claude Code 2.1.251 or newer.
+
 ## 0.3.0
 
 _2026-11-21_

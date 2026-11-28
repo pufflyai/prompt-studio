@@ -1,5 +1,43 @@
 # pstdio-planner
 
+## 0.49.0
+
+_2026-11-28_
+
+### Minor Changes
+
+- 4444cbf: Keep ticket boards, opening, edits, Timeline and bulk actions bounded as projects grow. Skip hidden relationship badges and unnecessary cleanup jobs, and reconcile bulk actions once after saving.
+
+  The `list-tickets` and `read-tickets` command results now use `{ tickets, total, cursor, revision }` pages instead of arrays. Scripts must read `tickets` and follow non-null cursors with the same filters. Pages default to 100 tickets; stale continuations require restarting the listing.
+
+### Patch Changes
+
+- 0ea67fc: Confirm dashboard ticket deletions by canonical ID and run their cleanup and change hooks in the background. Queue workspace cleanup for dashboard archives and release the ticket-order lock before move notifications. Serve full filter counts independently of card pages.
+- 958363f: Keep extensions available on the next host API while retaining compatibility with previously supported hosts.
+- 8ea199b: Prefer configured cloud test workspaces and app previews during implementation.
+- fff48a5: Move Project Timeline Auto Build into its contributed page header and open its controls in a host dialog, preserving shared compact styling and resource context.
+- 0ea67fc: Queue overlapping Planner board moves so rapid drops can all save.
+- 7afa556: Make session cleanup reads reliable, expose conversation exports and Planner template provenance and reset, and document failure-preserving CLI pipelines.
+- 68646d4: Keep Notes rename and Planner launch recovery attached to their original resource and preserve confirmed results after a missed response.
+- fe4214a: Browse Planner in 50-card pages with indexed ordering, exact column counts and indexed child lookups.
+- b171fb5: Keep the Tickets board loading when a project update changes its data during an initial read.
+- 4444cbf: Prepare Planner indexes once per storage handle, avoid resumption reads for tickets without attempts, and preserve activity history for inline property edits.
+- 4d0c65e: Open the first Timeline page after initializing its execution prefix, while retaining exact global totals and dependency flags. Keep milestone and track visibility with the page snapshot and read tag definitions once.
+- 4444cbf: Preserve pending ticket order when moving or creating Timeline tickets before the Timeline has been opened. Skip dependency delivery history reads when no completed dependency has a pull request to inspect, and avoid repeated attempt queries for unstarted Auto Build candidates.
+
+  Serialize first-use Timeline placement initialization across concurrent readers and writers, preserving batch order and allowing queued initialization to recover after a rejected write.
+
+  Keep first-page ticket reads coherent through successive synchronization revisions, including display-name enrichment, and stop restarting when the command is canceled.
+
+  Keep earlier unanswered Auto Build requests accessible after a later page empties, include ticket workers beyond the first page of live sessions, and reject gate reviews for archived tickets.
+
+  Resolve dependency-only blockers through legacy current shorthand links as well as IDs, while preserving shared-alias ambiguity and global blocker counts.
+
+- 4c4b384: Open new tickets directly from the create response.
+- 4444cbf: Keep Timeline position and zoom while adjacent ticket windows load, and allow panning through horizontal and compact plans.
+- e75e68a: Keep Timeline display settings closed after a pointer click so view changes can be saved.
+- 0ea67fc: Count Planner filter options across the full matching ticket set and preview ticket deletion immediately after confirmation.
+
 ## 0.48.0
 
 _2026-11-21_

@@ -1,5 +1,22 @@
 # pstdio-session-browser
 
+## 0.4.0
+
+_2026-11-28_
+
+### Minor Changes
+
+- d151f9a: Recognize saved conversations by a short, stable nickname on tab hover and copy it from the session menu.
+
+### Patch Changes
+
+- 958363f: Keep extensions available on the next host API while retaining compatibility with previously supported hosts.
+- fb5e669: Link agent conversations started from an extension upgrade review so the user can load the reply into that review.
+- e78df2f: Keep unsent session drafts in the browser while sending messages to the session's owning device. Preserve existing saved drafts and accepted native input when upgrading.
+- ccbd7bd: Keep conversations refreshing after sending a message by reading session updates from the conversation watcher.
+- b571ea5: Keep the Sessions list loaded when switching conversations in Main.
+- 5f93203: Keep one unsent draft per conversation, without restore prompts. Sessions no longer recovers drafts saved by older releases or puts failed native commands back in the composer; a failed native command stays visible in the conversation.
+
 ## 0.3.0
 
 _2026-11-21_

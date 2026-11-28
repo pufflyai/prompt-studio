@@ -1,5 +1,14 @@
 # pstdio-reports
 
+## 0.47.1
+
+_2026-11-28_
+
+### Patch Changes
+
+- 958363f: Keep extensions available on the next host API while retaining compatibility with previously supported hosts.
+- 64c1869: Saving a report reuses unchanged attachments and the existing Markdown body. Repeated saves no longer create and delete a copy of every file.
+
 ## 0.47.0
 
 _2026-11-21_
