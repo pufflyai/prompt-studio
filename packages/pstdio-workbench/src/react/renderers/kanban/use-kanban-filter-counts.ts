@@ -1,14 +1,13 @@
 import type { CollectionPage, CollectionPageRequest } from "@pstdio/sdk/extensions";
-import type { KanbanRendererQueryState, WorkbenchCore } from "../../../core";
+import type { KanbanRendererQueryState, RegisteredKanbanRendererContribution, WorkbenchCore } from "../../../core";
 import { rendererResourceDependency } from "../../../core/registries/renderers/renderer-refresh-key";
 import { rendererQueryKey } from "../renderer-query-key";
 import { useRendererRead } from "../use-renderer-read";
 import { isPlannerTicketsBoard } from "./kanban-move";
-import type { ReactRegisteredKanbanRendererContribution } from "./kanban-presentation";
 
 export const useKanbanFilterCounts = (
   workbench: WorkbenchCore,
-  contribution: ReactRegisteredKanbanRendererContribution,
+  contribution: Pick<RegisteredKanbanRendererContribution, "id" | "queryScope" | "queryEvents" | "executePage">,
   ownerKey: string,
   state: KanbanRendererQueryState,
   request: CollectionPageRequest,
@@ -22,8 +21,19 @@ export const useKanbanFilterCounts = (
     queryScope,
     queryEvents,
     dependency: rendererResourceDependency(state.resource),
-    queryKey: rendererQueryKey([id, state.resource]),
-    refreshKey: rendererQueryKey([state.filter, request.search, page?.revision]),
+    // Unlike rows, counts for another query cannot be kept visible during replacement.
+    queryKey: rendererQueryKey([
+      id,
+      state.resource,
+      state.filter,
+      state.settings.columnGrouping,
+      state.settings.rowGrouping,
+      request.search,
+      request.search.trim() ? request.searchFields : undefined,
+      request.presentation,
+      request.collapsedGroups,
+      page?.revision,
+    ]),
     enabled: Boolean(page && !page.statistics && executePage && isPlannerTicketsBoard(id)),
     load: async (signal) =>
       (
@@ -33,6 +43,7 @@ export const useKanbanFilterCounts = (
         )
       ).page,
   });
-  const statistics = read.acceptedValue?.revision === page?.revision ? read.acceptedValue?.statistics : undefined;
-  return page && statistics ? { ...page, statistics } : page;
+  if (!page || page.statistics || read.acceptedValue?.revision !== page.revision) return page;
+  const { statistics } = read.acceptedValue;
+  return statistics ? { ...page, statistics } : page;
 };

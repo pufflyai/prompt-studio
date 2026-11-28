@@ -1,10 +1,11 @@
 import { afterEach, expect, test } from "bun:test";
-import type { CollectionPageRequest } from "@pstdio/sdk/extensions";
+import type { CollectionPage, CollectionPageRequest, ViewFilterGroup } from "@pstdio/sdk/extensions";
 import { ChakraProvider, psTheme } from "@pstdio/ui";
 import type { AttributeDescriptor, KanbanRendererProps } from "@pstdio/ui/kanban-renderer";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { createWorkbench, getWorkbenchRenderers } from "../../../core";
 import { WorkbenchKanbanView } from "./kanban-view";
+import { useKanbanFilterCounts } from "./use-kanban-filter-counts";
 
 const environment = globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean };
 const previousEnvironment = environment.IS_REACT_ACT_ENVIRONMENT;
@@ -123,4 +124,77 @@ test.each([
   }
   expect(shown?.rows.map((row) => row.id)).toEqual(["first"]);
   expect(shown?.page?.loading).toBe(false);
+});
+
+test("Planner filter counts attach only to the current filter, search, and revision", async () => {
+  environment.IS_REACT_ACT_ENVIRONMENT = true;
+  core = createWorkbench();
+  const id = "pstdio.planner.view.tickets";
+  const renderers = getWorkbenchRenderers(core);
+  const page = { revision: "r1", cursor: null, total: 10, filteredTotal: 10, groups: [] } satisfies CollectionPage;
+  const statistics = (count: number) => ({
+    status: { type: "top-values" as const, values: [{ label: "todo", count, percentage: count * 10 }] },
+  });
+  let nextCounts: Promise<CollectionPage> = Promise.resolve({ ...page, statistics: statistics(10) });
+  const holdCounts = (value: CollectionPage) => {
+    const response = Promise.withResolvers<void>();
+    responses.push(response);
+    nextCounts = response.promise.then(() => value);
+    return response.resolve;
+  };
+  renderers.registerKanbanRenderer({
+    id,
+    title: "Tickets",
+    attributes: [],
+    executeQuery: () => [],
+    executePage: async () => ({ rows: [], page: await nextCounts }),
+  });
+  const contribution = renderers.getKanbanRenderer(id)!;
+  const all: ViewFilterGroup = { conjunction: "and", rules: [] };
+  const filtered: ViewFilterGroup = {
+    conjunction: "and",
+    rules: [{ attributeId: "status", condition: "is", value: "todo" }],
+  };
+  let shown: CollectionPage | undefined;
+  const Renderer = (props: { filter: ViewFilterGroup; search: string; result: CollectionPage }) => {
+    shown = useKanbanFilterCounts(
+      core,
+      contribution,
+      "tickets",
+      {
+        filter: props.filter,
+        sorts: [],
+        settings: { viewMode: "board", columnGrouping: "status", rowGrouping: "none", displayProperties: [] },
+      },
+      { limit: 50, offset: 0, fields: [], search: props.search },
+      props.result,
+    );
+    return null;
+  };
+
+  await act(async () => {
+    tree = create(<Renderer filter={all} search="" result={page} />);
+  });
+  expect(shown?.statistics).toEqual(statistics(10));
+
+  const releaseFiltered = holdCounts({ ...page, statistics: statistics(7) });
+  await act(async () => tree?.update(<Renderer filter={filtered} search="" result={page} />));
+  expect(shown?.statistics).toBeUndefined();
+  await act(async () => releaseFiltered());
+  expect(shown?.statistics).toEqual(statistics(7));
+
+  const releaseSearched = holdCounts({ ...page, statistics: statistics(3) });
+  await act(async () => tree?.update(<Renderer filter={filtered} search="ticket" result={page} />));
+  expect(shown?.statistics).toBeUndefined();
+  await act(async () => releaseSearched());
+  expect(shown?.statistics).toEqual(statistics(3));
+
+  const embedded = { ...page, statistics: statistics(2) };
+  await act(async () => tree?.update(<Renderer filter={filtered} search="ticket" result={embedded} />));
+  expect(shown).toBe(embedded);
+
+  await act(async () =>
+    tree?.update(<Renderer filter={filtered} search="ticket" result={{ ...page, revision: "r2" }} />),
+  );
+  expect(shown?.statistics).toBeUndefined();
 });

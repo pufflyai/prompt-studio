@@ -1,6 +1,7 @@
 import { type QueryScope, type ResourceRef, resourceKey, type ScopedQueryClient } from "@pstdio/sdk/extensions";
 import {
   changeStatus,
+  checkRecoveryEntry,
   dismissOperationProgress,
   type Entry,
   emptySnapshot,
@@ -10,6 +11,7 @@ import {
   recoveryStatus,
   retiredError,
   retireOperations,
+  settleRecoveryAttempt,
   snapshotForOperations,
   waitForPendingOperations,
 } from "./operation-state";
@@ -154,6 +156,7 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
     changeStatus(entry, status);
     entry.error = error;
     entry.completion.reject(error);
+    settleRecoveryAttempt(entry, { error });
     changed();
   };
 
@@ -238,6 +241,7 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
         if (signal.aborted) return;
         settleReconciledDraft(entry, input.retainedAfterReconcile, finish, changed);
         result.resolve(value);
+        settleRecoveryAttempt(entry);
         input.onReconciled?.();
       };
       const reconcileRejection = createRejectionReconciler(entry, input.reconcileRejection, { publish, fail });
@@ -301,8 +305,7 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
       };
     },
     check(id: symbol) {
-      const entry = findRecovery(id);
-      if (entry && !entry.controller.signal.aborted) return entry.check?.();
+      return checkRecoveryEntry(findRecovery(id));
     },
     /** Capture before starting a read that can prove a particular saved outcome. */
     captureRecoveryConfirmation() {
