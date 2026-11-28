@@ -120,11 +120,11 @@ test("only an observed read-only online remote queue recovers and becomes quiet 
   const f = createWatchObservationFixture();
   f.state.readExecution = async () => ({ kind: "remote", available: true, device: { id: "owner", name: "Laptop" } });
   f.state.readQueue = async () => ({ messages: [], queue: { ...queue, readOnly: f.counts.queue === 1 } });
-  const watching = watchConversation(f.ctx, { type: "session", id: "s" }, "browser");
+  const watching = watchConversation(f.ctx, { type: "session", id: "s" });
   try {
     await f.connected;
     await Bun.sleep(2100);
-    expect(f.counts).toMatchObject({ execution: 1, session: 1, queue: 2, harness: 0, native: 2, stream: 1 });
+    expect(f.counts).toMatchObject({ execution: 1, session: 1, queue: 2, harness: 0, native: 1, stream: 1 });
     expect(f.frames.at(-1)).toMatchObject({ snapshot: { queueReadOnly: false } });
     await Bun.sleep(2100);
     expect(f.counts.queue).toBe(2);

@@ -10,18 +10,12 @@ Hover a saved session’s tab to see its nickname under its title. Choose **Copy
 
 Other tools use `sessionBrowser` from `@pstdio/sdk/extensions`. This package re-exports the same implementation-free contract from `pstdio-session-browser/refs`. Session and draft resources retain `extensionId: "pstdio"`; navigation refs belong to this provider. New navigation uses provider refs. The host retains deprecated page/panel/command definitions that target the provider renderer, without another chat implementation or persistence owner. Missing or disabled providers use normal unavailable-target feedback.
 
-Each browser keeps its own draft text, attachment references, and composer settings,
-including for projects without a local folder and for conversations running on another
-device. Main and Side show the same local composer. Sending a message delivers it to
-the session's owner. Removing an attachment chip releases its draft reference.
-
-Upgrading also recovers drafts saved by the old provider and accepted native input
-created before browser identities existed. Older drafts have no browser owner, so
-the first browser that durably saves all their bodies acknowledges recovery. The
-old provider record and file remain intact; a content receipt prevents duplicate
-recovery without hiding later writes from an older client. New accepted input
-recovers only in its sending browser. Unavailable browser storage leaves recovery
-unacknowledged.
+Each conversation keeps one unsent draft: its text, attachment references and composer
+settings, including for projects without a local folder and for conversations running
+on another device. Main and Side show the same composer. The draft survives switching
+conversations, reloading and, in the desktop app, restarting. Drafts are not
+synchronized or recovered across browsers or devices. Sending a message delivers it
+to the session's owner. Removing an attachment chip releases its draft reference.
 
 Creation uses `sessionBrowser.commands.create`. With `side: true`, an optional
 `panel` placement ref selects an existing compatible destination (for example a
@@ -46,7 +40,7 @@ each project install without changing message identity or stream behavior.
 This provider has an independent version, changelog, and changeset. It stays outside
 the host fixed group. `private: true` follows bundled/PSX core-extension conventions.
 
-Browser-local drafts use `ChatViewBody.browserDraft` and require extension API
+Host-kept drafts use `ChatViewBody.browserDraft` and require extension API
 `^0.5.1`.
 
 ## Current implementation checkpoint

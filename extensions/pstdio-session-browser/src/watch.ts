@@ -1,4 +1,4 @@
-import type { ApprovalRequest, ChatDraft, SessionMessage } from "@pstdio/sdk/extensions";
+import type { ApprovalRequest, SessionMessage } from "@pstdio/sdk/extensions";
 import {
   applySessionMessagePatch,
   type ChatRendererEvent,
@@ -16,8 +16,6 @@ import { createStreamObservation } from "./changes";
 import { diagnosticChatFrames } from "./chat-stream-diagnostics";
 import { conversationOperations } from "./controls";
 import { conversationState } from "./conversation-state";
-import { recoverSavedDraft } from "./draft-recovery";
-import { recoverNativeInputs } from "./native-recovery";
 import type { readQueue } from "./queue-snapshot";
 import { createRecoveryBackoff } from "./recovery-backoff";
 import { sessionId } from "./resource";
@@ -27,7 +25,6 @@ import { executionNotice, type readSessionSnapshot } from "./snapshot";
 
 type ChatWatchUpdate =
   | { snapshot: ChatRendererSnapshot }
-  | { recoverDraft: ChatDraft }
   | { patch: Extract<ChatRendererEvent, { patch: unknown }>["patch"] };
 
 export const approvalSnapshot = (approval?: ApprovalRequest): ChatRendererSnapshot["approval"] => {
@@ -83,30 +80,9 @@ const writeFrames = async (ctx: CommandContext, id: string, revision: number, ev
   }
 };
 
-const recoverProviderDraft = async (ctx: CommandContext, id?: string, draftClientId?: string, draftKey?: string) => {
-  if (!draftClientId || !draftKey) return 0;
-  let recoverDraft: ChatDraft | undefined;
-  try {
-    recoverDraft = await recoverSavedDraft(ctx, draftKey);
-  } catch {
-    await writeFrames(ctx, id ?? draftKey, 0, {
-      snapshot: { notice: "Could not recover the saved draft. The original was kept." },
-    });
-    return 1;
-  }
-  if (!recoverDraft) return 0;
-  await writeFrames(ctx, id ?? draftKey, 0, { recoverDraft });
-  return 1;
-};
-
-export const watchConversation = async (
-  ctx: CommandContext,
-  resource?: ResourceRef,
-  draftClientId?: string,
-  draftKey?: string,
-) => {
+export const watchConversation = async (ctx: CommandContext, resource?: ResourceRef) => {
   const id = sessionId(resource);
-  let revision = await recoverProviderDraft(ctx, id, draftClientId, draftKey);
+  let revision = 0;
   // A visible draft retains its shared watch until disposal, without reconnect churn.
   if (!id) return retainDraftWatch(ctx.signal);
   const hold = await ctx.sessions.retainResources(id);
@@ -143,7 +119,6 @@ export const watchConversation = async (
     if (remote && available && readOnly) queueRecovery.failed();
     else queueRecovery.succeeded();
   };
-  const emittedRecovery = new Set<string>();
   const enqueue = (send: () => Promise<unknown>) => {
     writes = writes.then(send).then(() => {});
     // Own a rejected write while other public stream callbacks are pending.
@@ -159,7 +134,6 @@ export const watchConversation = async (
   );
   const observation = () =>
     observe(metadata.query.getSnapshot().data?.session, hasTranscript ? messages : undefined, approvals[0]?.id);
-  const restore = (recoverDraft: ChatDraft) => writeEvent({ recoverDraft });
   const write = (snapshot: ChatRendererSnapshot) => {
     if (snapshot.messages) canonicalDisplay = matchesCanonicalMessages(messages, snapshot.messages);
     writeEvent({ snapshot });
@@ -258,7 +232,7 @@ export const watchConversation = async (
     void stream.catch(() => undefined);
   };
   const applyMetadata = async (result: NonNullable<ReturnType<typeof metadata.query.getSnapshot>["data"]>) => {
-    const { session, reads, readAt } = result;
+    const { reads, readAt } = result;
     const snapshot = { ...result.snapshot };
     harnessId = selectedHarness(snapshot.values ?? {})?.harnessId;
     remote = Boolean(snapshot.nativeHarnessAccount?.remote);
@@ -284,8 +258,6 @@ export const watchConversation = async (
       delete snapshot.streamingStartedAt;
     }
     await write(snapshot);
-    if (draftClientId && (result.sessionRead || result.marks.some(([field]) => field === "storage")))
-      await recoverNativeInputs(ctx, id, session, restore, emittedRecovery, draftClientId);
   };
   try {
     stopMetadata = metadata.observe(changed);
@@ -330,9 +302,9 @@ export const watch = defineCommand({
   stream: streamOf<ChatRendererStreamEvent & JsonObject>(),
   params: {
     renderer: params.json<{ resource?: ResourceRef }>(),
+    // The host sends these with every chat stream; hosts before PS-1405 also send draftClientId. Both are unused.
     draftClientId: params.text(),
     draftKey: params.text(),
   },
-  run: (ctx, input) =>
-    watchConversation(ctx, input.renderer?.resource ?? ctx.resource, input.draftClientId, input.draftKey),
+  run: (ctx, input) => watchConversation(ctx, input.renderer?.resource ?? ctx.resource),
 });
