@@ -125,7 +125,7 @@ test("uploads the selected comparison history without unrelated workspace branch
   const commit = async (message: string) =>
     run("-c", "user.name=t", "-c", "user.email=t@example.com", "commit-tree", tree, "-m", message);
   const base = await commit("comparison");
-  await run("update-ref", "refs/remotes/origin/release", base);
+  await run("update-ref", "refs/custom/release", base);
   await run("update-ref", "refs/heads/unrelated-workspace", await commit("unrelated"));
   const out = await mkdtemp(join(tmpdir(), "remote-testing-comparison-out-"));
   directories.push(out);
@@ -135,13 +135,15 @@ test("uploads the selected comparison history without unrelated workspace branch
     "HEAD",
     async ({ archive }) => {
       await localProcess.runOrThrow({ command: ["tar", "-xzf", archive.name!, "-C", out] });
-      const selected = await localProcess.runOrThrow({ command: ["git", "-C", out, "rev-parse", "origin/release"] });
+      const selected = await localProcess.runOrThrow({
+        command: ["git", "-C", out, "rev-parse", "refs/custom/release"],
+      });
       expect(selected.stdout.trim()).toBe(base);
       const omitted = await localProcess.run({
         command: ["git", "-C", out, "show-ref", "--verify", "refs/heads/unrelated-workspace"],
       });
       expect(omitted.exitCode).not.toBe(0);
     },
-    "origin/release",
+    "refs/custom/release",
   );
 });

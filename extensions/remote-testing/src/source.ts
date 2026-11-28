@@ -118,7 +118,21 @@ async function prepareHistory(
   // Keep complete history for this candidate and the main comparison base.
   // Unrelated workspaces can have large, private branch histories of their own.
   let base = revision;
+  let comparisonRef = "";
   if (comparison) {
+    const named = await process.runOrThrow({
+      command: ["git", "-C", root, "rev-parse", "--symbolic-full-name", "--verify", "--end-of-options", comparison],
+      timeoutMs: 10_000,
+    });
+    comparisonRef = named.stdout.trim();
+    if (
+      comparison === "HEAD" ||
+      comparison === "@" ||
+      (!comparisonRef.startsWith("refs/") && !/^[a-f0-9]{7,40}$/i.test(comparison))
+    )
+      throw new Error(
+        "Choose a named comparison ref or commit SHA. Resolve relative expressions on the host before uploading.",
+      );
     const result = await process.runOrThrow({
       command: ["git", "-C", root, "rev-parse", "--verify", "--end-of-options", `${comparison}^{commit}`],
       timeoutMs: 10_000,
@@ -157,6 +171,7 @@ async function prepareHistory(
     .split("\n")
     .filter(Boolean)
     .map((ref) => `+${ref}:${ref}`);
+  if (comparisonRef) refs.push(`+${comparisonRef}:${comparisonRef}`);
   await git("fetch", "--no-write-fetch-head", "--no-tags", root, revision, base, ...refs);
   await git("update-ref", "refs/cloud-upload/head", revision);
   await git("reset", "--mixed", "--quiet", revision);
