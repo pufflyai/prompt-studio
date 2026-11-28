@@ -9,6 +9,7 @@ import {
   workspaceSlots,
 } from "@pstdio/sdk/extensions";
 import { repairRemovedCommand, repairRemovedSchedule } from "./merge-queue-repair";
+import { repairDryRunCommand, repairDryRunSchedule } from "./release-dry-run-repair";
 import { benchmarkCommands, syncCommandRef } from "./src/benchmarks/commands";
 import { diagnosticsCommands } from "./src/diagnostics/commands";
 import { commands as insightsCommands } from "./src/insights/commands";
@@ -172,6 +173,7 @@ export default defineExtension({
     ...Object.values(diagnosticsCommands),
     ...insightsCommands,
     repairRemovedCommand,
+    repairDryRunCommand,
   ],
   views,
   pages,
@@ -251,5 +253,6 @@ export default defineExtension({
       command: syncCommandRef,
     }),
     repairRemovedSchedule,
+    repairDryRunSchedule,
   ],
 });

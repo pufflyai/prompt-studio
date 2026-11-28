@@ -3,8 +3,8 @@
 This guide explains how a change moves from a pull request to a stable release, and which tests run at each step. [ADR 0149](../../adrs/0149-share-required-checks-and-own-platform-coverage.md) records why CI is split this way.
 
 ```text
-pull request ──► merge queue ──► main ──► nightly (daily) ──► stable release (manual)
- shared profile  same profile   smoke     Linux + native      exact shipped artifacts
+pull request ──► merge queue ──► main ──► nightly (daily) ──► release dry run (twice daily) ──► stable release (manual)
+ shared profile  same profile   smoke     starts + upgrades   full release validation          exact shipped artifacts
 ```
 
 The required profile has a ten-minute maximum turnaround target. Qualification is pending until representative cold and warm PR and actual merge-group runs pass. Native and release durations have separate targets.
@@ -13,14 +13,14 @@ Each stage has its own purpose. A later stage never trusts a result from a diffe
 
 ## Test priorities
 
-Every test file names its priority before the runner suffix, for example `session-state.p0.test.ts`. Priority describes importance; the coverage catalog separately owns platform applicability. PR and queue selection use the same policy and include affected behavior and edited tests. P3 workloads stay in dedicated nightly/release validation.
+Every test file names its priority before the runner suffix, for example `session-state.p0.test.ts`. Priority describes importance; the coverage catalog separately owns platform applicability. PR and queue selection use the same policy and include affected behavior and edited tests. P3 workloads stay in dedicated release validation.
 
 | Priority | What it protects | Runs in | Examples |
 | --- | --- | --- | --- |
-| P0 | Fast rules: types, validation, permissions, state changes, focused extension logic, repository and CI rules | Pull request, queue, nightly, stable | `session-state.p0.test.ts` |
-| P1 | Essential product behavior: session, workspace and extension lifecycles, data safety, restart and upgrade, sync, a working app, native and compiled startup | PR/queue for affected source contracts and packaged smoke; complete suites in nightly/stable | `session-isolation.p1.test.ts`, `startup.p1.spec.ts` |
-| P2 | Breadth: extension feature workflows, component variants, more browsers and platforms, full install and update matrices | Nightly, stable | `planner-board.p2.spec.ts` |
-| P3 | Performance: startup, responsiveness, throughput, resource use, scale and endurance | Nightly, stable | `startup.p3.bench.ts`, `chat-rendering.p3.bench.ts` |
+| P0 | Fast rules: types, validation, permissions, state changes, focused extension logic, repository and CI rules | Pull request, queue, release dry run, stable | `session-state.p0.test.ts` |
+| P1 | Essential product behavior: session, workspace and extension lifecycles, data safety, restart and upgrade, sync, a working app, native and compiled startup | PR/queue for affected source contracts and packaged smoke; complete suites in release dry run/stable | `session-isolation.p1.test.ts`, `startup.p1.spec.ts` |
+| P2 | Breadth: extension feature workflows, component variants, more browsers and platforms, full install and update matrices | Release dry run, stable | `planner-board.p2.spec.ts` |
+| P3 | Performance: startup, responsiveness, throughput, resource use, scale and endurance | Release dry run, stable | `startup.p3.bench.ts`, `chat-rendering.p3.bench.ts` |
 
 Rules:
 
@@ -55,8 +55,9 @@ A local run only proves your own machine. It does not prove other platforms or s
 | Pull request | Push to a PR branch | Test and Build (`pull_request`) | All fast P0 units, affected source contracts, static/type checks, one Linux desktop package, smoke and affected packaged flows | The selected profile passed on this candidate | at most 10 min; qualification pending |
 | Merge queue | Add to queue | Test and Build (`merge_group`) | The same required profile on the actual merged tree and combined diff | The exact merged candidate passed | at most 10 min; qualification pending |
 | Main | Queue merges a commit | Test and Build (`push`) | Checks that main matches the tested queue commit, publishes the build cache, runs a startup smoke test | Main is the commit the queue tested, and it still starts | under 8 min |
-| Nightly | 03:00 UTC daily, or manual `nightly` | Release Packages → Production validation | P0–P2 on Linux, with focused native checks on Apple Silicon and Windows x64; all eight P3 benchmarks on Linux x64, Apple Silicon and Windows x64, coverage, signed apps for Linux and Apple Silicon | Nightly published; full results recorded for that commit | 40–50 min of execution |
-| Stable release | Manual `stable` | Release Packages → Production validation | Everything nightly runs, plus Windows and Intel macOS: signed desktop apps, packaged CLI hosts, focused Windows process/security and filesystem/storage contracts, the same three-host benchmark matrix, and the Windows update check | A complete certificate for the exact release files allows publishing | 40–50 min of execution |
+| Nightly | 03:00 UTC daily, or manual `nightly` | Release Packages (`nightly`) | Signed apps for Linux and Apple Silicon, their critical desktop release workflows, the packaged harness smoke when required, and the four populated upgrade paths | The nightly starts, upgrades safely and is published | under 30 min |
+| Release dry run | 09:00 and 21:00 UTC, or manual Release Dry Run | Release Dry Run → Release Packages (`verify`) → Production validation | The complete stable validation on the Changesets version candidate, without publishing | The next stable candidate passes every release check | 40–50 min of execution |
+| Stable release | Manual `stable` | Release Packages → Production validation | P0–P2 on Linux with native checks on Apple Silicon and Windows x64, plus Windows and Intel macOS: signed desktop apps, packaged CLI hosts, focused Windows process/security and filesystem/storage contracts, and the Windows update check; coverage; the three-host benchmark matrix runs independently | A complete certificate for the exact release files allows publishing | 40–50 min of execution |
 
 Prioritize distinct coverage first, then minimize repeated work on frequent runs. Parallel jobs contribute their dependency critical path, not the sum of every runner minute. Report total runner work separately to expose expensive duplication.
 
@@ -72,7 +73,7 @@ The timing report keeps initial scheduling delay, elapsed time after the first j
 - Both stages run all fast P0 units. Source P1 contracts follow production owners and their dependants. Lockfiles and shared build inputs select all owners. Static/public checks follow the files they read.
 - Both stages build one unsigned Linux desktop package, then run packaged startup and affected desktop flows. Relative helper/fixture imports select consuming flows even when no test file changed. Existing Linux compiled-runtime/browser flows remain explicit coverage owners until their Electron replacements pass; an external browser pass is not a desktop pass.
 - The compact source dashboard smoke remains a source integrity contract. Complete source app/component, native and browser-engine matrices stay outside the routine required profile.
-- Edited behavior tests use their registered Linux runners. Native-only changes can use focused diagnostics. Edited benchmarks retain their dedicated nightly/release workload and budgets.
+- Edited behavior tests use their registered Linux runners. Native-only changes can use focused diagnostics. Edited benchmarks retain their dedicated release workload and budgets.
 - A documentation-only PR has the same fast baseline and mandatory packaged smoke, without affected feature journeys. Local prose-only work can still use scoped verification without invoking the review command.
 - Scope seals the exact selected files, target, source and policy into the immutable plan. Missing execution, setup failure or a missing selected job fails the gate. Quarantine retains its case identities and separate evidence rules.
 - A new push cancels the older PR run. `ci:full` and `ci:windows` request separate diagnostics; they do not replace required candidate validation.
@@ -129,28 +130,35 @@ A push to `main` does not run the tests again. It:
 
 A red `main` usually means a startup smoke failure or a cache problem. Fix it before queueing more work.
 
-## Nightly (full validation)
+## Nightly (publish when it starts and upgrades)
 
-**Release Packages** runs on a schedule at 03:00 UTC, and can be started manually with the `nightly` channel.
+**Release Packages** runs on a schedule at 03:00 UTC, and can be started manually with the `nightly` channel. The nightly proves that a build starts and upgrades safely. It does not run the full production matrix; the [release dry run](#release-dry-run-twice-daily) does. A nightly can therefore contain P2 or Windows regressions, which the next dry run reports.
 
-- It builds a nightly only if `main` changed since the last published nightly. If `main` did not change, it validates the last nightly's files again.
+- It builds a nightly only if `main` changed since the last published nightly. If `main` did not change, the run does nothing.
 - It versions the packages on a tag, never on `main`.
-- It builds and publishes the npm packages, containers, and signed desktop apps for Linux x64 and Apple Silicon. Before publishing, both platforms must pass the populated-project upgrade from the latest stable release and, when available, the preceding published nightly. The other production diagnostics run independently.
-- Every desktop release target must pass the critical workflows in `clients/desktop/src/e2e/release` against its publication build. The Codex conversation check sends a message in the desktop composer, observes the reply, then sends a follow-up in the same session and observes its reply. A local Codex protocol peer provides the replies. The packaged host, extension workers, and transcript renderer handle the conversation. Production diagnostics exercise the other workflows on the archived app.
+- It builds and publishes the npm packages, containers, and signed desktop apps for Linux x64 and Apple Silicon. Before publishing, both platforms must pass the populated-project upgrade from the latest stable release and, when available, the preceding published nightly.
+- Every desktop release target must pass the critical workflows in `clients/desktop/src/e2e/release` against its publication build. The Codex conversation check sends a message in the desktop composer, observes the reply, then sends a follow-up in the same session and observes its reply. A local Codex protocol peer provides the replies. The packaged host, extension workers, and transcript renderer handle the conversation.
 - Changes to harnesses or to the code that loads and bundles them require a packaged harness smoke on Linux x64 and Apple Silicon before publication. The smoke boots the desktop app's bundled runtime in an isolated home, verifies that startup does not install any of the three harness CLIs, then exercises first use, restart, PATH discovery, and an upgrade from the previous published release when available. Stable and patch releases use this gate too.
 - Each populated upgrade from stable or a previous nightly must finish and allow an edit to be saved and read back within 20 seconds of starting the candidate. The 0.49 database upgrade has a 40-second allowance. The Cloud pair times each device separately, once with its relay access blocked and once connected. Both devices must receive the edits after reconnection. The signed desktop opens and edits a project on two released-schema fixtures. One holds 90,000 history entries and 90,000 source rows. The six-project fixture holds 628,492 document heads, 337,379 records, 538,976 operations and 398,882 asset transfers. Each measurement must pass on its own. Fixture creation, verification after shutdown, and artifact uploads are outside the measurement.
-- **Production validation** runs on the same files:
-  - P0, P1 and P2 on Linux, with up to twelve P2 app shards; native desktop and packaged CLI checks also run on Apple Silicon
-  - P1 and P2 against the signed desktop apps. When the run validates signed release files, the source desktop jobs keep only the source Electron checks, so each packaged desktop case runs once.
-  - P3 performance measurements run in a separate advisory workflow after publication, and continue for unchanged nightly and non-publishing verify candidates
-  - container service checks
-  - native artifact contracts on Linux x64, Apple Silicon and Windows x64; full shared CLI behavior runs separately on Linux
-- B1–B8 each run once on Linux x64, Apple Silicon Mac and Windows x64: 24 combinations. Intel Mac is excluded from benchmarks. Windows desktop measurements use an unpublished production-mode package in nightly validation and the signed candidate in stable validation.
-- Windows runs focused source/native contracts and an unpublished packaged desktop diagnostic. Intel macOS and the other secondary CLI architectures have weekly compatibility diagnostics and exact-artifact checks in stable releases. Signed installation/update certification belongs to the release path.
-- The shared Bun unit, API and database suites run on Linux. Apple Silicon runs the desktop app's own Bun tests, the native desktop and packaged CLI checks, and the Bun quarantine lane.
-- Source line coverage comes from the nightly's P0–P2 Bun jobs. The Coverage workflow publishes only a successful full nightly's measurement. Quarantined tests and P3 are not counted.
 
-A failed, cancelled or skipped upgrade or critical workflow check blocks nightly publication. A later failure in independent production diagnostics does not unpublish an existing nightly. It makes the run red, `certify` reports the failed checks, and the Coverage workflow skips that nightly's measurement.
+A failed, cancelled or skipped build, upgrade or critical workflow check blocks nightly publication and makes the run red. A red nightly means the build cannot start or upgrade safely; fix it before anything else.
+
+## Release dry run (twice daily)
+
+The **Release Dry Run** workflow runs at 09:00 and 21:00 UTC, or manually. It dispatches **Release Packages** with the `verify` channel on the head of the Changesets version PR (`changeset-release/main`): the exact commit a stable release would ship today. It skips, and says why in the run summary, when no version PR exists or when that commit already has a running or finished verify run. Rerunning unchanged code would be a retry.
+
+The verify run builds and signs the four stable desktop targets and runs the complete **production validation** without publishing:
+
+- P0, P1 and P2 on Linux, with up to twelve P2 app shards; native desktop and packaged CLI checks also run on Apple Silicon
+- P1 and P2 against the signed desktop apps. When the run validates signed release files, the source desktop jobs keep only the source Electron checks, so each packaged desktop case runs once.
+- Windows and Intel macOS: all six native CLI artifact contracts, focused Windows process/security and filesystem/storage contracts, the harness CLI matrix, and the signed Windows install/update check
+- container service checks
+- P3 performance measurements in a separate advisory workflow after validation produces a candidate
+- source line coverage from the P0–P2 Bun jobs. The Coverage workflow publishes the newest successful fully validated run's measurement. Quarantined tests and P3 are not counted.
+
+B1–B8 each run once on Linux x64, Apple Silicon Mac and Windows x64: 24 combinations. Intel Mac is excluded from benchmarks. The shared Bun unit, API and database suites run on Linux. Apple Silicon runs the desktop app's own Bun tests, the native desktop and packaged CLI checks, and the Bun quarantine lane.
+
+Verify runs are named `Release Packages · verify <candidate sha>`. When the newest finished one failed, the `release-dry-run-repair` automation in the repo-local `pstdio-dev` extension starts one agent session with the `fix-release-pipeline` skill and the failed jobs. The agent fixes every failure in one PR, merges it, and starts one confirmation dry run. A test that failed in one dry run and passed in another, with no change to the test or the code it covers, is quarantined or deleted, not fixed. A job that fails three dry runs in a row goes to the maintainer as a planner decision instead of a fourth repair. See the [extension README](../../../.pstdio/extensions/pstdio-dev/README.md#release-dry-run-repair).
 
 P3 budgets describe the hosted CI runners, not a developer machine. Each was set from the slowest result of several runs on the hosted ubuntu-24.04 runner, plus about 20% (see [sidenav and subnav](../../references/performance/0004-sidenav-subnav.md) and [board cold open](../../references/performance/0002-planner-board-cold-open.md)). A fast laptop passes them easily, so a P3 failure on CI is the signal to act on. To change a budget, collect several CI runs of the same candidate first and get the exact value approved (see [CI guidance](../../guidance/0004-ci.md#3-ci-timeouts-and-performance-budgets)).
 
@@ -162,7 +170,7 @@ Start **Release Packages** manually with the `stable` channel.
 
 1. `plan` picks the version and places the release tag.
 2. The release files are built once: npm packages, containers, and signed desktop apps for Linux x64, macOS x64, macOS arm64 and Windows x64. The Windows installer also gets an update check.
-3. **Production validation** runs everything the nightly runs, against those exact files, and adds Windows and Intel macOS: all six native CLI artifact contracts, with shared CLI journeys on Linux, focused Windows process/security and filesystem/storage contracts, and exact signed Windows artifacts. Independent advisory benchmark coverage is B1–B8 on Linux x64, Apple Silicon Mac and Windows x64 in both channels; Intel Mac has no benchmark lane.
+3. **Production validation** runs the same checks as the [release dry run](#release-dry-run-twice-daily) against those exact files, including Windows and Intel macOS: all six native CLI artifact contracts, with shared CLI journeys on Linux, focused Windows process/security and filesystem/storage contracts, and exact signed Windows artifacts. Independent advisory benchmark coverage is B1–B8 on Linux x64, Apple Silicon Mac and Windows x64 in both channels; Intel Mac has no benchmark lane.
 4. `certify` writes a certificate. It ties the results to the source commit, version commit, toolchain, producing run and attempt, and the artifact IDs and digests.
 5. `publish` runs only if every required functional and artifact-integrity job passed. It checks the certificate again before it downloads the files. Missing, expired, changed or partial required results block publishing. Performance measurements start independently after publication and cannot fail or delay it.
 
@@ -198,7 +206,7 @@ Omit `--profile` to run both profiles. For a retained local source binary, suppl
 
 ## Extra diagnostics
 
-These expensive workflows are exceptions, not routine PR requirements. Use them only for a concrete high-risk change that focused local checks and normal PR CI cannot establish, or an explicit user request. Record the risk and smallest complete workload first. Deferred inventory entries and shared dependency changes do not automatically justify a full matrix. Nightly and release validation retain their declared complete coverage.
+These expensive workflows are exceptions, not routine PR requirements. Use them only for a concrete high-risk change that focused local checks and normal PR CI cannot establish, or an explicit user request. Record the risk and smallest complete workload first. Deferred inventory entries and shared dependency changes do not automatically justify a full matrix. The release dry run and stable validation retain their declared complete coverage.
 
 - **`ci:full` label.** Runs production functional diagnostics for a same-repository PR through the trusted base workflow. Its `production_ci_passed` result does not replace `ci_passed`. A maintainer runs this for fork PRs.
 - **`ci:windows` label.** Runs Windows-only source diagnostics for the exact same-repository PR merge commit. Includes the two focused Windows source groups, native desktop contracts and x64/ARM64 CLI artifact contracts, Windows harness checks and Bun quarantine evidence, plus repository static checks. Reports `windows_ci_passed`; it does not replace either the fast PR gate or full production/release certification. The label runs once when added; remove and re-add it to test a new head. Forks require maintainer dispatch of a reviewed repository ref.
@@ -209,7 +217,7 @@ None of these replace the real queue run or release certification.
 
 ## Failure handling
 
-- **P1 stops early in PR and queue runs.** When a P1 job fails, other P1 jobs stop their own work. They never cancel the whole workflow. Nightly and stable validation (profile `production`) run every P1 job and file to the end, so one run reports every failure. [ADR 0108](../../adrs/0108-temporary-cooperative-p1-cancellation.md) explains this temporary design.
+- **P1 stops early in PR and queue runs.** When a P1 job fails, other P1 jobs stop their own work. They never cancel the whole workflow. Release dry run, stable and patch validation (profile `production`) run every P1 job and file to the end, so one run reports every failure. [ADR 0108](../../adrs/0108-temporary-cooperative-p1-cancellation.md) explains this temporary design.
 - **P0, P2 and P3 finish.** They run all their selected work and report every failure. Matrices with mixed priorities do not use GitHub's fail-fast.
 - **A failed setup step blocks the jobs that need it.** It can never let them pass.
 - **`validation_results`** starts after all execution jobs finish, then reads the job list from the GitHub API. This avoids occupying a runner and exhausting its allowance while other jobs wait for runners. Individual P1 failures and cooperative stopping remain immediate; the aggregate required result waits for the remaining diagnostics. Missing, duplicated, skipped, cancelled or failed selected jobs fail it. Unselected jobs may skip. If GitHub refuses a read because of a rate limit or a server error, it waits and reads again.
@@ -269,7 +277,7 @@ Keep `ci_passed` and ALLGREEN. Read the live ruleset before you change it. If a 
 
 [`coverage-ownership.ts`](../../../scripts/ci/coverage-ownership.ts) owns integration applicability. Shared navigation, Planner and editing flows have one Linux owner. Native shell, drive, locking, process ownership and install behavior stays on its OS. Mixed native files retain their native assertions until a replacement is extracted and qualified. The Intel Mac desktop runs the retained startup/recovery smoke. The failing startup/persistence cases, including their Intel terminal assertion, were removed with the quarantine cleanup; their earlier validation does not certify the retained coverage.
 
-Daily native diagnostics include an unpublished Windows desktop package; nightly publication still contains only Linux and Apple Silicon apps. Stable validation consumes every shipped target's exact bytes. Certificate names distinguish `desktop-shared-linux-x64` from `desktop-native-<target>` and the policy digest includes the selection and execution code. Surviving P3 cases keep their existing workloads and budgets. Failing quarantined P3 cases were removed; their coverage gaps are recorded in [the quarantine decision](../../adrs/0101-temporary-flaky-test-quarantine.md). Installation/update verification and signature checks retain their existing contracts.
+Nightly publication contains only Linux and Apple Silicon apps. Stable validation consumes every shipped target's exact bytes. Certificate names distinguish `desktop-shared-linux-x64` from `desktop-native-<target>` and the policy digest includes the selection and execution code. Surviving P3 cases keep their existing workloads and budgets. Failing quarantined P3 cases were removed; their coverage gaps are recorded in [the quarantine decision](../../adrs/0101-temporary-flaky-test-quarantine.md). Installation/update verification and signature checks retain their existing contracts.
 
 Measure a completed first-attempt run with `bun scripts/ci/required-turnaround.ts <run-id> cold` or `warm`. Preserve the cache provenance with the report. The JSON records workflow creation through required-gate completion, runner waits when GitHub provides creation timestamps, and individual job/step timings. Unknown cache provenance, incomplete or failed runs, reruns and overruns cannot qualify the ten-minute target. Do not omit selected tests or raise allowances to pass it.
 

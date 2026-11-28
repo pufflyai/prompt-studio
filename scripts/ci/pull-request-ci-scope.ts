@@ -122,6 +122,11 @@ const requiredEditedRows = (
   return selectEditedTests(edited, input.packages, covered).filter((row) => row.platform === "linux");
 };
 
+// Every signed release validation (dry run, stable, patch) measures source coverage for the badge,
+// and so does a manual source-only rehearsal with the nightly channel.
+const measuresSourceCoverage = (production: boolean, releaseChannel: string, signedCandidate: boolean) =>
+  production && (signedCandidate || releaseChannel === "nightly");
+
 export const resolveBaseScope = (input: CiScopeInput) => {
   const { event, changedFiles, packages, tests, profile, releaseChannel = "stable", signedCandidate = false } = input;
   for (const file of tests) priorityFromFile(file);
@@ -174,7 +179,7 @@ export const resolveBaseScope = (input: CiScopeInput) => {
     production,
     changedFiles,
     requiredProfile,
-    sourceCoverage: production && releaseChannel === "nightly",
+    sourceCoverage: measuresSourceCoverage(production, releaseChannel, signedCandidate),
     affectedOwners,
     integrationOwners,
     // Both gates include edited behavior tests; platform diagnostics remain outside the universal Linux profile.

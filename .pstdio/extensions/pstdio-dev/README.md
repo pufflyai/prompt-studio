@@ -16,7 +16,7 @@ Workspace creation does not install dependencies or start a build. Run targeted 
 
 ## Agent automations
 
-Daily high-impact issue discovery and merge queue repair are off by default. To opt in, open the **Automations** dropdown for **Prompt Studio Dev** in the project's **Extensions** settings and enable the schedules you want.
+Daily high-impact issue discovery, merge queue repair and release dry run repair are off by default. To opt in, open the **Automations** dropdown for **Prompt Studio Dev** in the project's **Extensions** settings and enable the schedules you want.
 
 When enabled, **Daily high-impact issue discovery** starts a search at noon and creates a Planner ticket only when it reproduces a high-impact issue that has yet to be tracked.
 
@@ -125,6 +125,12 @@ Reports go to `.pstdio/extension-storage/pstdio.dev/reports/`.
 ## Merge queue repair
 
 When enabled, the automation checks every five minutes for pull requests that GitHub removed from the merge queue. It lists open pull requests with the `removed-from-queue` label, which the Merge queue removals workflow manages. For each one, it creates a workspace from the pull request's branch and starts a session that reproduces and fixes the failure, then pushes to the same branch. A pull request gets one repair session per queue removal, identified by its latest removal event's timestamp. A repair's own push does not start another session. A later removal after requeueing can start a fresh repair. Session history includes older pages and archived sessions. If one pull request's repair cannot start, the command tries the others before reporting the failed pull requests and their errors. Pull requests from forks are skipped. The command needs an authenticated `gh` CLI.
+
+## Release dry run repair
+
+The Release Dry Run workflow verifies the next stable candidate at 09:00 and 21:00 UTC. When enabled, this automation checks every ten minutes for the newest finished dry run. If it failed, the automation creates a workspace from `origin/main` and starts one session with the [fix-release-pipeline](skills/fix-release-pipeline/SKILL.md) skill and the run's failed jobs. The session fixes every failure in one pull request, merges it after review, and starts one confirmation dry run.
+
+Only one repair or escalation session runs at a time. A failed run gets at most one repair session, and a newer failure replaces older ones that have not started. When the same job fails three dry runs in a row, the automation starts an escalation session instead. That session changes no code: it files a planner ticket with the evidence and asks the maintainer to decide. Later repairs leave escalated jobs alone. The command needs an authenticated `gh` CLI.
 
 ## Skills
 
