@@ -94,5 +94,16 @@
     ],
     "removalCriteria": "Merge #2616, which makes a cancelled command wait for the accepted-workspace cleanup it started before the run reports cancelled (reproduced 3/3 with a 100 ms provider cancel delay before the fix). Then restore this unchanged case to the stable lane with first-attempt evidence. Keep every assertion.",
     "failureMessageIncludes": ["providerCancelCount"]
+  },
+  {
+    "runner": "playwright-ui",
+    "file": "packages/e2e/src/ui/desktop-upgrade.p1.spec.ts",
+    "name": "shows a downloaded update as a movable status widget and asks before restarting",
+    "platforms": ["linux"],
+    "arch": "x64",
+    "owner": "PS-1371",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/46181534119/job/141096913231"],
+    "removalCriteria": "Find why the keyboard move (Alt+Shift+ArrowRight twice after the restart confirmation closes) left the widget in the leading slot in verify run 46181534119, likely focus returning to the dismissed dialog's trigger after widget.focus(). It passed 13 earlier release runs and 4 of 4 local runs on the same main. Fix the race, then restore this unchanged case to the stable lane with first-attempt evidence. Keep every assertion.",
+    "failureMessageIncludes": ["toHaveAttribute", "desktop.upgrade"]
   }
 ]
