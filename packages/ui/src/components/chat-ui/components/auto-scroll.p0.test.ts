@@ -1,5 +1,10 @@
 import { describe, expect, mock, test } from "bun:test";
-import { type AutoScrollState, getNextAutoScrollState, scrollForNextAutoScrollState } from "./auto-scroll";
+import {
+  type AutoScrollState,
+  getNextAutoScrollState,
+  getNextReaderReturnState,
+  scrollForNextAutoScrollState,
+} from "./auto-scroll";
 
 const advanceAutoScroll = (state: AutoScrollState, userMessageCount: number) =>
   getNextAutoScrollState({
@@ -61,6 +66,31 @@ describe("auto-scroll state", () => {
     expect(next.state).toEqual({
       conversationKey: "session-2",
       userMessageCount: 12,
+    });
+  });
+});
+
+describe("returning to a conversation", () => {
+  const leave = (tail: string) => getNextReaderReturnState({ reading: true, seenTail: tail }, false, tail).state;
+
+  test("keeps the reading position when nothing changed while away", () => {
+    expect(getNextReaderReturnState(leave("m2:1"), true, "m2:1").shouldScroll).toBe(false);
+  });
+
+  test("lands on the latest reply when a message arrived while away", () => {
+    const away = getNextReaderReturnState(leave("m2:1"), false, "m3:1").state;
+    expect(getNextReaderReturnState(away, true, "m3:1").shouldScroll).toBe(true);
+  });
+
+  test("lands on the latest reply when the last reply grew while away", () => {
+    expect(getNextReaderReturnState(leave("m2:1"), true, "m2:4").shouldScroll).toBe(true);
+  });
+
+  test("never scrolls while the reader stays on the conversation", () => {
+    const reading = { reading: true, seenTail: "m2:1" };
+    expect(getNextReaderReturnState(reading, true, "m3:1")).toEqual({
+      shouldScroll: false,
+      state: { reading: true, seenTail: "m3:1" },
     });
   });
 });
