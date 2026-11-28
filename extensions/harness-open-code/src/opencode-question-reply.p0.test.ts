@@ -165,6 +165,63 @@ const createQuestionReplyFetcher = (handlers: QuestionReplyFetcherInput) => {
   };
 };
 
+test("a follow-up held behind a question can expose the question and continue after its answer", async () => {
+  const question = createRunningQuestionMessage();
+  const messages = [question];
+  const idle = Promise.withResolvers<Response>();
+  let queuedText = "";
+  const posts: string[] = [];
+  const fallback = createQuestionReplyFetcher({
+    getSessionMessages: () => messages,
+    onReply: (body) => {
+      completeQuestionMessage(question, body.answers);
+      messages.push({
+        info: { id: "continued", role: "assistant", time: { created: Date.now(), completed: Date.now() } },
+        parts: [{ type: "text", text: `Answered ${body.answers[0]![0]}; applied ${queuedText}` }],
+      });
+      idle.resolve(Response.json({}));
+    },
+  });
+  const h = createOpencodeHarness(harnessDefaults(), {
+    ...serviceOverrides(),
+    fetcher: (input, init) => {
+      const path = new URL(String(input)).pathname;
+      if (init?.method === "POST") posts.push(path);
+      if (path === "/api/session/oc-1/prompt") {
+        queuedText = parseJsonBody(init).text;
+        return Promise.resolve(acceptedPrompt());
+      }
+      if (path === "/api/experimental/session/oc-1/wait") return idle.promise;
+      return fallback(input, init);
+    },
+  });
+  const { sink } = recordingSink();
+  const input = { agentSessionId: "oc-1", sessionId: "host-1", cwd: "/repo", events: sink };
+  try {
+    const followUp = await h.resume(ctx, { ...input, prompt: "Break down workspaces by template" });
+    const settled = await Promise.race([followUp.done, Bun.sleep(100).then(() => null)]);
+    if (!settled) await followUp.stop();
+    expect(settled).toEqual({ status: "completed" });
+    expect(sink.getMessages().at(-1)?.parts[0]).toMatchObject({ tool: "question", status: "running" });
+
+    const answer = await h.resume(ctx, {
+      ...input,
+      prompt: "Nice",
+      questionResponse: { callId: "call-question", answers: [["Nice"]] },
+    });
+    expect(await answer.done).toEqual({ status: "completed" });
+    expect(sink.getMessages().at(-1)?.parts).toContainEqual({
+      type: "text",
+      text: "Answered Nice; applied Break down workspaces by template",
+    });
+    expect(posts.filter((path) => path.endsWith("/prompt"))).toHaveLength(1);
+    expect(posts.filter((path) => path.endsWith("/reply"))).toEqual(["/api/session/oc-1/form/frm_weather/reply"]);
+  } finally {
+    idle.resolve(Response.json({}));
+    await h.dispose!(ctx);
+  }
+});
+
 // A poller that outlives a failed test must not freeze the clock for later files in this process.
 let advanceClock = false;
 
@@ -310,13 +367,13 @@ describe("OpenCode question replies", () => {
     });
   });
 
-  test("does not get stuck when question status stays queued after reply", async () => {
+  test("does not get stuck when question status stays running after reply", async () => {
     const questionMessage = createRunningQuestionMessage();
     const questionPart = "parts" in questionMessage ? questionMessage.parts?.[0] : undefined;
     if (questionPart?.state) {
       questionPart.state = {
         ...questionPart.state,
-        status: "queued",
+        status: "running",
         output: "",
       };
     }
@@ -360,7 +417,7 @@ describe("OpenCode question replies", () => {
     if (questionPart?.state) {
       questionPart.state = {
         ...questionPart.state,
-        status: "queued",
+        status: "running",
       };
     }
     const continuationMessage: OpencodeSessionMessage = {

@@ -4,7 +4,13 @@ import { composeOwnedOpencodeSnapshot } from "./history-reconciliation";
 import { normalizeErrorPart } from "./normalized-error";
 import { isTransportTimeout } from "./opencode-http";
 import { normalizeOpencodeMessage } from "./opencode-normalizer";
-import { isTurnCompleted, isTurnInFlight, isTurnStale, resolveInFlightTurnProgressAt } from "./opencode-turn-state";
+import {
+  isTurnAwaitingQuestion,
+  isTurnCompleted,
+  isTurnInFlight,
+  isTurnStale,
+  resolveInFlightTurnProgressAt,
+} from "./opencode-turn-state";
 import type { OpencodeSessionMessage } from "./opencode-types";
 import { retainOpencodeResults } from "./retained-results";
 
@@ -182,6 +188,7 @@ export const pollOpencodeMessages = async (input: {
   cwd: string | undefined;
   events: HarnessEventSink;
   baselineCount: number;
+  messageAccepted?: Promise<void>;
   messageComplete: Promise<void>;
   abortSignal?: AbortSignal;
   pollIntervalMs?: number;
@@ -192,6 +199,7 @@ export const pollOpencodeMessages = async (input: {
   let lastObserved: OpencodeSessionMessage[] = [];
   let lastInFlightProgressAt: number | null = null;
   const postState = trackPostState(messageComplete);
+  const admission = input.messageAccepted ? trackPostState(input.messageAccepted) : postState;
 
   while (true) {
     if (abortSignal?.aborted) {
@@ -227,6 +235,12 @@ export const pollOpencodeMessages = async (input: {
 
     if (turnVisible && inFlight && isTurnStale(lastInFlightProgressAt, now, OPENCODE_STALE_TURN_TIMEOUT_MS)) {
       return disconnectStaleTurn(events);
+    }
+
+    // OpenCode can hold an accepted follow-up in its inbox behind a question that
+    // was already in our baseline. Its idle wait cannot settle until the person answers.
+    if (admission.settled && !admission.failed && !admission.timedOut && isTurnAwaitingQuestion(lastObserved)) {
+      break;
     }
 
     if (shouldStopPolling({ turnVisible, inFlight, turnCompleted, postState })) {

@@ -51,7 +51,7 @@ describe("isTurnInFlight", () => {
 
   it("returns false for question tool regardless of case", () => {
     const msg = assistantMessage({
-      parts: [{ type: "tool", tool: "Question" }],
+      parts: [{ type: "tool", tool: "Question", state: { status: "running" } }],
     });
     expect(isTurnInFlight([msg])).toBe(false);
   });
@@ -147,7 +147,7 @@ describe("resolveInFlightTurnProgressAt", () => {
 
   it("returns null when the turn has a question (not in-flight)", () => {
     const msg = assistantMessage({
-      parts: [{ type: "tool", tool: "question" }],
+      parts: [{ type: "tool", tool: "question", state: { status: "running" } }],
     });
     const result = resolveInFlightTurnProgressAt({
       rawMessages: [msg],

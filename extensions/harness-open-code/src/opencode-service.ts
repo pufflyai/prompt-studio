@@ -212,7 +212,10 @@ export const createOpencodeService = (overrides: Partial<OpencodeServiceDeps> = 
       ),
     );
 
-    return { messageComplete: admitted.then(() => waitForIdle(input.sessionId, directory, input.signal)) };
+    return {
+      messageAccepted: admitted,
+      messageComplete: admitted.then(() => waitForIdle(input.sessionId, directory, input.signal)),
+    };
   };
 
   const getSessionMessages = async (sessionId: string, cwd?: string, signal?: AbortSignal) => {
