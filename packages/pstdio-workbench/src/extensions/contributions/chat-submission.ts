@@ -78,7 +78,10 @@ export const createChatSubmissionRunner = (input: {
           const returned = returnFailedChatInput(draft, failed);
           if (returned === draft) return undefined;
           source.changeDraft(returned);
-          return { draftEdits: source.read().edits, previous: { text: draft.text, attachments: draft.attachments } };
+          // The composer may still hold the sent files; a delivered message owns them.
+          const sent = new Set(failed.attachments.map((attachment) => attachment.id));
+          const attachments = draft.attachments.filter((attachment) => !sent.has(attachment.id));
+          return { draftEdits: source.read().edits, previous: { text: draft.text, attachments } };
         };
         if (error instanceof UnresolvedSubmissionError && pending) {
           // Sending stays blocked until delivery is known.

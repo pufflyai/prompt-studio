@@ -97,7 +97,8 @@ test("a rejected queued send returns to the composer and leaves it if it arrives
       saved.push(draft);
     },
   });
-  session.changeDraft({ text: "", attachments: [], values: action.values });
+  // The composer clears its text on send but still holds the sent file.
+  session.changeDraft({ text: "", attachments: [file], values: action.values });
   await expect(session.run(action)).rejects.toThrow("Could not send");
   expect(session.getSnapshot().draft).toEqual({ text: action.text, attachments: [file], values: action.values });
   expect(session.getSnapshot().pending?.[0]?.failure).toBe("Could not send");
