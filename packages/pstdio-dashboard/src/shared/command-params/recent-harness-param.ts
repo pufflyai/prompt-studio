@@ -160,9 +160,7 @@ export const saveRecentHarnessSelection = (
 
 // A harness selector always commits a value: the explicit current selection, then
 // the project's last-used harness, then the project default, then the first
-// available harness. Only an empty harness list leaves the field unset. Once the
-// project's harness list is known, a candidate must be on it: a stored or current
-// selection can name a harness whose extension was disabled since.
+// available harness. Only an empty harness list leaves the field unset.
 export const resolveInitialHarnessSelection = (input: {
   current: CurrentHarnessSelection;
   recent: RecentHarnessSelection | undefined;
@@ -176,17 +174,13 @@ export const resolveInitialHarnessSelection = (input: {
     return { harnessId, model, ...(model && setup?.params ? { params: setup.params } : {}) };
   };
 
-  const agents = input.agents ?? [];
-  const enabled = (harnessId: string | null | undefined): harnessId is string =>
-    Boolean(harnessId) && (agents.length === 0 || agents.some((agent) => agent.id === harnessId));
-
   // Existing selections belong to the live field, including a model cleared by catalog synchronization.
   // Explicit harness switches restore their setup in the selection handler.
-  if (enabled(input.current.harnessId)) return input.current;
-  if (enabled(input.recent?.harnessId)) return restore(input.recent.harnessId);
-  if (enabled(input.defaultAgent)) return restore(input.defaultAgent);
+  if (input.current.harnessId) return input.current;
+  if (input.recent?.harnessId) return restore(input.recent.harnessId);
+  if (input.defaultAgent) return restore(input.defaultAgent);
 
-  const fallback = firstAvailableHarness(agents);
+  const fallback = firstAvailableHarness(input.agents ?? []);
   if (fallback) return restore(fallback.id);
 
   return input.current;

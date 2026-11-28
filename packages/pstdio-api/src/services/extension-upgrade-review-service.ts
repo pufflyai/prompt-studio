@@ -1,4 +1,5 @@
-import { resolve } from "node:path";
+import { existsSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { settlePreparedInstall } from "../features/extensions/extension-install-transaction";
 import { assertExtensionUpgradeWorkingTree } from "../features/extensions/extension-upgrade-baseline";
 import {
@@ -20,7 +21,6 @@ import {
 import { readExtensionReviewRecord } from "../features/extensions/review-extension-source-record";
 import type { ExtensionReviewSource } from "../features/extensions/review-extension-working-copy";
 import type { ExtensionService, ExtensionUpgradeServiceDeps } from "./extension-upgrade-service";
-import { keepsLocalCheckout } from "./published-extension-alternative";
 
 type ExistingInstance = NonNullable<Awaited<ReturnType<ExtensionService["getProjectExtensionInstance"]>>>;
 type UpgradeResult = {
@@ -75,7 +75,7 @@ export const createExtensionUpgradeReviewService = (input: {
         separateProviderId: local.instance.id,
       };
     const { source_path: path, source_ref: ref } = existing.installedSource;
-    const keepGitHistory = existing.instance.enabled && keepsLocalCheckout(path);
+    const keepGitHistory = existing.instance.enabled && existsSync(join(path, ".git"));
     return { path, ref, ...(keepGitHistory && { separateProviderId: existing.instance.id }) };
   };
 
