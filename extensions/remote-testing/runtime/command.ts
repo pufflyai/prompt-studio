@@ -20,7 +20,15 @@ export async function runCommand(options: {
   signal: AbortSignal;
   onOutput(tail: string): void;
 }): Promise<CommandRun> {
+  // The abort may have arrived during source installation, before this listener existed.
+  if (options.signal.aborted) return { exitCode: null, timedOut: false, aborted: true, tail: "" };
   const log = createWriteStream(options.logPath);
+  let logError: Error | undefined;
+  // A full workspace volume surfaces as a stream error. Capture it instead of
+  // crashing the runner, then reject after the process and log are cleaned up.
+  log.on("error", (error) => {
+    logError = error;
+  });
   let tail = "";
   const child = Bun.spawn(["sh", "-c", options.command], {
     cwd: options.cwd,
@@ -42,22 +50,44 @@ export async function runCommand(options: {
   }, options.timeoutSeconds * 1000);
   options.signal.addEventListener("abort", stop, { once: true });
 
+  const write = async (chunk: string) => {
+    if (logError) throw logError;
+    if (log.write(chunk)) return;
+    // Respect the stream's buffer so a chatty suite cannot grow it without bound.
+    await new Promise<void>((resolve) => {
+      const done = () => {
+        log.off("drain", done);
+        log.off("error", done);
+        resolve();
+      };
+      log.once("drain", done);
+      log.once("error", done);
+    });
+  };
   const collect = async (stream: ReadableStream<Uint8Array>) => {
     const decoder = new TextDecoder();
     for await (const bytes of stream) {
       const chunk = decoder.decode(bytes, { stream: true });
-      log.write(chunk);
+      await write(chunk);
       tail = (tail + chunk).slice(-TAIL_BYTES);
       options.onOutput(tail);
     }
   };
-  await Promise.all([collect(child.stdout), collect(child.stderr), child.exited]);
-  clearTimeout(deadline);
-  clearTimeout(killTimer);
-  options.signal.removeEventListener("abort", stop);
-  // The shell may exit before its children; never leave test processes behind.
-  killGroup(child.pid, "SIGKILL");
-  await new Promise<void>((resolve) => log.end(resolve));
+  try {
+    await Promise.all([collect(child.stdout), collect(child.stderr), child.exited]);
+  } finally {
+    clearTimeout(deadline);
+    clearTimeout(killTimer);
+    options.signal.removeEventListener("abort", stop);
+    // The shell may exit before its children; never leave test processes behind.
+    killGroup(child.pid, "SIGKILL");
+    await new Promise<void>((resolve) => {
+      if (log.destroyed) return resolve();
+      log.once("close", resolve);
+      log.end(() => resolve());
+    });
+  }
+  if (logError) throw logError;
   const aborted = options.signal.aborted;
   return { exitCode: timedOut || aborted ? null : child.exitCode, timedOut, aborted, tail };
 }

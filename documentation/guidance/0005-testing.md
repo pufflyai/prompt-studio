@@ -37,7 +37,7 @@
 
 Run agent tests primarily in configured cloud workspaces, including focused red/green checks, long suites and `test:review`. Check `pst pocketcoder.remote-testing status` before choosing execution. Follow the `run-cloud-tests` or `run-tests-remotely` skill. Cloud test workspaces must provide a working Docker daemon and a self-contained Git repository with the candidate, comparison refs and their history. Source uploads preserve these without copying host credentials, Git configuration or hooks.
 
-Preserve required suite selection, save full logs and source revision, and verify workspace cleanup after completion. Run review against a committed candidate with `--ref <commit>` and the intended `--base`; working-tree runs create a child commit for edits. Native desktop checks need a desktop session or passing GitHub Actions evidence for that candidate via `--desktop-in-ci`. Browser suites need the repository-pinned browser installed.
+Preserve required suite selection, save full logs and source revision, and verify workspace cleanup after completion. Run review against a committed candidate by passing `--ref <commit>` to `pst pocketcoder.remote-testing run`; set the intended comparison base on both the upload (`--base`) and the review command. Working-tree runs create a child commit for edits. Native desktop checks need a desktop session or passing GitHub Actions evidence for that candidate via `--desktop-in-ci`. Browser suites need the repository-pinned browser installed.
 
 Use the supported local workflow only when cloud execution is unavailable or cannot run a required workload. Record the concrete reason and keep blocked checks visible. A missing prerequisite never reduces the gate, and focused results do not replace a complete review run.
 

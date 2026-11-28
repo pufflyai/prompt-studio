@@ -173,7 +173,9 @@ async function prepareHistory(
     .split("\n")
     .filter(Boolean)
     .map((ref) => `+${ref}:${ref}`);
-  if (comparisonRef) refs.push(`+${comparisonRef}:${comparisonRef}`);
+  // Name the captured commit, not the host ref: a concurrent ref move must not
+  // import history outside the captured candidate and comparison commits.
+  if (comparisonRef) refs.push(`+${base}:${comparisonRef}`);
   await git("fetch", "--no-write-fetch-head", "--no-tags", root, revision, base, ...refs);
   await git("update-ref", "refs/cloud-upload/head", revision);
   await git("reset", "--mixed", "--quiet", revision);

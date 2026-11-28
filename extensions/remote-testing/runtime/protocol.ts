@@ -1,3 +1,5 @@
+import { MAX_COMMAND_SECONDS } from "./limits";
+
 export const RESULT_MARKER = "REMOTE_TEST_RESULT ";
 export interface RunRequest {
   type: "pocketcoder.remote-test/v1";
@@ -26,7 +28,7 @@ export function parseRequest(message: string) {
     request.command.length > 4096 ||
     !Number.isInteger(request.timeoutSeconds) ||
     request.timeoutSeconds <= 0 ||
-    request.timeoutSeconds > 6 * 3600
+    request.timeoutSeconds > MAX_COMMAND_SECONDS
   )
     throw new Error("Invalid remote test request.");
   for (const url of [request.source.url, request.log?.url]) {

@@ -5,7 +5,7 @@ metadata:
   version: 0.1.0
 ---
 
-Use cloud workspaces as the primary place to run agent tests, including focused red/green checks and `test:review`. Remote testing runs a test command on a cloud machine. It uploads your working tree as Git sees it: committed files, your uncommitted edits and new files that are not ignored. It omits ignored untracked files such as `node_modules` and build output; tracked files and candidate and comparison-base Git history are included. Inspect the selected files and history for secrets before uploading. Your machine stays free while the tests run.
+Use cloud workspaces as the primary place to run agent tests, including focused red/green checks and `test:review`. Remote testing runs a test command on a cloud machine. It uploads your working tree as Git sees it: committed files, your uncommitted edits and new files that are not ignored. It omits ignored untracked files such as `node_modules` and build output; tracked files and candidate and comparison-base Git history are included. Inspect the selected files and history for secrets before uploading. An ancestor commit in the uploaded candidate or comparison history can still contain a credential; if inspection finds one, do not upload that history. Rotate the credential and choose a history without it. Your machine stays free while the tests run.
 
 ## Check that it is available
 
