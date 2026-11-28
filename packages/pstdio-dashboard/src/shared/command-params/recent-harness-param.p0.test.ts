@@ -177,4 +177,29 @@ describe("recent harness params", () => {
       }),
     ).toEqual({ harnessId: "", model: "" });
   });
+
+  test("switches away from a current harness that is no longer enabled", () => {
+    expect(
+      resolveInitialHarnessSelection({
+        current: { harnessId: "disabled", model: "old" },
+        recent: { harnessId: "codex", model: "gpt-5" },
+        defaultAgent: "claude-code",
+        agents: [{ id: "claude-code" }, { id: "codex" }],
+      }),
+    ).toEqual({ harnessId: "codex", model: "gpt-5" });
+  });
+
+  test("skips a last-used or default harness that is no longer enabled", () => {
+    expect(
+      resolveInitialHarnessSelection({
+        current: { harnessId: "", model: "" },
+        recent: { harnessId: "disabled", model: "old" },
+        defaultAgent: "also-disabled",
+        agents: [
+          { id: "missing", availability: { type: "NOT_FOUND" } },
+          { id: "claude-code", availability: { type: "INSTALLED" } },
+        ],
+      }),
+    ).toEqual({ harnessId: "claude-code", model: "" });
+  });
 });

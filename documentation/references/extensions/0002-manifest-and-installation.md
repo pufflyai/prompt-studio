@@ -140,8 +140,8 @@ Explicit Git refs and other repository sources use the system Git executable. Wh
   Edit and send it, then paste the reply into **Import agent proposal**. The review checks the
   proposal's revision and lets you inspect or validate it before applying. Closing the
   review saves your choices. **Keep current version** cancels the review.
-- If an enabled local provider shares a catalog identity, **Review published version** shows
-  its incoming release. **Use published version** switches this project to a separate provider
+- If an enabled local provider shares a catalog identity and its folder is its own git checkout,
+  **Review published version** shows its incoming release. **Use published version** switches this project to a separate provider
   and retains the local folder and the provider selections of other projects.
 - In the extension panel, every row that can take a newer release shows an upgrade button next to
   its switch. The button upgrades only that extension. **Upgrade all** in the panel header runs
@@ -604,4 +604,4 @@ Agents and clients use the same API: `GET` and `POST
 `kind: "rollback"` with `extensionId`, package `revision` and `expectedRevision`;
 or `kind: "enabled"` with `extensionId`, `enabled` and `expectedRevision`.
 
-*Updated at: 2026-11-12*
+*Updated at: 2026-11-28*
