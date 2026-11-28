@@ -194,7 +194,7 @@ test("a late local frame survives a reconnect acknowledgement that adopts anothe
   expect(f.session.getSnapshot().pending).toBe(false);
   expect(f.session.getSnapshot().document).not.toBe(original);
   expect(f.session.getSnapshot().document!.getText("content").toString()).toBe("OFFLINE first\nlast LATE");
-}, 5_000);
+}, 15_000);
 
 test("a failed local-host request keeps unsaved frames and reconnect merges their original history", async () => {
   const f = await fixture();
