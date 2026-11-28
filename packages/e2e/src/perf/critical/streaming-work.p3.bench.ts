@@ -135,6 +135,26 @@ await runScenario("B4", (capture) =>
           .length,
         30,
       );
+      // Returning to an open session tab reveals its retained transcript instead of rebuilding it.
+      const other = await request(first.runtime, "/sessions", {
+        project_id: first.fixture.project.id,
+        title: "Session tab return",
+        agent: "pstdio.workbench-fixture.harness.fake",
+      });
+      const streamTab = first.page.getByRole("tab", { name: first.fixture.session.title, exact: true });
+      await streamTab.click({ button: "right" });
+      await first.page.getByRole("menuitem", { name: "Pin tab", exact: true }).click();
+      await first.page.getByRole("option", { name: other.title, exact: true }).click();
+      await expect(first.page.getByRole("tab", { name: other.title, exact: true })).toHaveAttribute(
+        "aria-selected",
+        "true",
+      );
+      await expect(streamTab).toHaveAttribute("aria-selected", "false");
+      const returning = await first.page.evaluate(() => performance.now());
+      await streamTab.click();
+      await expect(streamTab).toHaveAttribute("aria-selected", "true");
+      await expect(first.page.getByText(/^Step 30\./).filter({ visible: true })).toBeVisible();
+      capture.record("session-return", (await afterPaint(first.page)) - returning);
       await request(first.runtime, `/sessions/${first.fixture.session.id}/follow-up`, {
         prompt: "Replay __fake_long_stream__",
       });

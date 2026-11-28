@@ -17,7 +17,7 @@ A self-edited lock is not human authorization. Add the `benchmark` label to PRs 
 | B1 | Empty-home first installed launch: window, authenticated API, default tools, usable workbench, first interaction | Linux x64, Apple Silicon Mac, Windows x64 |
 | B2 | Fresh-process saved project: 100 messages, file, idle terminal | Linux x64, Apple Silicon Mac, Windows x64 |
 | B3 | Same saved project, attach to an already-running owned runtime | Linux x64, Apple Silicon Mac, Windows x64 |
-| B4 | Two populated projects; 30 turns × 8 updates × 25ms, one tool result per turn; foreground actions and cancel a second replay | Linux x64, Apple Silicon Mac, Windows x64 |
+| B4 | Two populated projects; 30 turns × 8 updates × 25ms, one tool result per turn; foreground actions, return to an open session tab and cancel a second replay | Linux x64, Apple Silicon Mac, Windows x64 |
 | B5 | Same saved fixture; 30s settle, forty fixed 15s action cycles; whole process tree sampled every 500ms | Linux x64, Apple Silicon Mac, Windows x64 |
 | B6 | 1,000 Planner tickets, three edits each, one saved filtered list; cold actionable content, search, page, move, reopen | Linux x64, Apple Silicon Mac, Windows x64 |
 | B7 | 10,000 deterministic records with three history edits; cold/warm page of 100, one edit, read during 100-record write/maintenance | Linux x64, Apple Silicon Mac, Windows x64 |
@@ -42,7 +42,7 @@ Timing and average-memory targets use strict **<**, including equality as a fail
 | B1 | Window <1,200ms; shell <3,000ms; usable <5,000ms; first interaction <1,200ms |
 | B2 | Extensions ready <1,800ms from runtime start after a clean shutdown; usable <5,000ms; first interaction <250ms |
 | B3 | Runtime attachment <1,800ms; usable <5,000ms; first interaction <250ms |
-| B4 | Input/history/stream-to-paint <250ms; file <1,500ms; terminal <250ms; panel <500ms; project/session switch <2,000ms; longest stall <200ms; completion <10,000ms; cancellation <500ms |
+| B4 | Input/history/stream-to-paint <250ms; file <1,500ms; terminal <250ms; panel <500ms; project/session switch <2,000ms; return to an open session tab <250ms; longest stall <200ms; completion <10,000ms; cancellation <500ms |
 | B5 | Average native memory <2.5GB on Linux, <2GB on macOS, <3GB on Windows; complete ten-minute coverage, no missing samples, maximum gap ≤1,000ms |
 | B6 | Advisory targets for benchmark qualification: actionable/reopen <5,000ms, filter/page/move <250ms, longest stall <200ms. Correctness requires bounded query pages, at most 100 mounted rows and persisted edits. |
 | B7 | Cold read <300ms; warm read <180ms; one-record edit <120ms; read during maintenance <120ms. Correct page contents, persisted edits and maintenance results remain required. |
