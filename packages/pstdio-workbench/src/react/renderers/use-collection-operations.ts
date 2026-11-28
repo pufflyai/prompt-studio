@@ -64,6 +64,8 @@ export const useCollectionOperations = <T>(
         (operation) =>
           !recoveryStatus(operation.status) && collectionReadMatches(operation, rows, read.sourceId, projectId),
       ),
+    waitForPendingWrites: () =>
+      operations.waitForPending((operation) => collectionReadMatches(operation, rows, read.sourceId, projectId)),
     originatingRead: observedRead(workbench, read),
     submit: async (
       move: KanbanRendererMove,

@@ -43,3 +43,51 @@ test("board keyboard navigation reaches the last card before and after resizing"
   await expect(first).toBeInViewport();
   await expect(preview.getByTestId("renderer-card")).toHaveCount(1);
 });
+
+test("dragging a clipped card supplies its full size and content to the browser", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/kanban-renderer/kanban-renderer-scrolling.canvas.tsx#OverflowingCards",
+  );
+  const card = preview.getByTestId("renderer-card").first();
+  await expect(card).toBeVisible();
+  const captured = await card.evaluate((element) => {
+    const column = element.closest<HTMLElement>("[data-board-column-viewport]")!;
+    column.scrollTop = element.getBoundingClientRect().height / 2;
+    const bounds = element.getBoundingClientRect();
+    const dataTransfer = new DataTransfer();
+    let image: { width: number; height: number; text: string | null; inBody: boolean } | undefined;
+    dataTransfer.setDragImage = (node) => {
+      const rectangle = node.getBoundingClientRect();
+      image = {
+        width: rectangle.width,
+        height: rectangle.height,
+        text: node.textContent,
+        inBody: node.parentElement === element.ownerDocument.body,
+      };
+    };
+    element.dispatchEvent(
+      new DragEvent("dragstart", {
+        bubbles: true,
+        dataTransfer,
+        clientX: bounds.left + 10,
+        clientY: column.getBoundingClientRect().top + 5,
+      }),
+    );
+    element.dispatchEvent(new DragEvent("dragend", { bubbles: true, dataTransfer }));
+    return {
+      image,
+      isClipped: bounds.top < column.getBoundingClientRect().top,
+      width: bounds.width,
+      height: bounds.height,
+      text: element.textContent,
+    };
+  });
+  expect(captured.isClipped).toBe(true);
+  expect(captured.image).toEqual({
+    width: captured.width,
+    height: captured.height,
+    text: captured.text,
+    inBody: true,
+  });
+});

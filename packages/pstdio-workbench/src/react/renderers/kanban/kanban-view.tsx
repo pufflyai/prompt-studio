@@ -333,12 +333,14 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
         onColumnAction={
           contribution.onColumnAction
             ? (...args) =>
-                runUserAction(workbench, "Column action", () =>
-                  mutate(
+                runUserAction(workbench, "Column action", async () => {
+                  // Wait before holding the read. Earlier moves reconcile against that same read.
+                  await mutations.waitForPendingWrites();
+                  await mutate(
                     (snapshot) => snapshot,
                     () => contribution.onColumnAction!(...args),
-                  ),
-                )
+                  );
+                })
             : undefined
         }
         getRowContextMenuActions={getRowContextMenuActions}

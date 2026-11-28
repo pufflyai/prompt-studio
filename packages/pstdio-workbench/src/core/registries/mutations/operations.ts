@@ -4,12 +4,14 @@ import {
   dismissOperationProgress,
   type Entry,
   emptySnapshot,
+  findRecoveryEntry,
   initialPreview,
   reconcileProjectAvailability,
   recoveryStatus,
   retiredError,
   retireOperations,
   snapshotForOperations,
+  waitForPendingOperations,
 } from "./operation-state";
 import type {
   OperationFailure,
@@ -103,7 +105,7 @@ const retainUnsentEntry = (entry: Entry, error: Error) => {
   entry.check = undefined;
   changeStatus(entry, "rejected");
   entry.error = error;
-  entry.reject(error);
+  entry.completion.reject(error);
 };
 
 const createWorkbenchOperations = (queries: ScopedQueryClient) => {
@@ -151,7 +153,7 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
   const fail = (entry: Entry, error: unknown, status: OperationFailure | "unconfirmed") => {
     changeStatus(entry, status);
     entry.error = error;
-    entry.reject(error);
+    entry.completion.reject(error);
     changed();
   };
 
@@ -164,10 +166,7 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
     changed();
   });
 
-  const findRecovery = (id: symbol) => {
-    const entry = entries.get(id);
-    return entry?.owner === owner && recoveryStatus(entry.preview.status) && !queries.isDisposed() ? entry : undefined;
-  };
+  const findRecovery = (id: symbol) => findRecoveryEntry(entries.get(id), owner, queries.isDisposed());
 
   const clearDraft = (entry: Entry) => {
     if (entry.controller.signal.aborted || entry.preview.status === "rejected" || entry.releaseOnDiscard) {
@@ -191,6 +190,8 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
       listeners.add(listener);
       return () => void listeners.delete(listener);
     },
+    waitForPending: (matches: (operation: OperationPreview) => boolean) =>
+      waitForPendingOperations(entries.values(), owner, matches),
     updateRetiredProjectAvailability(isAvailable: ProjectRecoveryAvailability) {
       if (!queries.isDisposed() && reconcileProjectAvailability(entries.values(), owner, isAvailable)) publish();
     },
@@ -206,7 +207,7 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
         scope: { ...scope, projectId: input.projectId ?? scope.projectId },
         controller: new AbortController(),
         preview: initialPreview(input, id, scope.projectId),
-        reject: result.reject,
+        completion: result,
         source: input.source,
         sourceCommand: input.sourceCommand,
         recoverySource: input.recoverySource,

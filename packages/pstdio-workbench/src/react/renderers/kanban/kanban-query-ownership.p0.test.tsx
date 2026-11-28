@@ -376,12 +376,15 @@ test("create and open leaves the departing board stale until it is visible again
   expect(calls).toBe(5);
 });
 
-test("column actions defer board reconciliation until their writes finish", async () => {
+test("column actions wait for earlier row moves and defer reconciliation until their own write finishes", async () => {
   environment.IS_REACT_ACT_ENVIRONMENT = true;
   core = createWorkbench();
   let output: KanbanRendererProps | undefined;
   let reads = 0;
+  let moved = false;
+  let actionStarted = false;
   let archived = false;
+  const moveSaved = Promise.withResolvers<void>();
   const saving = Promise.withResolvers<void>();
   const entered = Promise.withResolvers<void>();
   const renderers = getWorkbenchRenderers(core);
@@ -391,9 +394,14 @@ test("column actions defer board reconciliation until their writes finish", asyn
     attributes: [],
     executeQuery: () => {
       reads++;
-      return archived ? [] : [{ id: "row", title: "Row", attributes: {} }];
+      return archived ? [] : [{ id: "row", title: "Row", attributes: { status: moved ? "done" : "todo" } }];
+    },
+    onMove: async () => {
+      await moveSaved.promise;
+      moved = true;
     },
     onColumnAction: async () => {
+      actionStarted = true;
       renderers.refreshKanbanRenderer("column action board");
       entered.resolve();
       await saving.promise;
@@ -419,8 +427,16 @@ test("column actions defer board reconciliation until their writes finish", asyn
   });
   expect(reads).toBe(1);
   let action: Promise<unknown> | undefined;
+  let movement: Promise<void> | void;
   await act(async () => {
+    movement = output!.onMove!({ rowId: "row", attributes: { status: "done" } });
     action = Promise.resolve(output!.onColumnAction!("done", "archive"));
+  });
+  expect(actionStarted).toBe(false);
+  expect(reads).toBe(1);
+  await act(async () => {
+    moveSaved.resolve();
+    await movement;
     await entered.promise;
   });
   const pendingReads = reads;
@@ -428,7 +444,7 @@ test("column actions defer board reconciliation until their writes finish", asyn
     saving.resolve();
     await action;
   });
-  expect(pendingReads).toBe(1);
-  expect(reads).toBe(2);
+  expect(pendingReads).toBe(2);
+  expect(reads).toBe(3);
   expect(output!.rows).toEqual([]);
 });
