@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import type { ChatDraft } from "@pstdio/sdk/extensions";
-import { createLocalChatDrafts } from "./chat-local-drafts";
+import { createLocalChatDrafts, seedLocalChatDraft } from "./chat-local-drafts";
 import { createChatSession } from "./chat-session";
 
 const draft: ChatDraft = {
@@ -284,5 +284,47 @@ test("a failed browser recovery read blocks replacement writes until recovery is
       local.save(session.getSnapshot().draft);
     } finally {
       await session.dispose();
+    }
+  }));
+
+test("a fresh native draft restores without executing and cannot overwrite saved or live edits", () =>
+  withStorage(async (records) => {
+    Object.defineProperty(globalThis, "localStorage", {
+      configurable: true,
+      value: {
+        getItem: (key: string) => records.get(key) ?? null,
+        setItem: (key: string, value: string) => records.set(key, value),
+        removeItem: (key: string) => records.delete(key),
+      },
+    });
+    const discard = seedLocalChatDraft("unopened", draft);
+    discard();
+    expect(records.has("pstdio-workbench:chat-draft:unopened")).toBe(false);
+    seedLocalChatDraft("project-account-endpoint", draft);
+    expect(() => seedLocalChatDraft("project-account-endpoint", { ...draft, text: "Overwrite" })).toThrow(
+      "already has a draft",
+    );
+    let executions = 0;
+    const session = createChatSession({
+      query: async () => ({}),
+      action: async () => {
+        executions++;
+      },
+    });
+    const local = createLocalChatDrafts("project-account-endpoint", () => undefined);
+    try {
+      local.restore(session);
+      expect(session.getSnapshot().draft).toEqual(draft);
+      expect(executions).toBe(0);
+      const other = createChatSession({ query: async () => ({}), action: async () => undefined });
+      const otherLocal = createLocalChatDrafts("another-project-account-endpoint", () => undefined);
+      otherLocal.restore(other);
+      expect(other.getSnapshot().draft.text).toBe("");
+      expect(() => seedLocalChatDraft("another-project-account-endpoint", draft)).toThrow("already has a draft");
+      otherLocal.dispose();
+      other.dispose();
+    } finally {
+      local.dispose();
+      session.dispose();
     }
   }));

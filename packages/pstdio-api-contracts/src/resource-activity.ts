@@ -49,6 +49,11 @@ export const activityChangeSchema = z.object({
   beforeLabel: z.string().optional(),
   afterLabel: z.string().optional(),
 });
+const markdownPassageSchema = z.object({
+  document: z.string().min(1).max(2048),
+  start: z.string().min(1).max(256),
+  end: z.string().min(1).max(256),
+});
 export const historicalResourceActivitySchema = z
   .object({
     /** Retry with the same key and content after a lost response. */
@@ -57,6 +62,7 @@ export const historicalResourceActivitySchema = z
     body: z.string(),
     replyToId: z.string().optional(),
     quote: z.string().max(10000).optional(),
+    passage: markdownPassageSchema.optional(),
     attachmentIds: z.array(z.string()).optional(),
     revision: activityRevisionSchema.optional(),
     implementationId: z.string().optional(),
@@ -71,6 +77,8 @@ export const historicalResourceActivitySchema = z
   })
   .superRefine((value, ctx) => {
     const issue = (message: string) => ctx.addIssue({ code: "custom", message });
+    if (value.passage && (value.kind !== "comment" || value.replyToId || !value.quote?.trim()))
+      issue("A Markdown passage requires a quoted root comment.");
     if ((value.kind === "implementation" || value.kind === "review") && !value.revision)
       issue("Outcomes require exact revision context.");
     if (value.kind === "review" && (!value.verdict || !value.implementationId))
@@ -97,6 +105,7 @@ export const resourceActivityEntrySchema = z.object({
   createdAt: z.string(),
   replyToId: z.string().optional(),
   quote: z.string().optional(),
+  passage: markdownPassageSchema.optional(),
   resolved: z.boolean(),
   attachments: z.array(activityAttachmentSchema),
   revision: activityRevisionSchema.optional(),

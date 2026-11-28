@@ -1,5 +1,5 @@
 import { folderProjectInput } from "../helpers/folder-project";
-import { homeFrame } from "../helpers/home-loading";
+import { homePage } from "../helpers/home-loading";
 import { createPlannerTicket } from "../helpers/planner-api";
 import { fixtureTest } from "../scripts/fixture-test";
 import { expect, test } from "../scripts/session-test";
@@ -115,7 +115,7 @@ test("keeps the tab viewport unscrolled during drag and supports pointer and key
     localStorage.setItem("dashboard-wb2:selected-project:global", id);
   }, project.id);
   await page.goto(`/projects/${project.id}`);
-  await expect(homeFrame(page).getByText("Project home", { exact: true })).toBeVisible();
+  await expect(homePage(page)).toBeVisible();
   await page.getByRole("button", { name: "Show Bottom Panel", exact: true }).click();
   const header = page.locator('[data-workbench-panel-header="secondary"]');
   for (let index = 0; index < 3; index += 1) {

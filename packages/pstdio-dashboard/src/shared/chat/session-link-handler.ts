@@ -4,7 +4,11 @@ import { type ChatLinkCandidate, type ChatLinkHandler, isGuessedChatLink, parseC
 import type { WorkbenchCore } from "@pstdio/workbench";
 import { toWorkbenchNavigationTarget } from "@pstdio/workbench/extensions";
 import { defaultPageResourceCodec, parseWorkbenchPageUrl, serializeWorkbenchPageUrl } from "pstdio-api-contracts";
-import { type ResourceLinkSource, resourceLinkTarget } from "pstdio-api-contracts/extension-kernel";
+import {
+  type ResourceLinkSource,
+  resourceLinkFallback,
+  resourceLinkTarget,
+} from "pstdio-api-contracts/extension-kernel";
 import { getApiClient } from "@/lib/api";
 import { getDashboardQueryClient } from "@/lib/query-client";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
@@ -30,7 +34,7 @@ interface SessionLinkHandlerInput {
   /** The panel showing the conversation; its links preview beside it. */
   sourceRegion?: () => ResourceLinkSource["region"];
   sourcePlacement?: PlacementIdentity;
-  onError(message: string): void;
+  onError(message: string, fallback?: { label: string; open(): Promise<void> }): void;
 }
 
 const sessionWorkspace = (input: SessionLinkHandlerInput) => {
@@ -158,15 +162,32 @@ export const createSessionLinkHandler = (input: SessionLinkHandlerInput): ChatLi
     if (owned) return { kind: "navigation" as const, target: owned.target, href: null };
     return resolve(candidate) ?? (await resolveFile(candidate, signal));
   };
+  type LinkedDestination = Exclude<NonNullable<Awaited<ReturnType<typeof resolveDestination>>>, { kind: "project" }>;
+  const linkedOpening = (
+    target: LinkedDestination["target"],
+    retry: () => Promise<void>,
+    useRegisteredOpening: boolean,
+  ) => {
+    if (useRegisteredOpening) return { target };
+    const registered = resourceLinkFallback(target);
+    return {
+      target: resourceLinkTarget(target, { region: input.sourceRegion?.() }),
+      fallback: registered
+        ? { label: registered.kind === "page" ? "Open in Main" : "Open using default placement", open: retry }
+        : undefined,
+    };
+  };
   const openDestination = async (
     label: string,
     destinationFor: (signal: AbortSignal) => ReturnType<typeof resolveDestination>,
-    invocation?: ReturnType<WorkbenchCore["viewers"]["captureContext"]>,
+    invocation = input.workbench.viewers.captureContext(input.sourcePlacement),
+    useRegisteredOpening = false,
   ) => {
     if (!input.projectId || getDashboardSelectedProjectId(input.workbench) !== input.projectId) return;
-    if (invocation?.isViewerCurrent?.() === false) return;
+    if (invocation.isViewerCurrent?.() === false) return;
     const request = beginDashboardNavigation(input.workbench, input.projectId);
-    const isCurrent = () => request.isCurrent() && invocation?.isViewerCurrent?.() !== false;
+    const isCurrent = () => request.isCurrent() && invocation.isViewerCurrent?.() !== false;
+    let fallback: Parameters<SessionLinkHandlerInput["onError"]>[1];
     try {
       const destination = await destinationFor(request.signal);
       if (!isCurrent() || !destination) return;
@@ -179,13 +200,16 @@ export const createSessionLinkHandler = (input: SessionLinkHandlerInput): ChatLi
         });
         return;
       }
-      await input.workbench.navigation.openTarget(
-        toWorkbenchNavigationTarget(resourceLinkTarget(destination.target, { region: input.sourceRegion?.() })),
-        invocation,
+      const opening = linkedOpening(
+        destination.target,
+        () => openDestination(label, async () => destination, invocation, true),
+        useRegisteredOpening,
       );
+      fallback = opening.fallback;
+      await input.workbench.navigation.openTarget(toWorkbenchNavigationTarget(opening.target), invocation);
     } catch (error) {
       if (!isCurrent()) return;
-      input.onError(`${label}: ${error instanceof Error ? error.message : "Could not open this link."}`);
+      input.onError(`${label}: ${error instanceof Error ? error.message : "Could not open this link."}`, fallback);
     } finally {
       request.dispose();
     }

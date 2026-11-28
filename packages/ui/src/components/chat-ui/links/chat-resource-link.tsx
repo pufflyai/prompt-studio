@@ -1,5 +1,6 @@
 import { Box, Icon } from "@chakra-ui/react";
 import { ResourceBadge } from "@/components/primitives/resource-badge";
+import { Tooltip } from "@/components/primitives/tooltip";
 import { getFileTypeIcon } from "@/utils/get-file-type-icon";
 import { resolveIconComponent } from "@/utils/resolve-icon-component";
 import { ChatGuessText } from "./chat-guess-text";
@@ -22,20 +23,20 @@ export const ChatResourceLink = (props: ChatResourceLinkProps) => {
   const parsed = parseChatLink(candidate);
   const ownerIcon = presentation?.icon ? resolveIconComponent(presentation.icon) : undefined;
   const ResourceIcon = ownerIcon ?? getFileTypeIcon(parsed?.kind === "file" ? parsed.path : label);
+  const href = presentation ? presentation.href : (handler?.resolveHref(candidate) ?? null);
   return (
-    <Box as="span" display="inline-block" verticalAlign="middle" maxW="full">
-      <ChatLinkAnchor
-        candidate={candidate}
-        resolvedHref={presentation ? presentation.href : (handler?.resolveHref(candidate) ?? null)}
-      >
-        <ResourceBadge
-          fileName={presentation?.label ?? label}
-          icon={<Icon as={ResourceIcon} boxSize="3" aria-hidden />}
-          tooltip={false}
-          size="sm"
-          cursor="pointer"
-        />
-      </ChatLinkAnchor>
-    </Box>
+    <Tooltip content={href ?? candidate.source}>
+      <Box as="span" display="inline-block" verticalAlign="middle" maxW="full">
+        <ChatLinkAnchor candidate={candidate} resolvedHref={href}>
+          <ResourceBadge
+            fileName={presentation?.label ?? label}
+            icon={<Icon as={ResourceIcon} boxSize="3" aria-hidden />}
+            tooltip={false}
+            size="sm"
+            cursor="pointer"
+          />
+        </ChatLinkAnchor>
+      </Box>
+    </Tooltip>
   );
 };

@@ -116,14 +116,8 @@ const WorkbenchContent = (props: WorkbenchProps) => {
   let presentedSideMode = sidePanelMode;
   if (fullscreen.active) presentedSideMode = fullscreen.sideOpen ? "floating" : "closed";
 
-  const {
-    hasActivityBarWidgets,
-    hasNavWidgets,
-    hasSideHeaderWidgets,
-    hasSidenavWidgets,
-    hasDockedStatusBar,
-    hasStatusContent,
-  } = useWorkbenchLayoutFlags(workbench);
+  const { hasActivityBarWidgets, hasNavWidgets, hasSideHeaderWidgets, hasSidenavWidgets, hasDockedStatusBar } =
+    useWorkbenchLayoutFlags(workbench);
   const showActivity = !fullscreen.active && hasActivityBarWidgets;
   const panelLeftInset = showActivity ? "0" : "panel-gap";
   const showStatus = !fullscreen.active && hasDockedStatusBar;
@@ -224,7 +218,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
         </Flex>
         <WorkbenchStatusBar
           workbench={workbench}
-          visible={!fullscreen.active && hasStatusContent}
+          visible={!fullscreen.active}
           floating={!showStatus}
           leftInset={panelLeftInset}
         />

@@ -18,7 +18,14 @@ const runtime = normalizeExtensionSources(loaded.sources, loaded.diagnostics);
 if (runtime.diagnostics.length) throw new Error(JSON.stringify(runtime.diagnostics));
 // Resolve external owners against their real declarations, but let each test's
 // Workspaces helper own its registrations instead of registering that provider twice.
-const allMetadata = createWorkbenchExtensionMetadata({ runtime });
+const allMetadata = createWorkbenchExtensionMetadata({
+  runtime,
+  resolveWebview: ({ webview }) => ({
+    ...webview,
+    runtimeUrl: "/test-assets/runtime.js",
+    moduleUrl: "/test-assets/session-view.js",
+  }),
+});
 export const sessionProviderMetadata = Object.fromEntries(
   Object.entries(allMetadata).map(([key, records]) => [
     key,

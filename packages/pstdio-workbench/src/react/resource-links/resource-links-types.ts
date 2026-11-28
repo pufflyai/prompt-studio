@@ -6,7 +6,8 @@ export interface ResourceLinkCandidate {
   resource: ResourceRef;
   target?: NavigationTarget;
   description?: string;
-  open?: () => void | Promise<void>;
+  fallbackLabel?: string;
+  open?: (placement?: "registered", source?: ResourceRef) => void | Promise<void>;
 }
 
 export type ResourceLinkChange = { source: ResourceRef } & (

@@ -24,6 +24,7 @@ export const sp = {
 };
 
 export const spacing = {
+  "navigation-label-offset": { value: "1px" },
   "status-widget-inset": { value: "2px" },
   "shortcut-key-gap": { value: "1px" },
   "window-tab-gap": { value: "0.4375rem" },

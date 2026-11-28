@@ -1,7 +1,13 @@
 import type { PageOpenIntent, ResourceRef } from "@pstdio/sdk/extensions";
 import { resourceMatchesConstraint } from "../../shared/contributions/reference-id";
 import { SINGLE_RESOURCE_INSTANCE_KEY } from "../placements/placement-instance-key";
-import { isSingleViewPage, PAGE_MAIN_SLOT_ID, pageSlots, primarySlot, type ResolvedPageSlot } from "./page-main";
+import {
+  canOpenPageWithoutResource,
+  PAGE_MAIN_SLOT_ID,
+  pageSlots,
+  primarySlot,
+  type ResolvedPageSlot,
+} from "./page-main";
 import type {
   WorkbenchPageContribution,
   WorkbenchPageOpenInput,
@@ -71,7 +77,7 @@ export const openResourceSlot = (input: {
 export const validatePageResourceTarget = (page: WorkbenchPageContribution, resource: ResourceRef | undefined) => {
   if (page.resource) {
     if (!resource) {
-      if (isSingleViewPage(page) && page.main.empty) return;
+      if (canOpenPageWithoutResource(page)) return;
       throw new Error(`Page "${page.id}" requires a resource`);
     }
     if (!resourceMatchesConstraint(page.resource, resource))

@@ -53,7 +53,10 @@ const toCanonicalDecision = (decision: FollowUpDecision) => {
   return decision;
 };
 
-export const followUpSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<typeof followUpSessionRoute> => {
+export const followUpSessionHandler = (
+  deps: SessionsRouteDeps,
+  originFor?: (request: Request) => import("pstdio-api-contracts").WorkbenchOrigin | undefined,
+): AppRouteHandler<typeof followUpSessionRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
     const input = c.req.valid("json");
@@ -84,7 +87,7 @@ export const followUpSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler
     }
 
     try {
-      const decision = await sendSessionFollowUp(deps, session, input);
+      const decision = await sendSessionFollowUp(deps, session, input, { workbenchOrigin: originFor?.(c.req.raw) });
       const result = await deps.sessionService.get(session.id);
       if (!result) {
         return c.json({ error: `Session not found: ${id}` }, 404);

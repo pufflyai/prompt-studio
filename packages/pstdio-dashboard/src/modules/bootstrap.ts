@@ -1,6 +1,7 @@
 import type { PageLocation } from "@pstdio/sdk/extensions";
 import { batchWorkbenchChanges, type WorkbenchModuleContribution } from "@pstdio/workbench";
 import { isInitialCollectionsSyncComplete } from "@/lib/sync/collections";
+import { reportWorkbenchError } from "@/lib/workbench-error-report";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import type { DashboardProjectSelectionPersistence } from "@/shared/app/project-selection-persistence";
 import {
@@ -10,10 +11,12 @@ import {
   subscribeDashboardExtensionsRegisteredProject,
 } from "@/shared/extensions/extension-readiness";
 import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
+import { openDashboardSidePanel } from "./sessions/bubble/open-side-panel";
 
 interface CreateBootstrapModuleInput {
   isInitialSyncComplete?: () => boolean;
   projectSelectionPersistence?: DashboardProjectSelectionPersistence;
+  openInitialSideChat?: boolean;
 }
 
 const isCorePageLocation = (location: PageLocation | undefined) => {
@@ -35,6 +38,15 @@ export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
       let generation = 0;
       let waitingUnsubscribe: (() => void) | undefined;
       let selectionUnsubscribe: (() => void) | undefined;
+      let openInitialSideChat = input.openInitialSideChat ?? false;
+
+      const startInitialSideChat = () => {
+        const projectId = getDashboardSelectedProjectId(ctx);
+        if (!openInitialSideChat || !projectId || getDashboardExtensionsReadyProjectId(ctx) !== projectId) return;
+        openInitialSideChat = false;
+        if (!ctx.shell.getPanelPolicy("side").canOpen || ctx.sidePanel.getMode() !== "closed") return;
+        void openDashboardSidePanel(ctx, "attached").catch((error) => reportWorkbenchError(error, projectId));
+      };
 
       const disposePending = () => {
         waitingUnsubscribe?.();
@@ -120,13 +132,19 @@ export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
       };
 
       bootSelectedProject();
-      const unsubscribeProject = subscribeDashboardSelectedProject(ctx, bootSelectedProject);
+      startInitialSideChat();
+      const unsubscribeReady = subscribeDashboardExtensionsReadyProject(ctx, startInitialSideChat);
+      const unsubscribeProject = subscribeDashboardSelectedProject(ctx, () => {
+        bootSelectedProject();
+        startInitialSideChat();
+      });
 
       return {
         dispose() {
           generation += 1;
           disposePending();
           unsubscribeProject();
+          unsubscribeReady();
         },
       };
     },

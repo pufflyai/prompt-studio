@@ -29,3 +29,6 @@ export const resourceContextMenuPath = (resourceKind: string): MenuPath => [
   resourceKind,
   "context",
 ];
+
+/** Commands contributed for a captured editor selection. */
+export const editorSelectionMenuPath = ["editor", "selection"] as const;

@@ -35,13 +35,21 @@ type Destination = {
   repoPath?: string;
 };
 
+const reviewedInstallInput = (installName: string, source: { path: string; ref: string | null }) =>
+  source.ref === null
+    ? { source: source.path }
+    : { source: installName, preparedSource: { path: source.path, ref: source.ref } };
+
 export const createExtensionUpgradeReviewService = (input: {
   deps: ExtensionUpgradeServiceDeps;
   install: (input: InstallExtensionSourceInput) => Promise<InstalledExtensionSource>;
   resolveUpgradeInput: (projectId: string, existing: ExistingInstance) => Promise<InstallExtensionSourceInput>;
   registerUpgrade: (existing: ExistingInstance, installed: InstalledExtensionSource) => Promise<UpgradeResult>;
   separateLocalProvider: (projectId: string, existing: ExistingInstance) => Promise<ExistingInstance | undefined>;
-  resolvePublishedInput: (extensionId: string) => Promise<InstallExtensionSourceInput>;
+  resolvePublishedInput: (
+    extensionId: string,
+    source: ExistingInstance["installedSource"],
+  ) => Promise<InstallExtensionSourceInput>;
   extensionUpgradeDestination: (
     deps: ExtensionUpgradeServiceDeps,
     projectId: string,
@@ -80,9 +88,17 @@ export const createExtensionUpgradeReviewService = (input: {
     const identity = existing.installedSource.extension_id;
     const input =
       source.separateProviderId === instanceId && existing.installedSource.source_kind === "local_path"
-        ? await resolvePublishedInput(identity)
+        ? await resolvePublishedInput(identity, existing.installedSource)
         : await resolveUpgradeInput(projectId, existing);
-    return startExtensionSourceReview(reviewHome(), projectId, instanceId, identity, source, input);
+    return startExtensionSourceReview(
+      reviewHome(),
+      projectId,
+      instanceId,
+      identity,
+      source,
+      input,
+      deps.release?.source === "workspace" ? deps.release.root : undefined,
+    );
   };
 
   const beginningReviews = new Map<string, ReturnType<typeof loadOrStartReview>>();
@@ -104,11 +120,10 @@ export const createExtensionUpgradeReviewService = (input: {
   ) => {
     const workspace = await deps.workspaceService.getDefault(projectId);
     const installed = await install({
-      source: existing.installedSource.install_name,
+      ...reviewedInstallInput(existing.installedSource.install_name, review.source),
       installName: `published-${id}`,
       allocateSeparateSource: true,
       repoPath: workspace?.root_path ?? undefined,
-      preparedSource: review.source,
       reviewedUpgrade: review.upgrade,
       retainBackup: true,
     });
@@ -148,11 +163,10 @@ export const createExtensionUpgradeReviewService = (input: {
       { revision, validationOnly: true },
       async ({ source: preparedSource, upgrade: reviewedUpgrade }) => {
         const candidate = await install({
-          source: existing.installedSource.install_name,
+          ...reviewedInstallInput(existing.installedSource.install_name, preparedSource),
           installName: `review-validation-${id}`,
           allocateSeparateSource: true,
           repoPath: workspace?.root_path ?? undefined,
-          preparedSource,
           reviewedUpgrade,
           retainBackup: true,
         });
@@ -195,9 +209,8 @@ export const createExtensionUpgradeReviewService = (input: {
           existing,
           await install({
             ...destination,
-            source: existing.installedSource.install_name,
+            ...reviewedInstallInput(existing.installedSource.install_name, review.source),
             installName: existing.installedSource.install_name,
-            preparedSource: review.source,
             reviewedUpgrade: review.upgrade,
             force: true,
             retainBackup: true,

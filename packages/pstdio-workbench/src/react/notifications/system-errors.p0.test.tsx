@@ -6,6 +6,7 @@ import { act, create } from "react-test-renderer";
 import { createWorkbench } from "../../core";
 import { getWorkbenchOperations } from "../../core/registries/mutations/operations";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
+import { useWorkbenchLayoutFlags } from "../workbench/use-workbench-layout-flags";
 import { OperationRecoveryItem } from "./operation-recovery";
 import { systemActivityItemId, useSystemActivityStatusItem } from "./system-errors";
 
@@ -259,7 +260,11 @@ test("dismissed progress stays hidden while running and a subsequent failure app
   const workbench = createWorkbench({ queries });
   workbench.pageLocations.setProject("project");
   const operations = getWorkbenchOperations(queries);
-  const Status = () => <span>{useSystemActivityStatusItem(workbench, true)}</span>;
+  let flags: ReturnType<typeof useWorkbenchLayoutFlags> | undefined;
+  const Status = () => {
+    flags = useWorkbenchLayoutFlags(workbench);
+    return <span>{useSystemActivityStatusItem(workbench, true)}</span>;
+  };
   let tree: ReturnType<typeof create>;
   const quiet = Promise.withResolvers<void>();
   const publication = Promise.withResolvers<void>();
@@ -288,10 +293,12 @@ test("dismissed progress stays hidden while running and a subsequent failure app
         write: () => publication.promise,
       });
     });
+    expect(flags?.hasDockedStatusBar).toBe(true);
     expect(tree!.root.findByType("span").children).toEqual(["System activity: Publish artifact"]);
     expect(workbench.statusBar.getItem(systemActivityItemId)?.popoverViewId).toBeDefined();
     await act(async () => operations.dismissProgress(attempt.id));
     expect(workbench.statusBar.listVisibleItems()).toHaveLength(0);
+    expect(flags?.hasStatusContent).toBe(false);
     expect(operations.getSnapshot().pending.find((entry) => entry.id === attempt.id)?.status).toBe("writing");
     await act(async () => {
       publication.reject(new Error("Publication failed"));

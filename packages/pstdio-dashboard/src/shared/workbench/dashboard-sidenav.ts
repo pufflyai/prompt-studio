@@ -124,6 +124,7 @@ export const registerDashboardSidenav = (ctx: WorkbenchModuleContext) => {
   const modeSubscription = ctx.modes.onDidChangeActive(syncNavigation);
   const primaryResourceSubscription = ctx.onDidChangePrimaryResource(syncNavigation);
   const pageSubscription = ctx.pages.store.subscribeSelector((state) => state.location, syncNavigation);
+  const levelSubscription = ctx.pages.store.subscribeSelector((state) => state.navigationLocation, syncNavigation);
   const unsubscribeDashboardData = subscribeSessionListData(refresh);
   const unsubscribeProject = subscribeDashboardSelectedProject(ctx, () => {
     syncLoading();
@@ -141,6 +142,7 @@ export const registerDashboardSidenav = (ctx: WorkbenchModuleContext) => {
       modeSubscription.dispose();
       primaryResourceSubscription.dispose();
       pageSubscription();
+      levelSubscription();
       unsubscribeDashboardData();
       unsubscribeProject();
       unsubscribeRegistration();

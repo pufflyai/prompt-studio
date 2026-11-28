@@ -1,5 +1,5 @@
 import type { ScopedQueryClient } from "@pstdio/sdk/extensions";
-import { type ChatRendererAction, contributionRefId, type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
+import { type ChatRendererAction, contributionRefId, type ResourceRef } from "@pstdio/sdk/extensions";
 import { text } from "pstdio-extensions/workbench";
 import { type ComponentType, createElement } from "react";
 import type { WorkbenchCore, WorkbenchPanelRegion, WorkbenchPanelRenderInput } from "../../core";
@@ -13,6 +13,7 @@ import { getWorkbenchQueries } from "../../core/workbench-queries";
 import type { NativeChatHostProps } from "../../react/renderers/chat/native-chat-host";
 import { NativeChatView } from "../../react/renderers/chat/native-chat-view";
 import type { RegisterWorkbenchExtensionContributionsInput } from "../host/workbench-extension-host-types";
+import { chatDraftOwnerKey } from "./chat-browser-draft-key";
 import { createChatCommandBinding } from "./chat-command-binding";
 import { createChatLinkHandler } from "./chat-link-handler";
 import type { createChatOwnerRetention } from "./chat-owner-retention";
@@ -134,7 +135,7 @@ export const createChatRendererOwner = (
     resource ? (input.resolveChatResource?.(resource, input.projectId) ?? resource) : undefined;
   const rootKey = createQueryRootKeys();
   const resourceIdentity = (resource: WorkbenchPanelRenderInput["instance"]["resource"]) =>
-    JSON.stringify([input.projectId, view.id, resourceKey(normalizeResource(resource)) ?? body.draftKey]);
+    chatDraftOwnerKey(input.projectId, view.id, normalizeResource(resource), body.draftKey);
   const keyFor = (resource: ResourceRef | undefined, queries: ScopedQueryClient) =>
     JSON.stringify([rootKey(queries), resourceIdentity(resource)]);
   const sessionFor = (
@@ -282,6 +283,7 @@ export const createChatRendererOwner = (
                 resolve: slot.resolve,
                 visible: render.visible,
                 placementOpen: render.placementOpen,
+                placementSelected: render.placementSelected,
                 workbench: render.workbench,
                 resource: render.instance.resource,
                 extensionId: view.extensionId,

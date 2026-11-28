@@ -32,7 +32,7 @@ In an existing session, pending questions and confirmations stay available besid
 
 ![New session panel beside the Start page, with a draft request to build a reading-list extension, a Project folder selector, and model controls.](../../images/new-conversation.png)
 
-The conversation opens in a side panel so you can keep a tool visible while talking to the agent. The image shows a draft request before sending it. It asks for a small tool and describes what the person should be able to do with it.
+The Side panel opens attached automatically the first time you enter a project on a fresh install. The chat bubble can reopen it as a floating panel, and you can attach or detach it with its panel controls. The image shows a draft request to build a small tool.
 
 Before sending:
 
@@ -105,4 +105,4 @@ To learn what the host and the harness each do, read [Agents and harnesses](../c
 
 If an agent does not start, see [Troubleshooting](0005-troubleshooting.md).
 
-*Updated at: 2026-11-22*
+*Updated at: 2026-11-27*

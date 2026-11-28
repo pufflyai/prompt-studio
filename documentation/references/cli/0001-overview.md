@@ -38,6 +38,7 @@ The extension author must declare CLI access and connect the UI action to the co
 | `pst serve` | Start or reuse the local API runtime. |
 | `pst close` | Stop the background API runtime. |
 | `pst logs` | Read the local runtime log. |
+| `pst workbench context --json` | Read the workbench attached to the current agent request. Add `--at-send` for the original page and selection. |
 | `pst performance [snapshot]` | Print the desktop app's local performance snapshot as JSON, including capture history, workbench frame rate (`frameRate`) and paused extensions (`pausedExtensionIds`). See [Developer tools](../../guides/0003-developer-tools.md). |
 | `pst performance recordings <directory>` | Export saved performance JSONL files without starting monitoring. |
 | `pst update-channel [stable\|nightly]` | Print or change which builds the desktop app on this computer updates to. See [Install](../../guides/getting-started/0001-install.md#choose-an-update-channel). |
@@ -52,6 +53,8 @@ The extension author must declare CLI access and connect the UI action to the co
 | `pst auth tokens` | Issue, list, and revoke scoped machine tokens. |
 | `pst automation` | Create and inspect durable automation runs. |
 | `pst connections check` | Run an extension's declared connection health check. |
+
+The context includes the project and mode, the Main page, visible panels, focus, and any supported row or Markdown range selection. Follow the returned references with the owning tool. For example, run `pst pstdio.planner get-ticket --id PS-12` for a selected Planner ticket. The command returns a structured unavailable result for headless requests or a disconnected workbench.
 
 ## Command pages
 

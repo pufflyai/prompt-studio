@@ -2,6 +2,11 @@ export { LazyMarkdownEditor, preloadMarkdownEditor } from "./lazy-markdown-edito
 export type { MarkdownEditorProps } from "./markdown-editor/markdown-editor";
 export { MarkdownEditor } from "./markdown-editor/markdown-editor";
 export type {
+  MarkdownEditorExtensionContext,
+  MarkdownEditorSelection,
+} from "./markdown-editor/markdown-editor-context";
+export { useMarkdownEditor } from "./markdown-editor/markdown-editor-context";
+export type {
   MarkdownCollaboration,
   MarkdownDocumentSelection,
 } from "./markdown-editor/plugins/markdown-collaboration-plugin";
@@ -9,6 +14,7 @@ export type {
   MarkdownSectionAnchor,
   MarkdownSectionNavigation,
 } from "./markdown-editor/plugins/markdown-section-navigation";
+export type { MarkdownSelectionAnchor } from "./markdown-editor/plugins/markdown-selection-anchor";
 export type { PromptCommand, PromptEditorProps, PromptEditorRef } from "./prompt-input/prompt-input";
 export { PromptEditor } from "./prompt-input/prompt-input";
 export { generateEditorStateFromString, getTextFromSerializedEditorState } from "./prompt-input/utils";

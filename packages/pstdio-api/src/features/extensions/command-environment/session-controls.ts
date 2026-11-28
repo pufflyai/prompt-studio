@@ -165,7 +165,15 @@ export const createSessionControls = (deps: ExtensionsRouteDeps, input: SessionA
       }),
     invokeHarnessOperation: async (id, operation, expectedHarnessId) => {
       await read(() => requireProjectSession(id));
-      return invokeSessionHarnessOperation(deps, id, operation, expectedHarnessId, input.signal);
+      return invokeSessionHarnessOperation(
+        deps,
+        id,
+        operation,
+        expectedHarnessId,
+        input.signal,
+        "resumed",
+        input.workbenchOrigin,
+      );
     },
     resolveSessionId: (request) =>
       read(async () => {

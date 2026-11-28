@@ -1,12 +1,13 @@
 import {
   applyTreeListOrder,
-  buildTreeVisibilityMenuActions,
   filterVisibleSections,
+  listTreeVisibilityItems,
   type ResourceContextAction,
   resolveVisibility,
   type TreeListActionMenuItem,
   type TreeListNode,
   type TreeListSection,
+  type TreeVisibilityItem,
   useTreeListOrderStore,
   useTreeListVisibilityStore,
   type VisibilityOverride,
@@ -36,6 +37,8 @@ interface TreeViewCustomization {
   // Back-of-tree right-click menu: header rows, body categories, and footer rows that opt in.
   backgroundContextActions: ResourceContextAction[];
   customizationRevision: string;
+  visibilityItems: TreeVisibilityItem[];
+  resetCustomization: () => void;
   onReorderSections: (slot: TreeViewSlot, nextSectionIds: string[]) => void;
   onMoveSection: (nextSectionIds: string[], sourceSectionId: string, destinationSectionId: string) => void;
   onReorderNodes: (sectionId: string, nextNodeIds: string[]) => void;
@@ -56,6 +59,7 @@ interface TreeViewCustomizationOptions {
   pinnedOnlyNodeIds?: ReadonlySet<string>;
   allowGroups?: boolean;
   groupScope?: TreeGroupScope;
+  openVisibility?: () => void;
 }
 
 const toStringLabel = (label: ReactNode, fallback: string) => (typeof label === "string" ? label : fallback);
@@ -237,20 +241,19 @@ export const useTreeViewCustomization = (
   const visibleSections = visibleIn(contentSections);
   if (options?.allowGroups && visibleSections.length === 0) visibleSections.push(...contentDropSections);
   const visibleFooterSections = visibleIn(footerSections);
-  const visibilityMenuItems = buildTreeVisibilityMenuActions(
+  const visibilityItems = listTreeVisibilityItems(
     { headerSections: orderedHeaderSections, sections: orderedSections, footerSections: orderedFooterSections },
     sectionOverrides,
     nodeOverrides,
     visibilityActions,
-    icons,
-  );
+  ).flat();
   const backgroundContextActions: ResourceContextAction[] = newGroupAction ? [newGroupAction] : [];
-  if (visibilityMenuItems.length > 0)
+  if (visibilityItems.length > 0 && options?.openVisibility)
     backgroundContextActions.push({
       key: "tree-visibility",
       label: "Hide/show items",
       icon: icons.visibleIcon,
-      items: visibilityMenuItems.map((item) => ({ ...item, closeOnSelect: false })),
+      onClick: options.openVisibility,
     });
 
   const customizationRevision = JSON.stringify({
@@ -284,6 +287,8 @@ export const useTreeViewCustomization = (
     visibleFooterSections,
     backgroundContextActions,
     customizationRevision,
+    visibilityItems,
+    resetCustomization: visibilityActions.onResetAll,
     onReorderSections: (slot, nextSectionIds) => {
       const idsBySlot: Record<TreeViewSlot, string[]> = {
         header: orderedHeaderSections.map((section) => section.id),

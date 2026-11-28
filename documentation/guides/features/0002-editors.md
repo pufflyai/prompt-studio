@@ -31,6 +31,8 @@ To build a workspace-style editor, give the page `main: { kind: "panels", empty:
 
 Keep the tool's operations in commands, too, so that agents can change the same content without opening the editor.
 
+Tools can contribute commands to `editorSlots.selection`. These actions appear in the document editor’s floating edit toolbar and receive the captured text and source location in the invocation slot. Sessions uses this slot for **Ask agent**, which opens an unsent draft. Activity adds **Comment** when the document supports anchored discussion; its popover lets the person write and post a comment without changing the document. See [Editor selection actions](../../references/extensions/0029-editor-selection-actions.md) for the ownership boundary.
+
 ## Learn more
 
 - [Workbench cookbook: editable resource pages](../extensions/0002-workbench-cookbook.md#editable-resource-pages) shows a Markdown editor from Extension Lab.
@@ -38,4 +40,4 @@ Keep the tool's operations in commands, too, so that agents can change the same 
 - [Renderer edit and refresh](../../references/extensions/0012-renderer-edit-refresh-lifecycle.md) explains how native editors load, save, and refresh.
 - [Projects and workspaces](../concepts/0001-projects-and-workspaces.md#files-and-workspaces-in-the-sidebar) describes **Files**.
 
-*Updated at: 2026-11-22*
+*Updated at: 2026-11-26*

@@ -10,6 +10,7 @@ import {
 import { canonicalRuntimeId, createCommandRunner, createReadBoundary } from "pstdio-extensions";
 import { z } from "zod";
 import { withStorageObservation } from "../../services/shared-files/storage-observation";
+import { submittedWorkbenchOrigin } from "../sessions/workbench-context";
 import { createCommandEnvironment } from "./command-environment";
 import type { ExtensionsRouteDeps } from "./deps";
 import { publishExtensionEventNotifications } from "./extension-event-notifications";
@@ -40,6 +41,7 @@ const executeCommand = async (
   },
 ) => {
   const { body, projectId } = input;
+  const { workbenchOrigin: rawWorkbenchOrigin, ...runnerMetadata } = body.metadata ?? {};
   const snapshot = await createReadBoundary(input.signal)(() => deps.extensionRuntimeCatalog.get(projectId));
   const commandId = canonicalRuntimeId(snapshot.runtime, input.commandId);
   const command = snapshot.runtime.commands.find((candidate) => candidate.id === commandId);
@@ -86,6 +88,13 @@ const executeCommand = async (
       createCommandEnvironment(deps, snapshot.enabledSources, {
         ...environment,
         resourceLinksReadOnly: input.resourceLinksReadOnly,
+        workbenchOrigin:
+          body.source === "dashboard" &&
+          body.slot?.kind === "renderer" &&
+          handler.extensionId === "pstdio.session-browser" &&
+          (body.params?.action as { type?: string } | undefined)?.type === "submit"
+            ? submittedWorkbenchOrigin(rawWorkbenchOrigin, projectId)
+            : undefined,
         artifactMounts: snapshot.runtime.artifactMounts,
         project: snapshot.project,
         settings: snapshot.runtime.settings,
@@ -107,7 +116,7 @@ const executeCommand = async (
       attachment: body.attachment as never,
       slot: body.slot as never,
       source: body.source ?? "api",
-      metadata: body.metadata as JsonObject | undefined,
+      metadata: Object.keys(runnerMetadata).length ? (runnerMetadata as JsonObject) : undefined,
       signal: input.signal,
       onChunk: input.onChunk,
     });

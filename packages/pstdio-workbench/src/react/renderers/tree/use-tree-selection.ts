@@ -16,6 +16,7 @@ export const useTreeSelection = (
   const context = JSON.stringify([
     treeViewId,
     input.activeNodeId,
+    input.activeSlot?.id,
     input.activeResource ? getWorkbenchSelectionResourceKeys(input.activeResource) : input.activeLocation,
     input.activeResource || input.activeLocation ? undefined : ids,
   ]);

@@ -122,3 +122,22 @@ export const createLocalChatDrafts = (key: string, readLegacy: () => LegacyChatD
     },
   };
 };
+
+/** Only fresh resource identities may be seeded; live or persisted edits always win. */
+export const seedLocalChatDraft = (key: string, draft: ChatDraft) => {
+  const value = chatDraftSchema.parse(draft);
+  const storage = globalThis.localStorage;
+  if (!storage) throw new Error("Browser draft storage is unavailable.");
+  const localKey = `pstdio-workbench:chat-draft:${key}`;
+  if (
+    browserOwners.get(storage)?.has(localKey) ||
+    storage.getItem(localKey) !== null ||
+    storage.getItem(`pstdio-workbench:chat-draft-pending:${key}`) !== null
+  )
+    throw new Error("The conversation already has a draft.");
+  const raw = JSON.stringify(value);
+  storage.setItem(localKey, raw);
+  return () => {
+    if (!browserOwners.get(storage)?.has(localKey) && storage.getItem(localKey) === raw) storage.removeItem(localKey);
+  };
+};

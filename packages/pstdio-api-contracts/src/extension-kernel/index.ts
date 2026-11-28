@@ -38,6 +38,7 @@ export { homePages } from "./home-refs";
 export type {
   CommitPayload,
   ConflictPayload,
+  EditorSelectionContext,
   MergePayload,
   RebasePayload,
   SessionLifecyclePayload,
@@ -47,6 +48,7 @@ export type {
 } from "./kernel-slots";
 export {
   accountEvents,
+  editorSlots,
   gitEvents,
   projectEvents,
   projectSlots,
@@ -74,7 +76,7 @@ export * from "./page-url";
 export { type QueryDependency, queryChangeEnvelopeSchema } from "./query-change";
 export { commandRef, eventRef } from "./refs";
 export { resourceKey } from "./resource-key";
-export { type ResourceLinkSource, resourceLinkTarget } from "./resource-link-target";
+export { type ResourceLinkSource, resourceLinkFallback, resourceLinkTarget } from "./resource-link-target";
 export { serializeCommandError } from "./serialize-error";
 export { sessionBrowser, sessionBrowserId } from "./session-browser-refs";
 export { defineSlot } from "./slots";

@@ -6,7 +6,7 @@ Status: Accepted.
 
 ## Intended behavior
 
-A retained chat panel preserves its scroll position while hidden. Showing it again keeps the same response visible. A panel following the tail continues to follow it, including messages received while hidden.
+A retained chat panel preserves its scroll position while hidden. Showing it again keeps the same response visible. A panel following the tail continues to follow it, including messages received while hidden. This applies to hiding and showing the same selected panel. Explicitly opening or selecting a session starts at the latest reply instead (RB 3.A.4), without reloading its conversation owner or composer draft.
 
 ## External limitation
 

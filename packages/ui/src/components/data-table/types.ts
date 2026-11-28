@@ -159,6 +159,7 @@ export interface DataTableEditModeConfig {
 }
 
 export interface DataTableProps {
+  onSelectedRowsChange?: (rows: Record<string, unknown>[]) => void;
   /** Provider-filtered page. Omit for the full-result client-side view. */
   page?: CollectionPageControl;
   data: RowData[];

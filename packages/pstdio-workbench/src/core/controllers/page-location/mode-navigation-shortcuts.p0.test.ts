@@ -31,7 +31,7 @@ const fixture = (label = "Project") => {
   return { core, navigate, direct };
 };
 
-test.each(["ticket", "sessions"])("the mode return chord leaves %s navigation for the last root page", async (id) => {
+test.each(["ticket", "sessions"])("the mode return chord leaves %s navigation while retaining Main", async (id) => {
   const { core, navigate, direct } = fixture();
   navigate("tickets");
   navigate(id);
@@ -39,7 +39,8 @@ test.each(["ticket", "sessions"])("the mode return chord leaves %s navigation fo
   expect(shortcut).toBeDefined();
   expect(shortcut?.disabled).toBe(false);
   await core.keyboard.invoke(shortcut!.id);
-  expect(core.pages.store.getState().activePageId).toBe("tickets");
+  expect(core.pages.store.getState().activePageId).toBe(id);
+  expect(core.pages.store.getState().navigationLocation).toBeNull();
   expect(direct()?.disabled).toBe(true);
 });
 
@@ -73,16 +74,18 @@ test("the direct mode-return shortcut completes and exits keyboard mode", async 
   navigate("sessions");
   core.keyboard.open();
   await core.keyboard.invoke(direct()!.id);
-  expect(core.pages.store.getState().activePageId).toBe("tickets");
+  expect(core.pages.store.getState().activePageId).toBe("sessions");
+  expect(core.pages.store.getState().navigationLocation).toBeNull();
   expect(core.keyboard.store.getState().active).toBe(false);
 });
 
-test("mode return uses Home when a nested page was opened first", async () => {
+test("mode return preserves a nested Main page opened first", async () => {
   const { core, navigate, direct } = fixture();
   navigate("sessions");
   core.keyboard.open();
   await core.keyboard.invoke(direct()!.id);
-  expect(core.pages.store.getState().activePageId).toBe("home");
+  expect(core.pages.store.getState().activePageId).toBe("sessions");
+  expect(core.pages.store.getState().navigationLocation).toBeNull();
 });
 
 test("mode return names the active mode and leaves direct editor chords alone", () => {

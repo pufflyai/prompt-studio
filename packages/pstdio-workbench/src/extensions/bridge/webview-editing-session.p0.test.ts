@@ -420,6 +420,26 @@ test("an equal authoritative refresh reconciles the saved baseline after reset r
   expect(await frame.call({ operation: "save", sessionId: "settings" })).toMatchObject({ value: { title: "Latest" } });
 });
 
+test("resetting settings tells the guest to discard its inline draft", async () => {
+  const { settingsLeaveGuard } = await import("../../react/settings/settings-leave-guard");
+  const editor = createEditor();
+  const frame = editor.frame("project-1", "pstdio.lab", {
+    instanceId: "settings",
+    panelId: "settings",
+    closable: true,
+    resource: { type: "workbench-settings", id: "tags" },
+  });
+  await frame.call(open("settings"));
+  await frame.call({ ...change("settings", "Draft"), operation: "preview" });
+  const guard = settingsLeaveGuard(editor.workbench);
+  await guard.getActions()!.reset();
+  expect(frame.events.at(-1)).toMatchObject({ snapshot: { value: initial, resetVersion: 2 } });
+  await frame.call({ ...change("settings", "Another draft"), operation: "preview", sequence: 2 });
+  await guard.getActions()!.reset();
+  expect(frame.events.at(-1)).toMatchObject({ snapshot: { value: initial, resetVersion: 4 } });
+  expect(editor.writes).toEqual([]);
+});
+
 test("saving a clean shared editor does not invalidate another view's backend read", async () => {
   const editor = createEditor();
   const first = editor.frame();

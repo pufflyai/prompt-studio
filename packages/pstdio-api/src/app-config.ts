@@ -25,6 +25,7 @@ export interface AppConfig {
 interface ResolveAppConfigInput {
   env: Record<string, string | undefined>;
   defaultExtensionReleaseRef?: string;
+  defaultExtensionSourceRoot?: string;
 }
 
 const resolveEventBufferSize = (value: string | undefined) => {
@@ -45,8 +46,11 @@ const resolvePath = (configured: string | undefined, fallback: string, home: str
   configured ? expandHomePath(configured, home) : fallback;
 
 const resolveRelease = (input: ResolveAppConfigInput): ExtensionRelease | null => {
-  const ref = (input.env.PSTDIO_EXTENSION_RELEASE_REF ?? input.defaultExtensionReleaseRef)?.trim() || undefined;
-  const root = input.env.PSTDIO_EXTENSION_SOURCE_ROOT?.trim() || undefined;
+  const configuredRef = input.env.PSTDIO_EXTENSION_RELEASE_REF?.trim();
+  const ref = (configuredRef ?? input.defaultExtensionReleaseRef)?.trim() || undefined;
+  const root =
+    input.env.PSTDIO_EXTENSION_SOURCE_ROOT?.trim() ||
+    (configuredRef === undefined ? input.defaultExtensionSourceRoot : undefined);
 
   if (root && !ref) {
     throw new Error("PSTDIO_EXTENSION_SOURCE_ROOT requires PSTDIO_EXTENSION_RELEASE_REF");

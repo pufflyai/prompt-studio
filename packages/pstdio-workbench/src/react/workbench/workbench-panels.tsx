@@ -8,6 +8,7 @@ import { usePanelDragSurface, usePanelPositionActions } from "../region/panel-po
 import { WorkbenchRegion } from "../region/region";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
+import { useStatusBarVisibility } from "./use-status-bar-visibility";
 import { WorkbenchStatusBarItems } from "./workbench-status-bar-items";
 
 interface WorkbenchSidenavProps {
@@ -95,9 +96,11 @@ interface WorkbenchStatusBarProps extends WorkbenchRegionPanelProps {
 }
 
 export const WorkbenchStatusBar = (props: WorkbenchStatusBarProps) => {
-  const { workbench, leftInset = "panel-gap", floating = false, visible = true } = props;
+  const { workbench, leftInset = "panel-gap", floating = false } = props;
+  const { hasStatusContent } = useStatusBarVisibility(workbench);
+  const visible = props.visible !== false && hasStatusContent;
   const chrome = useModeChrome(workbench, "status");
-  const systemNoticeAnnouncement = useSystemActivityStatusItem(workbench, visible);
+  const systemNoticeAnnouncement = useSystemActivityStatusItem(workbench, props.visible !== false);
   const styles = useSlotRecipe({ key: "statusBar" })();
 
   return (

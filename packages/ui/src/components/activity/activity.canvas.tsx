@@ -257,3 +257,29 @@ export const Setup: Story = {
   id: "components-data-display-activity--setup",
   render: () => <ActivitySetupExample />,
 };
+
+export const LocalUser: Story = {
+  render: () => (
+    <Activity.Root>
+      <Activity.Feed>
+        <Activity.Comment
+          actor={{ name: "Local user", showAvatar: false }}
+          replies={
+            <Activity.Reply actor={{ name: "Local user", showAvatar: false }}>
+              A local reply aligns with its author without an avatar gutter.
+            </Activity.Reply>
+          }
+        >
+          A local comment keeps its attribution without a placeholder avatar.
+        </Activity.Comment>
+        <Activity.Comment actor={author}>Named participants keep their avatars.</Activity.Comment>
+        <Activity.Timeline>
+          <Activity.Event actor={{ name: "Local user", showAvatar: false }}>updated the title</Activity.Event>
+          <Activity.Event actor={{ name: "Local user", showAvatar: false }} icon={<Tag size={12} />}>
+            added a label
+          </Activity.Event>
+        </Activity.Timeline>
+      </Activity.Feed>
+    </Activity.Root>
+  ),
+};

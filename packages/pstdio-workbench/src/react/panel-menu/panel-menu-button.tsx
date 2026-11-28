@@ -20,6 +20,10 @@ export const WorkbenchPanelMenuButton = (props: {
   const owner = useWorkbenchActivePanel(workbench, panel);
   const { configure } = useMenuHeaderSettings(workbench, owner);
   const floatingMenu = useFloatingMenu();
+  const activity = workbench.viewMenus.getViewMenu(entry.id)?.purpose === "activity";
+  const maxWidth = activity ? 480 : 320;
+  const width = floatingMenu.size.width || maxWidth;
+  const minWidth = Math.min(activity ? 400 : 240, width);
   const open = view.canAttach
     ? view.placementId === entry.placement.widgetId && !view.collapsed
     : floatingMenu.ids.includes(entry.placement.widgetId);
@@ -90,6 +94,7 @@ export const WorkbenchPanelMenuButton = (props: {
           button
         ) : (
           <Popover.Root
+            ids={{ trigger: triggerProps.id }}
             open={open}
             onOpenChange={({ open }) => select(open)}
             closeOnInteractOutside={false}
@@ -107,26 +112,26 @@ export const WorkbenchPanelMenuButton = (props: {
               overflowPadding: 0,
             }}
           >
-            <Popover.Trigger asChild>
-              <IconButton {...triggerProps} size={PANEL_HEADER_CONTROL_SIZE} variant="ghost">
-                {icon}
-              </IconButton>
-            </Popover.Trigger>
+            <Tooltip content={entry.title} ids={{ trigger: triggerProps.id }}>
+              <Popover.Trigger asChild>
+                <IconButton {...triggerProps} size={PANEL_HEADER_CONTROL_SIZE} variant="ghost">
+                  {icon}
+                </IconButton>
+              </Popover.Trigger>
+            </Tooltip>
             <Portal>
               <Popover.Positioner>
                 <Popover.Content
                   aria-label={entry.title}
                   w="max-content"
-                  minW="min(240px, var(--available-width))"
-                  maxW={
-                    floatingMenu.size.width ? `${Math.min(320, floatingMenu.size.width)}px` : "var(--available-width)"
-                  }
+                  minW={`min(${minWidth}px, var(--available-width))`}
+                  maxW={`min(${Math.min(maxWidth, width)}px, var(--available-width))`}
                   maxH={floatingMenu.size.height ? `${floatingMenu.size.height}px` : "var(--available-height)"}
                   overflow="hidden"
                   css={
                     floatingMenu.size.height
                       ? {
-                          "& iframe, & [data-workbench-presentation], & [data-scope=scroll-area][data-part=viewport]": {
+                          "& iframe, & [data-workbench-region-scroll] > [data-part=viewport]": {
                             maxHeight: `${Math.max(0, floatingMenu.size.height - 2)}px`,
                           },
                         }

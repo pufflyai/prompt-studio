@@ -1,11 +1,12 @@
 import type { UpdateQueuedFollowUpInput } from "pstdio-api-contracts";
+import { sessionMessageSenderSchema } from "pstdio-api-contracts";
 import type { SessionsRouteDeps } from "./deps";
 import { HarnessParamError, resolveHarnessRunParams } from "./harness-params";
 import { resolveSessionAttachments } from "./session-attachments";
 import type { PendingQueueEntry } from "./session-scheduler-internals";
 
 export const queuedRequest = (entry: PendingQueueEntry) => ({
-  ...(entry.sender_json ? { sender: entry.sender_json } : {}),
+  ...(entry.sender_json ? { sender: sessionMessageSenderSchema.parse(entry.sender_json) } : {}),
   queuePosition: entry.queue_position,
   revision: entry.revision,
   prompt: entry.prompt,

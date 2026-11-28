@@ -1,4 +1,4 @@
-import type { PlacementIdentity } from "@pstdio/sdk/extensions";
+import type { PlacementIdentity, SlotInvocationContext } from "@pstdio/sdk/extensions";
 import { type ContextKeyService, matchesContextExpression } from "../../shared/context/context-key-service";
 import { canonicalRegistryId } from "../../shared/contributions/identity-aliases";
 import {
@@ -22,6 +22,7 @@ export type WorkbenchCommandExecutionErrorListener = (event: WorkbenchCommandExe
 
 export interface WorkbenchCommandExecutionContext {
   projectId?: string;
+  slot?: SlotInvocationContext<Record<string, unknown>>;
   /** Called after a tracked write takes ownership of the submitted draft. */
   onAdmitted?(): void;
   removalVersion?: number;

@@ -138,6 +138,11 @@ export const workbenchSlots = {
 
 /** Dashboard commands available through a webview's commands.execute capability. */
 export const workbenchCommands = {
+  /** Open an unsent session draft in the installed Sessions provider. Never starts an agent. */
+  openSessionDraft: commandRef<{ text: string; label?: string }, void>({
+    extensionId: "pstdio",
+    id: "workbench.sessions.openDraft",
+  }),
   /** Open the project's configured ordinary default page. */
   openDefaultPage: commandRef<Record<string, never>, void>({ extensionId: "pstdio", id: "workbench.page.openDefault" }),
 

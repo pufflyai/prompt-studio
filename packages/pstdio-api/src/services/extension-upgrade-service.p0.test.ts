@@ -62,6 +62,49 @@ const idleExtensionService = {
 
 const emptyWorkspaceService = { getDefault: async () => null };
 
+test("upgrades an incompatible Codex harness from the running source checkout", async () => {
+  const releaseCommit = "d".repeat(40);
+  const resolveReleaseCommit = mock(async () => releaseCommit);
+  const codex = {
+    ...installedSource,
+    install_name: "harness-codex",
+    extension_id: "pstdio.harness-codex",
+    source_path: "/home/user/.pstdio/extensions/harness-codex",
+    version: "0.48.0",
+    manifest_json: { name: "harness-codex", enginesPstdio: "^0.4.0 || ^0.5.0" },
+    source_ref: namedSourceRef(releaseCommit, "harness-codex"),
+  };
+  const install = mock(async () => ({
+    ...installed,
+    installName: codex.install_name,
+    metadata: { ...installed.metadata, id: codex.extension_id, enginesPstdio: `^${EXTENSION_API_VERSION}` },
+    source: { kind: "local" as const, path: "/workspace/repo/extensions/harness-codex" },
+  }));
+  const service = createExtensionUpgradeService({
+    extensionService: {
+      ...idleExtensionService,
+      getProjectExtensionInstance: async () => ({ instance, installedSource: codex }) as never,
+      registerInstalledSource: async () =>
+        ({ ...codex, source_hash: installed.sourceHash, source_ref: null, source_kind: "local_path" }) as never,
+    },
+    installExtensionSource: install,
+    release: { source: "workspace", ref: "pstdio@0.48.0", root: "/workspace/repo" },
+    resolveReleaseCommit,
+    workspaceService: emptyWorkspaceService,
+  });
+  expect(await service.canUpgrade(codex)).toBe(true);
+  expect(await service.upgrade("project-1", instance.id)).toMatchObject({ changed: true, instance });
+  expect(install).toHaveBeenCalledWith(
+    expect.objectContaining({
+      source: "/workspace/repo/extensions/harness-codex",
+      installedSourcePath: codex.source_path,
+      upgradeFromVersion: "0.48.0",
+      retainBackup: true,
+    }),
+  );
+  expect(resolveReleaseCommit).not.toHaveBeenCalled();
+});
+
 describe("extension upgrade service", () => {
   test("a host extension the release catalog no longer lists has no upgrade", async () => {
     const resolveReleaseCommit = mock(async () => "f".repeat(40));

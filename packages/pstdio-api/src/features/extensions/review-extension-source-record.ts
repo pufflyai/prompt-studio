@@ -8,7 +8,7 @@ export type ReviewRecord = {
   sourceRef: string | null;
   separateProviderId?: string;
   workingFingerprint: string;
-  incomingRef: string;
+  incomingRef: string | null;
   incomingVersion: string;
   expectedIdentity: string;
   based: boolean;

@@ -266,6 +266,7 @@ export {
   type RendererReadBinding,
   type RendererReadRegistry,
   type RendererReadRequest,
+  readWorkbenchContext,
   rendererReadKey,
   resolveAnchorRegion,
   resourceContextMenuPath,
@@ -274,6 +275,7 @@ export {
   settleReadBatch,
   sidePanelBubblePreferences,
   standardResourceIcons,
+  subscribeWorkbenchContext,
   WORKBENCH_KEYBOARD_OPEN_COMMAND_ID,
   WORKBENCH_KEYBOARD_SELECT_TAB_COMMAND_ID,
   workbenchBreadcrumbLocationMenuPath,
@@ -297,6 +299,7 @@ export {
   type NativeDocumentSessionInput,
   type NativeDocumentSessionSnapshot,
 } from "./core/native-documents/native-document-session";
+export { editorSelectionMenuPath } from "./core/registries/menus/workbench-menu-paths";
 export { classifyApiWrite } from "./core/registries/mutations/operation-failures";
 export type { OperationRecovery, OperationSourceCommand } from "./core/registries/mutations/operation-types";
 export {

@@ -103,6 +103,8 @@ export const localizeDashboardExtensionCommandResponse = <T extends { extensionI
   projectId?: string,
 ) => localizeExtensionValue(response, response.extensionId, owner, projectId) as ResolvedLocalizable<T>;
 
+import { captureWorkbenchContext } from "./workbench-context-connection";
+
 export const registerExtensionContributions = (input: RegisterExtensionContributionsInput) => {
   const owner = input.owner ?? getRuntimeCollections();
   const disposables: Disposable[] = [];
@@ -128,6 +130,7 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
         terminalRendererOwners: input.terminalRendererOwners,
         readLegacySessionDraft: readLegacySessionChatDraft,
         createChatHost: createDashboardChatHost,
+        captureChatContext: (core, composer) => captureWorkbenchContext(owner, input.projectId, core, composer),
         resolveChatResource: canonicalDashboardResource,
         createChatParamField: createDashboardParamFieldRenderer,
         streamChatCommand: (commandId, body, signal) =>

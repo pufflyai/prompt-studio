@@ -5,6 +5,7 @@ import type {
   HarnessParams,
   HarnessSession,
   PreparedHarnessOperation,
+  WorkbenchOrigin,
 } from "pstdio-api-contracts";
 import { HarnessDisposedError } from "pstdio-api-runtime-host";
 import { readCurrentHarness } from "../harnesses/read-current-harness";
@@ -187,6 +188,7 @@ export const invokeSessionHarnessOperation = async (
   expectedHarnessId?: string,
   signal?: AbortSignal,
   lifecycle: "started" | "resumed" = "resumed",
+  workbenchOrigin?: WorkbenchOrigin,
 ) => {
   const context = await withSchedulingLock(async () => {
     const { session, harness, input, options } = await resolve(deps, id, true);
@@ -211,6 +213,7 @@ export const invokeSessionHarnessOperation = async (
     return invokeControl(deps, id, prepared, harnessId, context.control.entry, context.control, signal);
   // Unreachable: admission returns a conversation entry whenever it returns no control.
   if (!entry) throw new Error("Harness command has no conversation owner.");
+  entry.workbenchOrigin = workbenchOrigin;
 
   const abort = new AbortController();
   const invocationSignal = signal ? AbortSignal.any([signal, abort.signal]) : abort.signal;
@@ -287,6 +290,7 @@ export const createSessionHarnessOperation = async (
   operation: HarnessOperation,
   onCreated: (session: { id: string; title: string; status: string }) => Promise<void>,
   signal?: AbortSignal,
+  workbenchOrigin?: WorkbenchOrigin,
 ) => {
   const { workspaceId, ...sessionInput } = input;
   const workspace = workspaceId ? await deps.workspaceService.get(workspaceId) : null;
@@ -314,6 +318,7 @@ export const createSessionHarnessOperation = async (
       input.agent,
       signal,
       "started",
+      workbenchOrigin,
     );
     return { ...(await deps.sessionService.get(session.id))!, operation_result };
   } catch (error) {

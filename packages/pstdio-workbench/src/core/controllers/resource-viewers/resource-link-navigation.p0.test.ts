@@ -362,3 +362,28 @@ for (const owner of ["a", "b"])
     expect(w.layout.getActivePanel("side")?.resource?.id).toBe("linked");
     expect(w.layout.getActivePanel("side")?.placementIdentity?.kind).toBe(owner === "b" ? "page" : "mode");
   });
+
+test("following a Side preview keeps its source and Main visible", async () => {
+  const { w, openMain, side } = createResourceViewerFixture();
+  await openMain("main");
+  const target = (id: string) =>
+    toWorkbenchNavigationTarget(
+      resourceLinkTarget({
+        kind: "page",
+        page: viewerPage("reader"),
+        resource: viewerResource(id),
+      }),
+    );
+  await w.navigation.openTarget(target("source"));
+  const source = side();
+  expect(source.tabRetention).toBe("preview");
+  const invocation = w.viewers.captureContext(source.placementIdentity);
+  await w.navigation.openTarget(target("linked"), invocation);
+
+  expect(w.pages.getContent()?.resource?.id).toBe("main");
+  expect(side()).toMatchObject({ tabRetention: "preview", resource: { id: "linked" } });
+  expect(w.layout.listPanelInstances("side").find((item) => item.instanceId === source.instanceId)?.resource?.id).toBe(
+    "source",
+  );
+  expect(invocation.isViewerCurrent?.()).toBe(true);
+});
