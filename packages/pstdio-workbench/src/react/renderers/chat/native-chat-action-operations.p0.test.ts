@@ -32,16 +32,15 @@ test("queue reordering shares its immediate display and restores the acknowledge
   };
   try {
     const attempted = first.run(move, undefined, execute);
-    expect(projectQueuedFollowUps(queue, peer.getSnapshot()[0])).toEqual([queue[1], queue[0]]);
+    expect(projectQueuedFollowUps(queue, peer.getSnapshot())).toEqual([queue[1], queue[0]]);
     expect(other.getSnapshot()).toEqual([]);
     const newer = [queue[0]!, { ...queue[1]!, revision: "newer" }];
-    expect(projectQueuedFollowUps(newer, peer.getSnapshot()[0])).toBe(newer);
-    await expect(peer.run(move, undefined, execute)).rejects.toThrow("still pending");
+    expect(projectQueuedFollowUps(newer, peer.getSnapshot())).toBe(newer);
     expect(await peer.run({ type: "stop" }, 1, async () => "Stop acknowledged")).toBe("Stop acknowledged");
     transport.reject(new PstdioConnectionError(new Error("Queue response lost")));
     await expect(attempted).rejects.toThrow();
     expect(peer.getSnapshot()[0]?.status).toBe("unknown");
-    expect(projectQueuedFollowUps(queue, peer.getSnapshot()[0])).toBe(queue);
+    expect(projectQueuedFollowUps(queue, peer.getSnapshot())).toBe(queue);
     expect(writes).toBe(1);
     const operations = getWorkbenchOperations(queries);
     expect(operations.getSnapshot().recovery[0]).toMatchObject({ canCheck: false, draft: { prompt: "Second" } });
@@ -67,6 +66,38 @@ test("a different approval or active run can proceed while an earlier action is 
     await expect(actions.run({ type: "stop" }, 1, lost)).rejects.toThrow();
     await expect(actions.run({ type: "stop" }, 1, accepted)).rejects.toThrow("still pending");
     expect(await actions.run({ type: "stop" }, 2, accepted)).toBe("accepted");
+  } finally {
+    queries.dispose();
+  }
+});
+
+test("quick queue changes show at once and run one after another without locking the queue", async () => {
+  const queries = createScopedQueryClient({ runtimeId: "dashboard", extensionId: "pstdio" });
+  const actions = createChatActionOperations(queries, session, "project");
+  const remove = (item: (typeof queue)[number]): ChatRendererAction => ({
+    type: "queue",
+    operation: "remove",
+    item,
+    attachments: [],
+    values: {},
+  });
+  const first = Promise.withResolvers<void>();
+  const order: string[] = [];
+  try {
+    const removingFirst = actions.run(remove(queue[0]!), undefined, async () => {
+      order.push("first");
+      await first.promise;
+    });
+    const removingSecond = actions.run(remove(queue[1]!), undefined, async () => {
+      order.push("second");
+    });
+    expect(projectQueuedFollowUps(queue, actions.getSnapshot())).toEqual([]);
+    await Promise.resolve();
+    expect(order).toEqual(["first"]);
+    first.resolve();
+    await Promise.all([removingFirst, removingSecond]);
+    expect(order).toEqual(["first", "second"]);
+    expect(actions.getSnapshot()).toEqual([]);
   } finally {
     queries.dispose();
   }

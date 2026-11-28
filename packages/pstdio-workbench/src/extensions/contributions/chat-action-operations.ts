@@ -54,7 +54,9 @@ export const createChatActionOperations = (queries: ScopedQueryClient, source: R
       if (action.type !== "queue" && action.type !== "stop" && action.type !== "approve") return execute();
       const intent = { resource, action, runStartedAt: action.type === "stop" ? runStartedAt : undefined };
       const subject = keyFor(intent);
-      if (operations.getSnapshot().pending.some((entry) => entry.subjects.includes(subject)))
+      // Queue changes share one subject, so the registry runs them in order behind each other.
+      // A second approval or Stop for the same target is refused instead.
+      if (action.type !== "queue" && operations.getSnapshot().pending.some((entry) => entry.subjects.includes(subject)))
         throw new Error("This conversation action is still pending. See System activity if its result is unconfirmed.");
       return operations.submit({
         domain,

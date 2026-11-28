@@ -17,9 +17,9 @@ export const findQueuedChatRequest = (items: ChatQueuedRequest[] | undefined, id
   return item;
 };
 
-export const projectQueuedFollowUps = (items: QueuedFollowUp[], pending?: ChatActionPreview) => {
-  const action = pending?.intent.action;
-  if (action?.type !== "queue" || pending?.status === "unknown" || pending?.status === "unconfirmed") return items;
+const projectQueueChange = (items: QueuedFollowUp[], pending: ChatActionPreview) => {
+  const action = pending.intent.action;
+  if (action.type !== "queue" || pending.status === "unknown" || pending.status === "unconfirmed") return items;
   const index = items.findIndex((item) => item.id === action.item.id && item.revision === action.item.revision);
   if (index < 0 || !action.item.revision) return items;
   if (action.operation === "update")
@@ -36,3 +36,7 @@ export const projectQueuedFollowUps = (items: QueuedFollowUp[], pending?: ChatAc
   reordered.splice(destination, 0, moved!);
   return reordered;
 };
+
+/** Show every queue change still running, in order, as if it had already succeeded. */
+export const projectQueuedFollowUps = (items: QueuedFollowUp[], pending: readonly ChatActionPreview[] = []) =>
+  pending.reduce(projectQueueChange, items);
