@@ -108,7 +108,7 @@ const ClosingState = () => {
       <Stack align="center" gap="xs" textAlign="center">
         <Heading textStyle="heading/M">Closing Prompt Studio</Heading>
         <Text color="fg.muted" textStyle="paragraph/M/regular">
-          Waiting for the runtime to finish safely. This can take a while.
+          Waiting for the runtime to finish safely.
         </Text>
       </Stack>
     </Stack>
