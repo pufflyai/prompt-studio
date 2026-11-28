@@ -11,7 +11,6 @@ import { selectExtensionUpgradeCandidates } from "pstdio-api-contracts/extension
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PageContentLayout } from "@/shared/components/page-content-layout";
-import type { DroppedExtensionFolder } from "@/shared/extensions/api";
 import { ExtensionActionFeedback, type ExtensionActionState } from "./extension-action-feedback";
 import { canStartExtensionUpgrade, type ExtensionUpgradeBatch, marketplaceActionKey } from "./extension-actions";
 import { defaultExtensionFilters, type ExtensionFilters, matchesExtensionSearch } from "./extension-filters";
@@ -54,7 +53,7 @@ export interface ExtensionsPanelViewProps {
   onInstallMarketplace?: (extension: MarketplaceExtension) => void;
   onOpenMarketplace?: (extension: MarketplaceExtension) => void;
   onUpgradeAll?: (extensions: ProjectExtensionInstance[]) => void;
-  onDropFolder?: (folder: DroppedExtensionFolder) => void;
+  onDropFolder?: (directory: FileSystemDirectoryEntry) => void;
 }
 
 const compareDisplayName = (a: { displayName: string }, b: { displayName: string }) =>

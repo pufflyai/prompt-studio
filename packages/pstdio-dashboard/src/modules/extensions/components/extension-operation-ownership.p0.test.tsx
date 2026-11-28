@@ -23,6 +23,91 @@ const installed = (name: string): ProjectExtensionInstance => ({
   updateAvailable: false,
 });
 
+test("retry uploads the corrected extension folder after validation fails", async () => {
+  const projectId = "folder-retry";
+  const uploads: Array<Record<string, string>> = [];
+  const server = Bun.serve({
+    port: 0,
+    hostname: "127.0.0.1",
+    async fetch(request) {
+      if (request.method !== "POST" || new URL(request.url).pathname !== `/v1/projects/${projectId}/extensions/install`)
+        return Response.json({ error: "Unexpected request" }, { status: 404 });
+      const form = await request.formData();
+      const files = form.getAll("files") as File[];
+      const contents = Object.fromEntries(await Promise.all(files.map(async (file) => [file.name, await file.text()])));
+      uploads.push(contents);
+      if (!contents["view.ts"])
+        return Response.json({ error: "Webview source is missing", code: "extension_invalid" }, { status: 422 });
+      return Response.json({ extension: { ...installed("folder"), projectId } }, { status: 201 });
+    },
+  });
+  const globals = globalThis as unknown as { __PSTDIO_CONFIG__?: { apiBaseUrl: string } };
+  const previous = globals.__PSTDIO_CONFIG__;
+  globals.__PSTDIO_CONFIG__ = { apiBaseUrl: server.url.origin };
+  const client = new QueryClient();
+  const initialManifest = new File(['{"name":"folder"}'], "package.json");
+  let files = [initialManifest];
+  let scans = 0;
+  const directory = {
+    name: "folder",
+    createReader() {
+      scans++;
+      let entries = files.map((file) => ({
+        name: file.name,
+        isFile: true,
+        file: (read: (value: File) => void) => read(file),
+      }));
+      return {
+        readEntries(read: (batch: typeof entries) => void) {
+          const batch = entries;
+          entries = [];
+          read(batch);
+        },
+      };
+    },
+  } as unknown as FileSystemDirectoryEntry;
+  let controls!: ReturnType<typeof useExtensionPanelActions>;
+  const Probe = () => {
+    controls = useExtensionPanelActions(projectId);
+    return null;
+  };
+  try {
+    renderToStaticMarkup(
+      <QueryClientProvider client={client}>
+        <Probe />
+      </QueryClientProvider>,
+    );
+    const owner = getExtensionActions(getProjectExtensionQueries(projectId).extensions);
+    await controls.handleDrop(directory);
+    const failure = owner.getSnapshot().actions.$folder;
+    expect(failure).toMatchObject({ status: "error", error: "Webview source is missing" });
+    expect(uploads).toEqual([{ "package.json": '{"name":"folder"}' }]);
+    expect(scans).toBe(1);
+    const updatedManifest = '{"name":"folder","version":"1.0.0"}';
+    files = [new File([updatedManifest], "package.json"), new File(["export {};"], "view.ts")];
+
+    const settled = Promise.withResolvers<void>();
+    const stop = owner.subscribe(() => {
+      const action = owner.getSnapshot().actions.$folder;
+      if (action !== failure && action?.status !== "running") settled.resolve();
+    });
+    try {
+      owner.retry("$folder");
+      await settled.promise;
+    } finally {
+      stop();
+    }
+
+    expect(uploads.slice(1)).toEqual([{ "package.json": updatedManifest, "view.ts": "export {};" }]);
+    expect(owner.getSnapshot().actions.$folder).toBeUndefined();
+    expect(scans).toBe(2);
+  } finally {
+    globals.__PSTDIO_CONFIG__ = previous;
+    client.clear();
+    await server.stop(true);
+  }
+});
+
 test("installs hand off to the exact instance and same-name upgrades respect host capacity", async () => {
   const targets = [installed("one"), { ...installed("two"), installName: "one" }, installed("three")];
   const gates = targets.map(() => Promise.withResolvers<void>());
@@ -84,7 +169,10 @@ test("installs hand off to the exact instance and same-name upgrades respect hos
     await owner.run(targets[0]!.id, { running: "Updating", failed: "Update failed" }, async () => {
       throw new Error("Earlier attempt");
     });
-    await controls.handleDrop({ name: "one", files: [] });
+    await controls.handleDrop({
+      name: "one",
+      createReader: () => ({ readEntries: (read: (batch: FileSystemEntry[]) => void) => read([]) }),
+    } as FileSystemDirectoryEntry);
     expect(owner.getSnapshot().actions).toEqual({});
     expect(owner.getSnapshot().installedIds).toEqual({ "marketplace:one": targets[0]!.id });
 
