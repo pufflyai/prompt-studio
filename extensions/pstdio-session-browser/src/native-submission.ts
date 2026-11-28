@@ -27,7 +27,7 @@ interface NativeSubmission {
   requestStarted?: string | null;
   started: boolean;
   createdAt: string;
-  /** "recovering" and "recovered" only appear on records written before PS-1405. */
+  /** "recovered": a failed input went back to the composer. "recovering" only appears on records written before PS-1405. */
   state: "pending" | "recovering" | "confirmed" | "recovered";
   hidden?: boolean;
 }
@@ -114,12 +114,14 @@ export const updateNativeSubmission = async (
 
 /**
  * Settle accepted native inputs once the session has moved past them, so hidden ones are deleted.
- * A failed input stays pending while visible, which keeps its failure notice.
+ * A failed input goes back to the composer once; it stays visible with its failure notice until hidden.
  */
-export const confirmNativeInputs = async (
+export const settleNativeInputs = async (
   ctx: ExtensionContextBase,
   id: string,
   session: { status: string; lastRequestStarted: string | null },
+  /** Resolves false when the watch closed before the input was written. */
+  returnInput: (draft: ChatDraft) => Promise<boolean>,
 ) => {
   if (["in_progress", "awaiting_input", "queued"].includes(session.status)) return;
   const page = await ctx.storage.records.query({
@@ -136,7 +138,17 @@ export const confirmNativeInputs = async (
   for (const record of await ctx.storage.records.readMany(page.records.map((row) => row.recordId))) {
     const value = record.value as unknown as NativeSubmission | undefined;
     if (!record.exists || record.deleted || !value || value.sessionId !== id) continue;
-    if (session.lastRequestStarted === value.previousRequest || (failed && !value.hidden)) continue;
-    await updateNativeSubmission(ctx, record.recordId, { state: "confirmed" });
+    if (session.lastRequestStarted === value.previousRequest) continue;
+    if (!failed) {
+      await updateNativeSubmission(ctx, record.recordId, { state: "confirmed" });
+      continue;
+    }
+    const { draft, operation } = JSON.parse(
+      new TextDecoder().decode(await ctx.storage.files.getBytes(value.fileId)),
+    ) as NativeSubmissionBody;
+    // A tagged command keeps its command name only in the operation, so return the command as sent.
+    const text = operation.kind === "command" ? operation.text : draft.text;
+    if (await returnInput({ text, attachments: draft.attachments, values: {} }))
+      await updateNativeSubmission(ctx, record.recordId, { state: "recovered" });
   }
 };

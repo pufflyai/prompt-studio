@@ -16,6 +16,8 @@ on another device. Main and Side show the same composer. The draft survives swit
 conversations, reloading and, in the desktop app, restarting. Drafts are not
 synchronized or recovered across browsers or devices. Sending a message delivers it
 to the session's owner. Removing an attachment chip releases its draft reference.
+A native command that fails after it started goes back in the composer, ahead of
+anything typed since, and its failure stays visible in the conversation.
 
 Creation uses `sessionBrowser.commands.create`. With `side: true`, an optional
 `panel` placement ref selects an existing compatible destination (for example a

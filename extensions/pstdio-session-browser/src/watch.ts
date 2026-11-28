@@ -1,4 +1,4 @@
-import type { ApprovalRequest, SessionMessage } from "@pstdio/sdk/extensions";
+import type { ApprovalRequest, ChatDraft, SessionMessage } from "@pstdio/sdk/extensions";
 import {
   applySessionMessagePatch,
   type ChatRendererEvent,
@@ -16,7 +16,7 @@ import { createStreamObservation } from "./changes";
 import { diagnosticChatFrames } from "./chat-stream-diagnostics";
 import { conversationOperations } from "./controls";
 import { conversationState } from "./conversation-state";
-import { confirmNativeInputs } from "./native-submission";
+import { settleNativeInputs } from "./native-submission";
 import type { readQueue } from "./queue-snapshot";
 import { createRecoveryBackoff } from "./recovery-backoff";
 import { sessionId } from "./resource";
@@ -26,6 +26,7 @@ import { executionNotice, type readSessionSnapshot } from "./snapshot";
 
 type ChatWatchUpdate =
   | { snapshot: ChatRendererSnapshot }
+  | { recoverDraft: ChatDraft }
   | { patch: Extract<ChatRendererEvent, { patch: unknown }>["patch"] };
 
 export const approvalSnapshot = (approval?: ApprovalRequest): ChatRendererSnapshot["approval"] => {
@@ -260,7 +261,9 @@ export const watchConversation = async (ctx: CommandContext, resource?: Resource
     }
     await write(snapshot);
     if (result.sessionRead || result.marks.some(([field]) => field === "storage"))
-      await confirmNativeInputs(ctx, id, session);
+      await settleNativeInputs(ctx, id, session, (recoverDraft) =>
+        writeEvent({ recoverDraft }).then(() => !ctx.signal.aborted),
+      );
   };
   try {
     stopMetadata = metadata.observe(changed);

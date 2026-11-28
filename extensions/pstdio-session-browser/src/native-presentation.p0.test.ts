@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import type { ChatDraft } from "@pstdio/sdk/extensions";
 import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
 import { harnessConfirmationId } from "./harness-confirmation";
 import { nativeAction } from "./native-actions";
@@ -98,11 +99,13 @@ test("a later ordinary failure cannot revive an earlier native command error", a
   ).toBe("");
 });
 
-test("a hidden native command is deleted once the session moves past it, while a visible failure stays", async () => {
-  const { saveNativeSubmission, updateNativeSubmission, confirmNativeInputs, readNativeSubmissions } = await import(
+test("a hidden native command is deleted once the session moves past it; a failed one returns its command once", async () => {
+  const { saveNativeSubmission, updateNativeSubmission, settleNativeInputs, readNativeSubmissions } = await import(
     "./native-submission"
   );
   const ctx = makeCommandContext({ storage: createMemoryStorage({ indexes: [nativeSubmissionIndex] }), params: {} });
+  const returned: ChatDraft[] = [];
+  const returnInput = async (draft: ChatDraft) => Boolean(returned.push(draft));
   const draft = { text: "/goal Ship", attachments: [], values: {} };
   const hidden = await saveNativeSubmission(
     ctx,
@@ -112,12 +115,27 @@ test("a hidden native command is deleted once the session moves past it, while a
     true,
   );
   await updateNativeSubmission(ctx, hidden, { hidden: true });
-  await confirmNativeInputs(ctx, "s", { status: "in_progress", lastRequestStarted: "b" });
+  await settleNativeInputs(ctx, "s", { status: "in_progress", lastRequestStarted: "b" }, returnInput);
   expect(await readNativeSubmissions(ctx, "s")).toHaveLength(1);
-  await confirmNativeInputs(ctx, "s", { status: "completed", lastRequestStarted: "b" });
+  await settleNativeInputs(ctx, "s", { status: "completed", lastRequestStarted: "b" }, returnInput);
   expect(await readNativeSubmissions(ctx, "s")).toHaveLength(0);
+  expect(returned).toEqual([]);
 
-  await saveNativeSubmission(ctx, "s", { draft, operation: { kind: "command", text: "/goal Ship" } }, "b", true);
-  await confirmNativeInputs(ctx, "s", { status: "failed", lastRequestStarted: "c" });
+  // A tagged command keeps only its objective in the composer text; the command name is in the operation.
+  const tagged = { text: "Ship", attachments: [], values: { intent: "goal" } };
+  await saveNativeSubmission(
+    ctx,
+    "s",
+    { draft: tagged, operation: { kind: "command", text: "/goal Ship" } },
+    "b",
+    true,
+    "c",
+  );
+  const failed = { status: "failed", lastRequestStarted: "c" };
+  await settleNativeInputs(ctx, "s", failed, async () => false);
   expect((await readNativeSubmissions(ctx, "s"))[0]?.value.state).toBe("pending");
+  await settleNativeInputs(ctx, "s", failed, returnInput);
+  await settleNativeInputs(ctx, "s", failed, returnInput);
+  expect(returned).toEqual([{ text: "/goal Ship", attachments: [], values: {} }]);
+  expect((await nativePresentation(ctx, "s", undefined, "agent", undefined, failed)).notice).toContain("failed");
 });
