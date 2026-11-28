@@ -248,8 +248,12 @@ export const createChatSession = (input: ChatSessionInput) => {
     const running = work<Awaited<ReturnType<typeof execute>> | undefined>(() =>
       action.type === "submit"
         ? submit(action, handler, { execute: admittedExecute, changeDraft: admittedChange }).then(() => undefined)
-        : trackChatActionExecution(input.actionOperations, action, state.conversation, () =>
-            admittedExecute(action, handler),
+        : trackChatActionExecution(
+            input.actionOperations,
+            action,
+            state.conversation,
+            (next) => admittedExecute(next, handler),
+            () => state.conversation.queuedFollowUps ?? [],
           ).catch(failChatAction(fail, action)),
     );
     return trackChatAction(actions, running, release, input.onIdle);

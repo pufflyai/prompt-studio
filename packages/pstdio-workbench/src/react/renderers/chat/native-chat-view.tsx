@@ -150,7 +150,8 @@ const NativeChatConversation = (props: NativeChatViewProps & { transcriptRevisio
   const { conversation: confirmed, draft, messages, queuedFollowUps, pending, loading, initializing, sending } = state;
   const observation = useNativeChatObservation(props, state);
   const pendingActions = useNativeChatActions(session, confirmed);
-  const conversation = pendingActions.queue ? { ...confirmed, queueReadOnly: true } : confirmed;
+  // Queue changes show immediately and run in order; the queue stays editable meanwhile.
+  const conversation = confirmed;
   const run: ChatSession["run"] = (action) => runNativeChatAction(session, action, props.action, Boolean(selected));
   const [uploading, setUploading] = useState(0);
   const [selected, setSelected] = useState<ChatQueuedRequest | null>(null);
@@ -291,7 +292,7 @@ const NativeChatConversation = (props: NativeChatViewProps & { transcriptRevisio
               />
             }
             actions={<NativeChatControls {...controlProps} />}
-            composerHeader={<NativeChatComposerHeader state={state} session={session} pending={pendingActions} />}
+            composerHeader={<NativeChatComposerHeader state={state} session={session} />}
             conversationNotices={<NativeChatNotices host={host} state={state} />}
             {...nativeChatAttachmentHandlers(conversation.readOnly, upload)}
             attachmentActions={
