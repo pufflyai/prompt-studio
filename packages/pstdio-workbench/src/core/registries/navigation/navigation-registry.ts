@@ -125,7 +125,7 @@ export interface NavigationRegistry {
   /** Opens or activates an owned panel through the shared executor. */
   openPanel(target: DistributiveOmit<NavigationTargetPanel, "kind">): Promise<readonly unknown[]>;
   navigate(location: string): Promise<readonly unknown[]>;
-  onDidOpenTarget(listener: (target: NavigationTarget) => void): Disposable;
+  onDidOpenTarget(listener: (target: NavigationTarget, context?: NavigationInvocationContext) => void): Disposable;
 }
 
 export interface CreateNavigationRegistryInput {
@@ -194,7 +194,7 @@ const toItems = (target: NavigationTarget): readonly NavigationTargetItem[] =>
 
 export const createNavigationRegistry = (input: CreateNavigationRegistryInput = {}): NavigationRegistry => {
   const resolveDispatcher = input.resolveDispatcher ?? noDispatcher;
-  const listeners = new Set<(target: NavigationTarget) => void>();
+  const listeners = new Set<(target: NavigationTarget, context?: NavigationInvocationContext) => void>();
 
   const store = createWorkbenchStore<NavigationRegistryStoreState>({
     name: "workbench.navigation",
@@ -254,11 +254,11 @@ export const createNavigationRegistry = (input: CreateNavigationRegistryInput = 
           throw new Error("navigation.openTarget: navigation preparation is not configured");
         const prepared = dispatcher.prepareNavigation(target.targets, context);
         const result = [prepared.commit()];
-        for (const listener of listeners) runWorkbenchEffect("navigation observer", () => listener(target));
+        for (const listener of listeners) runWorkbenchEffect("navigation observer", () => listener(target, context));
         return result;
       }
       for (const item of items) results.push(await dispatchItem(item, dispatcher, context));
-      for (const listener of listeners) runWorkbenchEffect("navigation observer", () => listener(target));
+      for (const listener of listeners) runWorkbenchEffect("navigation observer", () => listener(target, context));
       return results;
     },
 

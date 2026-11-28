@@ -2,6 +2,7 @@ import type { PlacementIdentity } from "@pstdio/sdk/extensions";
 import { useEffect, useState } from "react";
 import type { WorkbenchCore } from "../../../core";
 import { currentViewerSource } from "../../../core/controllers/resource-viewers/viewer-source";
+import { placementIdentityKey } from "../../../core/registries/layout/placement-reconciliation";
 
 interface NativeChatTranscriptOptions {
   workbench?: WorkbenchCore;
@@ -21,7 +22,13 @@ export const useNativeChatTranscript = (props: NativeChatTranscriptOptions) => {
   useEffect(() => {
     if (!workbench || !sourcePlacement || !active) return;
     // Explicit navigation can reopen an already-selected viewer, including a hidden panel.
-    const subscription = workbench.navigation.onDidOpenTarget((target) => {
+    const subscription = workbench.navigation.onDidOpenTarget((target, context) => {
+      // A viewer target replaces only its caller. A sent draft that moved into its session page continues its transcript.
+      if (
+        target.kind === "viewer" &&
+        (!context?.viewer || placementIdentityKey(context.viewer) !== placementIdentityKey(sourcePlacement))
+      )
+        return;
       const viewer = currentViewerSource(workbench, sourcePlacement);
       if (!viewer?.resource) return;
       const selected =
