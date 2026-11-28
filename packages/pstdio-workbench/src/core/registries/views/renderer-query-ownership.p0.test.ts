@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { createScopedQueryClient } from "@pstdio/sdk/extensions";
-import { createRendererReadRegistry } from "./renderer-read-registry";
+import { createRendererReadRegistry, getRendererReadCache } from "./renderer-read-registry";
 
 const turn = () => new Promise<void>((resolve) => setImmediate(resolve));
 
@@ -82,6 +82,30 @@ test("A to B to A reuses unchanged native data and catches up only the project m
   binding.dispose();
   await registry.dispose();
   queries.dispose();
+});
+
+test("a saved change reaches all hidden pages of its board and leaves other views untouched", async () => {
+  const registry = createRendererReadRegistry();
+  const windows = [
+    { queryKey: "offset:0", projectionKey: "active tickets" },
+    { queryKey: "offset:50", projectionKey: "active tickets" },
+    { queryKey: "archived:0", projectionKey: "archived tickets" },
+  ];
+  for (const window of windows) {
+    const binding = registry.bind("board");
+    await binding.request({
+      ...window,
+      sourceId: "tickets",
+      load: () => Promise.resolve("old"),
+      onValue: () => {},
+      onError: () => {},
+    });
+    binding.dispose();
+  }
+  await getRendererReadCache(registry).projectUnobserved<string>("active tickets", () => "saved");
+  const states = windows.map((window) => registry.peek<string>({ ...window, sourceId: "tickets" })?.data);
+  expect(states).toEqual(["saved", "saved", "old"]);
+  await registry.dispose();
 });
 
 test("changing query identity aborts its source but keeps the placement barrier until the child settles", async () => {

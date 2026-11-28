@@ -10,6 +10,7 @@ import {
   reviewRequestCountSummary,
   reviewSummaryBadgeItems,
 } from "./review-request-summary";
+import { readTicketFilterStatistics } from "./ticket-filter-statistics";
 import {
   appendLegacyPullRequestBadges,
   loadTicketLinkedResources,
@@ -26,6 +27,7 @@ export const readTicketViewPage = async (
   input: Partial<KanbanRendererQueryParams>,
   selection: TicketViewSelection = {},
   displayFields?: readonly string[],
+  includeFilterStatistics = false,
 ) => {
   const prepared = await prepareTicketViewQuery(ctx, input, selection);
   const { scope, tags, statuses, attributes } = prepared;
@@ -38,7 +40,7 @@ export const readTicketViewPage = async (
     return ticket ? [ticket] : [];
   });
   const extensionId = selection.owner ?? plannerOwnerFor(ctx);
-  const [links, parents, reviews] = await Promise.all([
+  const [links, parents, reviews, statistics] = await Promise.all([
     showLinkedResources
       ? loadTicketLinkedResources(
           ctx.resources,
@@ -50,6 +52,7 @@ export const readTicketViewPage = async (
       ctx.storage,
       requested(["reviewRequests", REVIEW_REQUEST_ITEMS_ATTRIBUTE]) ? tickets.map(({ id }) => id) : [],
     ),
+    includeFilterStatistics ? readTicketFilterStatistics(ctx.storage, prepared, selected.page) : undefined,
   ]);
   const projections = new Map(selected.records.map(({ fields }) => [String(fields.id), fields]));
   if (links) {
@@ -90,7 +93,7 @@ export const readTicketViewPage = async (
   const result = {
     rows,
     attributes,
-    page: selected.page,
+    page: statistics ? { ...selected.page, statistics } : selected.page,
     boardColumnConfigs: Object.fromEntries(statuses.map((status) => [status.id, statusToColumnConfig(status)])),
   };
   // An empty selection has no subsequent relationship reads to reconcile with its page revision.
@@ -109,9 +112,10 @@ export const queryTicketPage = (
   ctx: TicketQueryContext,
   input: Partial<KanbanRendererQueryParams>,
   signal?: AbortSignal,
+  includeFilterStatistics = Boolean(input.page),
 ) =>
   readStableTicketPage(
     input.page?.cursor !== undefined || input.page?.revision !== undefined,
-    async () => (await readTicketViewPage(ctx, input, {}, input.page?.fields)).result,
+    async () => (await readTicketViewPage(ctx, input, {}, input.page?.fields, includeFilterStatistics)).result,
     signal,
   );

@@ -2,6 +2,7 @@ import { PstdioConnectionError } from "@pstdio/sdk/client";
 import type { QueryDependency, QueryScope } from "@pstdio/sdk/extensions";
 import { type RefObject, startTransition, useEffect, useRef, useState } from "react";
 import type { Disposable, RendererReadBinding, WorkbenchCore } from "../../core";
+import type { RendererReadRequest } from "../../core/registries/views/renderer-read-registry";
 import { createRendererMutationBinding } from "./renderer-mutations";
 import { useWorkbenchConnection } from "./workbench-connection-provider";
 
@@ -24,6 +25,8 @@ interface RendererReadOptions<T> {
   load(signal: AbortSignal, publish: (value: T) => void, accepted: T | undefined): Promise<T> | T;
   /** Hydrate presentation controllers for both shared and newly loaded values. */
   onAccept?(value: T): void;
+  projectResourceChange?: RendererReadRequest<T>["projectResourceChange"];
+  projectionKey?: string;
   onInvalidate?(): boolean;
   subscribe?(listener: () => void): Disposable | (() => void);
 }
@@ -31,10 +34,19 @@ interface RendererReadOptions<T> {
 interface ReadState<T> {
   queryKey: string;
   request?: symbol;
+  acceptedKey?: string;
   value?: T;
   loading: boolean;
   error?: Error;
 }
+
+const readState = <T>(identity: string, cacheKey: string, snapshot?: { data?: T; error?: Error }): ReadState<T> => ({
+  queryKey: identity,
+  acceptedKey: snapshot?.data === undefined ? undefined : cacheKey,
+  value: snapshot?.data,
+  loading: snapshot?.data === undefined,
+  error: snapshot?.error,
+});
 
 // Navigation can settle as soon as its external store changes. Resume a visible
 // placement after React commits that change and disposes any departing binding.
@@ -63,15 +75,9 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
   const scopeKey = JSON.stringify([options.queryScope, options.sourceId, options.dependency, options.queryEvents]);
   const [scopeRevision, setScopeRevision] = useState(0);
   const identity = JSON.stringify([queryKey, scopeKey, scopeRevision]);
-  const warm = enabled
-    ? workbench.views.reads.peek<T>({ ...options, queryKey: JSON.stringify([queryKey, refreshKey]) })
-    : undefined;
-  const [state, setState] = useState<ReadState<T>>(() => ({
-    queryKey: identity,
-    value: warm?.data,
-    loading: warm?.data === undefined,
-    error: warm?.error,
-  }));
+  const cacheKey = JSON.stringify([queryKey, refreshKey]);
+  const warm = enabled ? workbench.views.reads.peek<T>({ ...options, queryKey: cacheKey }) : undefined;
+  const [state, setState] = useState(() => readState(identity, cacheKey, warm));
   const retryRef = useRef<(() => Promise<void>) | undefined>(undefined);
   const refreshRef = useRef<((reason?: "observe") => Promise<void>) | undefined>(undefined);
   const lastRefreshKey = useRef(refreshKey);
@@ -109,10 +115,12 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
     };
     if (warm?.data !== undefined && owner.accept(warm.data, owner.revision())) callbacks.current.onAccept?.(warm.data);
     const handlers = {
-      onValue: (value: T, request: symbol) => {
+      onValue: (value: T, request: symbol, acceptedKey: string) => {
         clearReconnectTimer();
         // Loaded contents may render many rows. Navigation structure and input keep priority.
-        startTransition(() => setState({ queryKey: identity, request, value: owner.value() ?? value, loading: false }));
+        startTransition(() =>
+          setState({ queryKey: identity, request, acceptedKey, value: owner.value() ?? value, loading: false }),
+        );
       },
       onError: (error: unknown) => {
         clearReconnectTimer();
@@ -121,6 +129,7 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
         setState((previous) => ({
           queryKey: identity,
           request: previous.queryKey === identity ? previous.request : undefined,
+          acceptedKey: previous.queryKey === identity ? previous.acceptedKey : undefined,
           value: previous.queryKey === identity ? previous.value : undefined,
           loading: connectionLost && (previous.queryKey !== identity || previous.value === undefined),
           error: connectionLost ? undefined : readError,
@@ -133,26 +142,28 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
     const refresh = (reason?: "retry" | "observe") => {
       clearReconnectTimer();
       if (owner.pending()) return Promise.resolve();
+      const current = callbacks.current;
+      const requestedKey = JSON.stringify([queryKey, current.refreshKey]);
       setState((previous) => {
-        if (previous.queryKey !== identity)
-          return { queryKey: identity, value: warm?.data, loading: warm?.data === undefined };
+        if (previous.queryKey !== identity) return readState(identity, cacheKey, warm);
         // Event-driven refreshes retain the loaded view too. Reconciliation is not another page load.
         if (reason === "observe" && previous.value !== undefined && !previous.error) return previous;
         return { ...previous, loading: true, error: undefined };
       });
-      const current = callbacks.current;
       const revision = owner.revision();
       const request = Symbol();
       return binding.request(
         {
           ...handlers,
           // A changed read scope cancels older work without clearing the mounted view's snapshot.
-          queryKey: JSON.stringify([queryKey, current.refreshKey]),
+          queryKey: requestedKey,
           queryScope: current.queryScope,
           sourceId: current.sourceId,
           queryEvents: current.queryEvents,
           dependency: current.dependency,
           onInvalidate: current.onInvalidate,
+          projectResourceChange: current.projectResourceChange,
+          projectionKey: current.projectionKey,
           subscribe: current.subscribe
             ? (invalidate) => {
                 const subscription = current.subscribe!(invalidate);
@@ -193,7 +204,7 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
           onValue: (value: T) => {
             if (!owner.accept(value, revision)) return;
             callbacks.current.onAccept?.(value);
-            handlers.onValue(value, request);
+            handlers.onValue(value, request, requestedKey);
           },
         },
         reason,
@@ -220,14 +231,20 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
     lastRefreshKey.current = refreshKey;
     refreshRef.current?.();
   }, [refreshKey]);
-  const current =
-    state.queryKey === identity
-      ? state
-      : { queryKey: identity, value: warm?.data, loading: warm?.data === undefined, error: warm?.error };
+  const current = state.queryKey === identity ? state : readState(identity, cacheKey, warm);
+  // A replacement read can still be waiting when a write updates the previously displayed snapshot.
+  const previousAccepted =
+    enabled &&
+    options.projectionKey &&
+    current.acceptedKey &&
+    current.acceptedKey !== cacheKey &&
+    warm?.data === undefined
+      ? workbench.views.reads.peek<T>({ ...options, queryKey: current.acceptedKey })?.data
+      : undefined;
   const connectionLost = current.error instanceof PstdioConnectionError;
   return {
     ...current,
-    acceptedValue: warm?.error ? current.value : (warm?.data ?? current.value),
+    acceptedValue: warm?.error ? current.value : (warm?.data ?? previousAccepted ?? current.value),
     error: connectionLost ? undefined : current.error?.message,
     loading: current.loading || (connectionLost && current.value === undefined),
     retry: () => retryRef.current?.() ?? Promise.resolve(),
@@ -235,7 +252,7 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
     mutate: (update: (value: T) => T, save: () => Promise<void> | void) => {
       const owner = mutations.current;
       const finishRead = workbench.views.reads.holdForMutation({
-        queryKey: JSON.stringify([queryKey, refreshKey]),
+        queryKey: cacheKey,
         queryScope: options.queryScope,
         sourceId: options.sourceId,
         dependency: options.dependency,

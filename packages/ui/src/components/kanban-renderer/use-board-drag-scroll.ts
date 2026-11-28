@@ -10,6 +10,45 @@ const edgeSpeed = (coordinate: number, start: number, size: number) => {
   return 0;
 };
 
+const containsCard = (viewport: DOMRect, card: DOMRect) =>
+  viewport.left <= card.left &&
+  viewport.right >= card.right &&
+  viewport.top <= card.top &&
+  viewport.bottom >= card.bottom;
+
+const setFullCardDragImage = (event: DragEvent<HTMLDivElement>, board: HTMLElement, window: Window) => {
+  const card = event.currentTarget;
+  const bounds = card.getBoundingClientRect();
+  const column = card.closest("[data-board-column-viewport]");
+  if (
+    containsCard(board.getBoundingClientRect(), bounds) &&
+    (!column || containsCard(column.getBoundingClientRect(), bounds))
+  ) {
+    return undefined;
+  }
+  // Snapshot a card outside the scroll view so the browser includes its clipped edges.
+  const image = card.cloneNode(true) as HTMLElement;
+  image.inert = true;
+  image.setAttribute("aria-hidden", "true");
+  image.removeAttribute("data-testid");
+  Object.assign(image.style, {
+    position: "fixed",
+    left: "0",
+    top: "0",
+    width: `${bounds.width}px`,
+    height: `${bounds.height}px`,
+    margin: "0",
+    pointerEvents: "none",
+  });
+  card.ownerDocument.body.append(image);
+  event.dataTransfer.setDragImage(image, event.clientX - bounds.left, event.clientY - bounds.top);
+  const frame = window.requestAnimationFrame(() => image.remove());
+  return () => {
+    window.cancelAnimationFrame(frame);
+    image.remove();
+  };
+};
+
 export const useBoardDragScroll = () => {
   const viewportRef = useRef<HTMLDivElement>(null);
   const cleanup = useRef<(() => void) | null>(null);
@@ -23,6 +62,7 @@ export const useBoardDragScroll = () => {
 
     const document = viewport.ownerDocument;
     const window = document.defaultView!;
+    const removeDragImage = setFullCardDragImage(event, viewport, window);
     let columnViewport: HTMLElement | null = null;
     let pointer: { x: number; y: number } | null = { x: event.clientX, y: event.clientY };
     let previousTime = window.performance.now();
@@ -38,6 +78,7 @@ export const useBoardDragScroll = () => {
       if (!event.relatedTarget) pointer = null;
     };
     const stop = () => {
+      removeDragImage?.();
       window.cancelAnimationFrame(frame);
       document.removeEventListener("dragover", trackPointer, true);
       document.removeEventListener("dragleave", leaveDocument, true);

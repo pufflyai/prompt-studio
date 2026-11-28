@@ -1,4 +1,5 @@
 import { HStack, Skeleton, type SkeletonProps, Stack, useSlotRecipe } from "@chakra-ui/react";
+import { computePaddingLeft } from "../list-row/list-row-root-props";
 import type { KanbanRendererSettings } from "./types";
 
 interface KanbanRendererSkeletonProps {
@@ -18,6 +19,19 @@ const ViewBarSkeleton = () => (
     <Bar width="3.5rem" />
     <Bar width="4rem" />
   </HStack>
+);
+
+export const KanbanCardSkeleton = ({ titleWidths = cardTitleWidths[0] }: { titleWidths?: string[] }) => (
+  <Stack gap="xs" padding="compact" borderRadius="compact" borderWidth="1px" borderColor="border" background="bg">
+    <Bar width="2rem" height="2.5" />
+    {titleWidths.map((width) => (
+      <Bar key={width} width={width} />
+    ))}
+    <HStack gap="2xs">
+      <Bar width="2.75rem" height="4" />
+      <Bar width="1.75rem" height="4" />
+    </HStack>
+  </Stack>
 );
 
 const BoardSkeleton = () => {
@@ -42,23 +56,7 @@ const BoardSkeleton = () => {
           </HStack>
           {Array.from({ length: 3 - (column % 2) }, (_, card) => (
             <Stack key={card} css={columnStyles.entry}>
-              <Stack
-                gap="xs"
-                padding="compact"
-                borderRadius="compact"
-                borderWidth="1px"
-                borderColor="border"
-                background="bg"
-              >
-                <Bar width="2rem" height="2.5" />
-                {cardTitleWidths[(column + card) % cardTitleWidths.length].map((width) => (
-                  <Bar key={width} width={width} />
-                ))}
-                <HStack gap="2xs">
-                  <Bar width="2.75rem" height="4" />
-                  <Bar width="1.75rem" height="4" />
-                </HStack>
-              </Stack>
+              <KanbanCardSkeleton titleWidths={cardTitleWidths[(column + card) % cardTitleWidths.length]} />
             </Stack>
           ))}
         </Stack>
@@ -67,23 +65,20 @@ const BoardSkeleton = () => {
   );
 };
 
-const ListSkeleton = () => (
-  <Stack flex="1" minH="0" gap="0" overflow="hidden">
-    {Array.from({ length: 12 }, (_, row) => (
-      <HStack
-        key={row}
-        height="collection-row"
-        gap="xs"
-        paddingX="sm"
-        borderBottomWidth="1px"
-        borderColor="border.subtle"
-      >
-        <Skeleton boxSize="4" borderRadius="full" flexShrink={0} />
-        <Bar width="2rem" height="2.5" />
-        <Bar width={rowTitleWidths[row % rowTitleWidths.length]} maxW="50%" />
-        <Bar width="2.75rem" height="4" marginLeft="auto" />
-        <Bar width="2.25rem" height="2.5" />
-      </HStack>
+const KanbanListRowSkeleton = ({ titleWidth }: { titleWidth: string }) => (
+  <HStack height="collection-row" gap="xs" paddingX="sm" borderBottomWidth="1px" borderColor="border.subtle">
+    <Skeleton boxSize="4" borderRadius="full" flexShrink={0} />
+    <Bar width="2rem" height="2.5" />
+    <Bar width={titleWidth} maxW="50%" />
+    <Bar width="2.75rem" height="4" marginLeft="auto" />
+    <Bar width="2.25rem" height="2.5" />
+  </HStack>
+);
+
+export const KanbanListSkeletonRows = ({ count, depth = 0 }: { count: number; depth?: number }) => (
+  <Stack gap="0" paddingInlineStart={computePaddingLeft(depth)}>
+    {Array.from({ length: count }, (_, row) => (
+      <KanbanListRowSkeleton key={row} titleWidth={rowTitleWidths[row % rowTitleWidths.length]} />
     ))}
   </Stack>
 );
@@ -103,7 +98,13 @@ export const KanbanRendererSkeleton = (props: KanbanRendererSkeletonProps) => {
       overflow="hidden"
     >
       <ViewBarSkeleton />
-      {viewMode === "board" ? <BoardSkeleton /> : <ListSkeleton />}
+      {viewMode === "board" ? (
+        <BoardSkeleton />
+      ) : (
+        <Stack flex="1" minH="0" gap="0" overflow="hidden">
+          <KanbanListSkeletonRows count={12} />
+        </Stack>
+      )}
     </Stack>
   );
 };

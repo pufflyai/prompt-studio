@@ -29,16 +29,51 @@ test("column, row group, and order save as one move and one completed event", as
   expect(f.events).toEqual(["tickets.changed"]);
 });
 
-test("sorted moves preserve manual order and skip unchanged grouping values", async () => {
+test("sorted moves update one ticket while order is locked and skip unchanged values", async () => {
   const f = await ticketMoveFixture();
   const [first, hidden, last] = f.tickets;
-  await moveTicketOnBoard(f.ctx, { rowId: first.id, attributes: { status: "done" } });
+  const input = { rowId: first.id, attributes: { status: "done", priority: "default-priority-high" } };
+  const releaseOrder = Promise.withResolvers<void>();
+  const order = withWriteGuard(f.ctx, "ticket-order", () => releaseOrder.promise);
+  const move = moveTicketOnBoard(f.ctx, input);
+  try {
+    const blockedByOrder = Bun.sleep(500).then(() => "waiting for ticket-order");
+    await expect(Promise.race([move, blockedByOrder])).resolves.toEqual({ changed: 1 });
+  } finally {
+    releaseOrder.resolve();
+    await Promise.all([order, move]);
+  }
   expect(await f.ordered()).toEqual([first.id, hidden.id, last.id]);
+  expect(await ticketsCollection(f.storage).get(first.id)).toMatchObject({
+    statusId: "done",
+    tags: { "default-priority": "default-priority-high" },
+  });
+  expect(f.reads).toEqual([first.id]);
+  expect(f.writes).toEqual([first.id]);
+  expect(f.events).toEqual(["tickets.changed"]);
   f.writes.length = 0;
   f.events.length = 0;
-  await moveTicketOnBoard(f.ctx, { rowId: first.id, attributes: { status: "done" } });
+  await expect(moveTicketOnBoard(f.ctx, input)).resolves.toEqual({ changed: 0 });
   expect(f.writes).toEqual([]);
   expect(f.events).toEqual([]);
+});
+
+test("rapid moves of different tickets wait for the same order guard and both save", async () => {
+  const f = await ticketMoveFixture();
+  const [first, hidden, last] = f.tickets;
+  await expect(
+    Promise.all([
+      moveTicketOnBoard(f.ctx, { rowId: first.id, attributes: { status: "ready" }, order: {} }),
+      moveTicketOnBoard(f.ctx, {
+        rowId: last.id,
+        attributes: { status: "done" },
+        order: { beforeRowId: hidden.id },
+      }),
+    ]),
+  ).resolves.toEqual([{ changed: 1 }, { changed: 1 }]);
+  expect(await ticketsCollection(f.storage).get(first.id)).toMatchObject({ statusId: "ready" });
+  expect(await ticketsCollection(f.storage).get(last.id)).toMatchObject({ statusId: "done" });
+  expect(await f.ordered()).toEqual([last.id, hidden.id, first.id]);
 });
 
 test("invalid tag cardinality fails before changing status or order", async () => {
@@ -79,10 +114,10 @@ test("creating a ticket during an append move cannot save the same position", as
   const create = () =>
     createTicketCommand.run(makeCommandContext({ storage: f.storage, params: {} }), { title: "New" });
   const move = () => moveTicketOnBoard(f.ctx, { rowId: first.id, attributes: {}, order: {} });
-  const outcomes = await Promise.allSettled([create(), move()]);
-  // A busy order guard rejects one writer; its retry must still land on a free position.
-  if (outcomes[0].status === "rejected") await create();
-  if (outcomes[1].status === "rejected") await move();
+  const [creation, movement] = await Promise.allSettled([create(), move()]);
+  expect(movement.status).toBe("fulfilled");
+  // Creation can still report a busy order guard. Its retry must land on a free position.
+  if (creation.status === "rejected") await create();
   const orders = (await ticketsCollection(f.storage).list()).map(({ position }) => position);
   expect(orders).toHaveLength(4);
   expect(new Set(orders).size).toBe(4);

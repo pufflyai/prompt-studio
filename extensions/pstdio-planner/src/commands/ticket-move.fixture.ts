@@ -13,7 +13,7 @@ export const ticketMoveFixture = async () => {
   for (const title of ["First", "Hidden", "Last"]) tickets.push(await createTicketCommand.run(ctx, { title }));
   const stored = await ticketsCollection(storage).list();
   const events: string[] = [];
-  const { storage: observed, writes } = observeTicketRecords(storage);
+  const { storage: observed, reads, writes } = observeTicketRecords(storage);
   const movingContext = {
     ...ctx,
     storage: observed,
@@ -29,6 +29,7 @@ export const ticketMoveFixture = async () => {
     storage,
     ctx: movingContext,
     tickets: tickets.map((ticket) => stored.find(({ id }) => id === ticket.id)!),
+    reads,
     writes,
     events,
     ordered,

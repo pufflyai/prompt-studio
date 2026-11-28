@@ -7,9 +7,9 @@ export const runCommandConfirmation = async (
   command: WorkbenchExtensionMetadata["commands"][number],
   params: Record<string, unknown> | undefined,
   persist: () => Promise<unknown>,
-  resourceLabel?: string,
-  signal?: AbortSignal,
+  input: { resourceLabel?: string; signal?: AbortSignal; closeOnConfirm?: boolean } = {},
 ) => {
+  const { resourceLabel, signal, closeOnConfirm } = input;
   const options = command.confirmation;
   const title = text(command.title, "Delete");
   const subject = options?.subjectParam ? params?.[options.subjectParam] : resourceLabel;
@@ -20,12 +20,14 @@ export const runCommandConfirmation = async (
       signal,
       description: text(options?.description ?? command.description),
       buttonLabel: options ? text(options.buttonLabel, "Delete") : title,
-      onConfirm: async () => {
-        saved = persist();
-        await saved;
-      },
+      onConfirm: closeOnConfirm
+        ? undefined
+        : async () => {
+            saved = persist();
+            await saved;
+          },
     },
   );
-  // UI confirmation saves before closing, so errors remain in the host dialog for retry.
+  // Without an optimistic preview, save in the dialog so errors stay available for retry.
   return confirmed && !signal?.aborted ? (saved ?? persist()) : undefined;
 };

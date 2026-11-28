@@ -49,6 +49,7 @@ import { createSettingsRegistry } from "./registries/settings/settings-registry"
 import { createStatusRegistry } from "./registries/statuses/status-registry";
 import { createFileIconThemeRegistry } from "./registries/themes/file-icon-theme-registry";
 import { createThemeRegistry } from "./registries/themes/theme-registry";
+import { getRendererReadCache, type RendererReadRegistry } from "./registries/views/renderer-read-registry";
 import { createContextKeyService } from "./shared/context/context-key-service";
 import { createWorkbenchActivation } from "./workbench-activation";
 import {
@@ -81,6 +82,17 @@ import { createWorkbenchHost } from "./workbench-core-host";
 
 const readPanelMenuOpen = (core: WorkbenchCore | undefined, widgetId: string) =>
   core?.panelMenuState.store.getState().openByMenuId[`panel-menu:${widgetId}`];
+
+const resourcePreviewForReads = (
+  reads: RendererReadRegistry,
+  operations: ReturnType<typeof getWorkbenchOperations>,
+) => {
+  const preview = createResourcePreview(operations);
+  const cache = getRendererReadCache(reads);
+  const subscription = preview.subscribeRefresh(cache.refreshResource);
+  cache.onDispose(() => subscription.dispose());
+  return preview;
+};
 
 export const createWorkbench = (input: createWorkbenchInput = {}) => {
   const queryContext = createWorkbenchQueryContext(input.queries);
@@ -173,7 +185,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   });
 
   const resources = createResourceRegistry({
-    preview: createResourcePreview(getWorkbenchOperations(queryContext.queries)),
+    preview: resourcePreviewForReads(views.reads, getWorkbenchOperations(queryContext.queries)),
     remove: (resource, retained) => removeWorkbenchResource(core, resource, retained, layoutCache.removeResource),
     getPrimary: () => core.getPrimaryResource(),
     resolveView: views.getView,

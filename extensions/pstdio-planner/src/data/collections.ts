@@ -34,6 +34,16 @@ const withStoredBlobRefs = (stored: StoredTicket, ticket: StoredTicket) => ({
 
 export const ticketsCollection = (ctx: TicketContext) => {
   const records = ticketRecords(ctx.storage);
+  const changeStored = (id: string, change: (current: StoredTicket) => Promise<StoredTicket>) =>
+    queueTicketWrite(id, async () => {
+      let before: StoredTicket | undefined;
+      const saved = await changeTicketRecord(ctx.storage, id, (current) => {
+        before = current;
+        return change(current);
+      });
+      if (saved && before) await publishTicketChanges(ctx, before, saved);
+      return saved;
+    });
   return {
     get: async (id: string) => {
       const record = await records.get(id);
@@ -70,17 +80,8 @@ export const ticketsCollection = (ctx: TicketContext) => {
         if (!saved) throw new Error(`Item not found: ${id}`);
       }),
     change: (id: string, change: (current: Ticket) => Promise<StoredTicket>) =>
-      queueTicketWrite(id, () =>
-        (async () => {
-          let before: StoredTicket | undefined;
-          const saved = await changeTicketRecord(ctx.storage, id, async (current) => {
-            before = current;
-            return change(await withTicketIdentity(ctx, current));
-          });
-          if (saved && before) await publishTicketChanges(ctx, before, saved);
-          return saved;
-        })(),
-      ),
+      changeStored(id, async (current) => change(await withTicketIdentity(ctx, current))),
+    changeStored,
     // The ticket's blobs, file bodies and images alike, have no other owner.
     delete: (id: string) =>
       queueTicketWrite(id, async () => {
