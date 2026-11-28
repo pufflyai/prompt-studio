@@ -253,10 +253,3 @@ runs:
         else
           gh release edit "$TAG" --draft=false
         fi
-
-    - name: Preserve actual publication identity for daily unchanged-candidate validation
-      uses: actions/upload-artifact@v4
-      with:
-        name: published-candidate-attempt-${{ github.run_attempt }}
-        path: production-published-candidate.json
-        if-no-files-found: error

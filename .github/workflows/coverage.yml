@@ -1,6 +1,7 @@
 name: Coverage
 
-# Measure in full nightly validation. This workflow publishes that run's result.
+# Measure in full release validation: the twice-daily Release Dry Run and stable or patch releases.
+# This workflow publishes that run's result.
 on:
   workflow_run:
     workflows: [Release Packages]
@@ -8,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       run_id:
-        description: Successful full nightly Release Packages run to publish
+        description: Successful fully validated Release Packages run to publish
         required: true
         type: string
 
@@ -37,7 +38,7 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
-      - name: Select the successful full nightly measurement
+      - name: Select the successful full validation measurement
         id: source
         env:
           GH_TOKEN: ${{ github.token }}
@@ -82,5 +83,5 @@ jobs:
           git init --quiet --initial-branch badges
           git add coverage.json coverage-report.json
           git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
-            commit --quiet --message "chore: update coverage badge from full nightly $SOURCE_RUN_ID"
+            commit --quiet --message "chore: update coverage badge from release validation $SOURCE_RUN_ID"
           git push --force --quiet "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" badges

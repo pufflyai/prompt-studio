@@ -2,7 +2,7 @@
 name: fix-release-pipeline
 description: Get Prompt Studio's release pipeline (nightly, verify or stable Release Packages runs) green in one pass. Find every blocker at once, run the release-only gates locally, triage by root cause, fix in parallel and verify before dispatching the next run. Use when a nightly fails to publish, a verify or stable run is red, or the user asks to make the release pipeline green or stable.
 metadata:
-  version: 0.0.2
+  version: 0.0.3
 ---
 
 # Fix the release pipeline in one pass
@@ -10,6 +10,15 @@ metadata:
 A Release Packages run takes about an hour. Fixing blockers one run at a time multiplies that. The goal is to know **every** blocker within the first hour, fix them all in parallel, and dispatch the next run only after the release-only gates pass locally.
 
 Loading this skill authorizes no stable publication. Dispatching nightly or `verify` runs is fine when the user asked for a green pipeline or a nightly.
+
+## Loop mode
+
+The `release-dry-run-repair` automation starts a session with this skill when a twice-daily release dry run fails. Its prompt lists the failed jobs. In loop mode, the prompt's rules take precedence over the sections below:
+
+- Don't dispatch a release run at the start. The failed dry run is the run to read.
+- Use one pull request for every failure, not one per root cause, and no coordination issue.
+- Quarantine or delete a flake instead of fixing it: a test that passed in another dry run with no change to the test or the code it covers.
+- After merging, start exactly one confirmation run with `gh workflow run release-dry-run.yml --ref main`. Never dispatch `stable`.
 
 ## 1. Start everything at once (first 10 minutes)
 
@@ -74,7 +83,7 @@ A failure that appears only after a merge is a regression in that merge. Find th
 
 ## 5. Prove stability
 
-- "Green" means `publish_nightly` (or `certify`) succeeds **and** the production validation jobs pass.
+- "Green" means the release dry run (`verify`) or the `stable` run passes `certify` with every production validation job. A nightly is green when `publish_nightly` succeeds; it no longer runs production validation.
 - "Stable" means at least two or three consecutive complete runs with no new failures and no flakes. Keep one run going while fixes land.
 - Record follow-ups for anything quarantined, overridden or left as a known limitation on the coordination issue before calling the pipeline ready.
 
