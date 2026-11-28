@@ -1,7 +1,6 @@
 Read and follow this document before starting work:
 
 - [Requirement book](documentation/requirement-book/README.md), then the Mission and product boundaries rules (RB1) in [the canonical book](documentation/requirement-book/book.json).
-- On a developer’s Mac, use `bun run test:review --desktop-in-ci` and run native desktop tests in GitHub Actions. See [005.9.8](documentation/guidance/0005-testing.md#9-targeted-validation-and-repairs).
 
 ## Work guidance
 

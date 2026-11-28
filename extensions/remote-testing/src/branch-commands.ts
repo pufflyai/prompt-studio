@@ -17,6 +17,7 @@ const sourceParams = {
     ),
   }),
   ref: params.text({ label: l10n("remote-testing.git-ref-default-working-tree", "Git ref (default: working tree)") }),
+  base: params.text({ label: l10n("remote-testing.comparison-base", "Comparison base (default: origin/main)") }),
 };
 
 export const createBranchTemplate = defineCommand({
@@ -42,11 +43,17 @@ export const createBranchTemplate = defineCommand({
   async run(ctx, input) {
     if (input.kind !== "tests" && input.kind !== "preview") throw new Error("Choose tests or preview.");
     const kind = input.kind;
-    return await withSourceArchive(ctx.process, input.path || (await projectRoot(ctx)), input.ref, async (source) => ({
-      template: await publishBranchTemplate(ctx, kind, source, ctx.signal),
-      revision: source.revision,
-      sourceSha256: source.sha256,
-    }));
+    return await withSourceArchive(
+      ctx.process,
+      input.path || (await projectRoot(ctx)),
+      input.ref,
+      async (source) => ({
+        template: await publishBranchTemplate(ctx, kind, source, ctx.signal),
+        revision: source.revision,
+        sourceSha256: source.sha256,
+      }),
+      input.base,
+    );
   },
 });
 
@@ -71,6 +78,7 @@ export const runPromptStudio = defineCommand({
       {
         root: input.path || (await projectRoot(ctx)),
         ref: input.ref,
+        base: input.base,
         kind: "preview",
         timeoutMinutes,
         command: previewCommand,

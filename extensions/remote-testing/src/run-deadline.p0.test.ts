@@ -1,8 +1,14 @@
 import { expect, test } from "bun:test";
 import type { Api } from "./connection";
 import { PocketCoderError } from "./connection";
-import { readRunReceipt } from "./run-deadline";
+import { readRunReceipt, runTimeoutSeconds } from "./run-deadline";
 import type { RunRecord } from "./runs";
+
+test("rejects command timeouts the runtime would reject", () => {
+  expect(runTimeoutSeconds(360)).toBe(21_600);
+  expect(() => runTimeoutSeconds(361)).toThrow("at most 360 minutes");
+  expect(() => runTimeoutSeconds(0)).toThrow("at least one minute");
+});
 
 test("a receipt read interrupted at the deadline gets a fresh final read", async () => {
   let reads = 0;

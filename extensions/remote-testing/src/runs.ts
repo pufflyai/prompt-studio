@@ -98,6 +98,7 @@ export async function startRun(
     sessionId?: string;
     keepEnvironment?: boolean;
     ref?: string;
+    base?: string;
     kind?: BranchKind;
     branchTemplate?: boolean;
   },
@@ -125,6 +126,7 @@ export async function startRun(
         bytes: source.archive.size,
       };
     },
+    input.base,
   );
 
   const setup = { until: Date.now() + TRANSFER_ALLOWANCE_SECONDS * 1000, stop: !input.environmentId };

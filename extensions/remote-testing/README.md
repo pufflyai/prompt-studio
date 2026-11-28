@@ -110,8 +110,7 @@ Connections are global on this device. Configure them once through any local pro
    permission to sign as the signer account; the cluster stage grants both to
    `remote_test_developers`.
 
-Test environments are Linux amd64 workspaces with Bun, Git, strace and Chromium. They have
-no Docker, so suites that start containers still run locally.
+Equipped test environments are Linux amd64 workspaces with Bun, Git, strace, Chromium, Docker CLI and Compose. Each has its own Docker daemon, workspace volume and image store. Uploads preserve self-contained Git history and comparison refs without host Git configuration, hooks or credentials. Clean `--ref` runs preserve the exact commit; working-tree edits become a child commit. Agent tests, including `test:review`, primarily run here. See [Docker test runtime setup](../../documentation/guides/development/0024-cloud-test-workspaces.md) to upgrade an older deployment.
 
 Set the session service's `process.env.HOME` to `/workspace` and
 `process.env.POCKETCODER_SESSION_DIRECTORY` to `/workspace/.pocketcoder-sessions` in the
@@ -122,3 +121,5 @@ the producer journal. Keep both browser caches and that journal on the workspace
 Apply these values to the published default template and both approved branch bases.
 
 For branch launches, install approved rendered manifests as `branch-templates/tests.json` and `branch-templates/preview.json` in this extension's project storage. Configure **PocketCoder branch templates** with a finite `templates:write` key scoped to `remote-tests-branch` and `prompt-studio-preview-branch`. Configure the runner key to launch both branch families. Both keys stay on the Prompt Studio host.
+
+Source history covers the selected candidate and comparison base, with refs pointing into those histories. The default base is `origin/main` (then local `main` or `master` when available). Choose a named branch, tag, custom ref or commit SHA; resolve HEAD-relative expressions to a SHA on the host. Pass `--base <ref>` to the remote command for another comparison base, and use the same base in `test:review`. Fetch it on the host before upload. Unrelated workspace branch histories stay on the host.

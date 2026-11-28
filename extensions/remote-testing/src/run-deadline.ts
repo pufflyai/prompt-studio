@@ -1,3 +1,4 @@
+import { MAX_COMMAND_SECONDS } from "../runtime/limits";
 import { type Api, canRetryControllerRequest, readControllerWithRetry } from "./connection";
 import { KITO_LOG_UPLOAD_MAX_SECONDS } from "./kito-workflow-limits";
 import type { RunRecord } from "./runs";
@@ -9,6 +10,10 @@ const RECEIPT_READ_MS = 30_000;
 
 export function runTimeoutSeconds(minutes: number, kitoWorkflow?: boolean) {
   const seconds = Math.round(minutes * 60);
+  // The runtime rejects these requests, so reject them before the source upload
+  // and workspace provisioning spend the allowance on a run that cannot start.
+  if (!Number.isFinite(seconds) || seconds <= 0) throw new Error("Test runs must last at least one minute.");
+  if (seconds > MAX_COMMAND_SECONDS) throw new Error(`Test runs can last at most ${MAX_COMMAND_SECONDS / 60} minutes.`);
   if (kitoWorkflow && seconds + TRANSFER_ALLOWANCE_SECONDS > KITO_LOG_UPLOAD_MAX_SECONDS) {
     const maxMinutes = (KITO_LOG_UPLOAD_MAX_SECONDS - TRANSFER_ALLOWANCE_SECONDS) / 60;
     throw new Error(`Kito test runs can last at most ${maxMinutes} minutes.`);

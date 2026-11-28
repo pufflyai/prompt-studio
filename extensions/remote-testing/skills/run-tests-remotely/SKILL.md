@@ -1,11 +1,11 @@
 ---
 name: run-tests-remotely
-description: "Run the repository's test suite on a remote PocketCoder environment instead of this machine, and manage those environments. Use whenever you need to run the full test suite or another long test command, and remote testing is available."
+description: "Run the repository's test suite on a remote PocketCoder environment instead of this machine, and manage those environments. Use as the primary agent testing workflow, including focused checks, full suites and test:review, when remote testing is available."
 metadata:
   version: 0.1.0
 ---
 
-Remote testing runs a test command on a cloud machine. It uploads your working tree as Git sees it: committed files, your uncommitted edits and new files that are not ignored. It does not upload `node_modules`, build output or anything in `.gitignore`. Your machine stays free while the tests run.
+Use cloud workspaces as the primary place to run agent tests, including focused red/green checks and `test:review`. Remote testing runs a test command on a cloud machine. It uploads your working tree as Git sees it: committed files, your uncommitted edits and new files that are not ignored. It omits ignored untracked files such as `node_modules` and build output; tracked files and candidate and comparison-base Git history are included. Inspect the selected files and history for secrets before uploading. An ancestor commit in the uploaded candidate or comparison history can still contain a credential; if inspection finds one, do not upload that history. Rotate the credential and choose a history without it. Your machine stays free while the tests run.
 
 ## Check that it is available
 
@@ -43,7 +43,7 @@ A run starts an isolated environment unless you select one with `--environment <
 
 If the remote result disagrees with what you expect, look for the cause in the log first. The remote machine is Linux amd64, not this machine's platform.
 
-The default runner uploads a source snapshot without Git base history and has no Docker daemon. It cannot run `test:review`; passing focused checks does not satisfy that gate. Use an environment with both required prerequisites for review.
+The equipped test runtime supplies Docker and Compose through a daemon dedicated to each workspace. Uploads include a self-contained Git repository, comparison refs and history without host Git configuration, hooks or credentials. Check `docker info`, `docker compose version` and `git merge-base origin/main HEAD` before review on an older deployment; ask the operator to upgrade it if prerequisites are missing. For review, commit the candidate, fetch the intended base on the host, then run `--ref <commit>` with `--command "bun install --frozen-lockfile && bun run test:review --base origin/main --desktop-in-ci"`. The flag leaves native desktop checks to GitHub Actions; require passing evidence for that exact candidate. Install the repository-pinned Playwright browser when selected suites need it. Focused checks do not replace the review gate.
 
 ## Long runs
 
@@ -71,3 +71,5 @@ Environments expire at the approved template's deadline. Stop the ones you start
 Pass `--path` for the target worktree. Use `--ref <branch-or-commit>` to test an exact commit, or `--branch-template true` to publish a version for the current worktree including uncommitted edits. For a Prompt Studio instance, use `pst pocketcoder.remote-testing preview run --path <worktree> [--ref <branch-or-commit>]`. When it returns a workspace ID, run `pst pocketcoder.remote-testing preview open --workspace-id <id>` to obtain a browser link on the configured operator device. Share the expiring link only with the intended viewer.
 
 Each Kito preview receives an independent HTTPS origin, invitation, browser session and app state. Multiple previews can stay open together within actual cloud capacity; never stop another session's preview to open yours. New certificates may take several minutes to become ready. Save `workspaceId`, `url` and `expiresAt` separately for each preview; keep the invitation URLs private. Reopening does not extend the preview lifetime.
+
+Source history covers the selected candidate and comparison base, with refs pointing into those histories. The default base is `origin/main` (then local `main` or `master` when available). Choose a named branch, tag, custom ref or commit SHA; resolve HEAD-relative expressions to a SHA on the host. Pass `--base <ref>` to the remote command for another comparison base, and use the same base in `test:review`. Fetch it on the host before upload. Unrelated workspace branch histories stay on the host.
