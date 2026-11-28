@@ -1,9 +1,12 @@
 import type { CollectionPage, ResourceRef, ViewFilterGroup } from "@pstdio/sdk/extensions";
 import { filterRowsByView, withTitleField } from "@pstdio/ui/collection-view";
-import type { KanbanRendererRow } from "../../../core";
+import type { KanbanRendererRow, KanbanRendererSettings } from "../../../core";
+import type { OperationPreview } from "../../../core/registries/mutations/operation-types";
 import { resourceOperationSubject } from "../../../core/registries/mutations/operations";
 import type { ResourceChange, ResourcePreviewChanges } from "../../../core/registries/resources/resource-preview";
+import { pendingArchivedColumns, projectBoardRows } from "../collection-operation-projection";
 import type { ReactAttributeDescriptor } from "./kanban-presentation";
+import { projectKanbanMoveCounts } from "./project-kanban-move-counts";
 
 interface BoardSnapshot {
   rows: KanbanRendererRow[];
@@ -130,4 +133,19 @@ export const applyColumnArchives = <T extends BoardSnapshot>(
     ...snapshot,
     rows,
   });
+};
+
+export const projectKanbanBoard = <T extends BoardSnapshot>(
+  snapshot: T | undefined,
+  changes: ResourcePreviewChanges,
+  pending: readonly OperationPreview[],
+  settings: KanbanRendererSettings,
+  filter: ViewFilterGroup,
+  query: { sourceId: string; queryScope?: { projectId?: string }; projectionKey: string },
+) => {
+  const projected = projectKanbanResourceChanges(snapshot, changes, filter);
+  if (!projected) return projected;
+  const moved = projectBoardRows(projected.rows, pending, query.sourceId, query.queryScope?.projectId);
+  const archived = pendingArchivedColumns(pending, query.projectionKey);
+  return applyColumnArchives(projectKanbanMoveCounts(projected, moved, settings), moved, archived, filter);
 };

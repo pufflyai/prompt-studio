@@ -1,8 +1,7 @@
 import { Box, Stack } from "@chakra-ui/react";
-import { type KanbanRendererMove, resourceKey } from "@pstdio/sdk/extensions";
+import { resourceKey } from "@pstdio/sdk/extensions";
 import type { ResourceContextAction } from "@pstdio/ui";
 import {
-  applyKanbanMove,
   KanbanRenderer,
   type KanbanRendererProps,
   KanbanRendererSkeleton,
@@ -28,7 +27,6 @@ import type { CommandParamFieldRenderer } from "../../command-palette/command-pa
 import { useWorkbenchResourceActionResolver } from "../../menus/resource-actions";
 import { useOperationAuthority } from "../../shared/use-operation-authority";
 import { useWorkbenchStore } from "../../shared/use-workbench-store";
-import { pendingArchivedColumns, projectBoardRows } from "../collection-operation-projection";
 import { kanbanPageFields, kanbanSearchFields, rendererPagePresentation } from "../renderer-page-fields";
 import { rendererQueryKey } from "../renderer-query-key";
 import { RendererReadNotice } from "../renderer-read-notice";
@@ -39,25 +37,21 @@ import { useRendererPages } from "../use-renderer-pages";
 import { useRendererRead } from "../use-renderer-read";
 import { useRendererViews } from "../use-renderer-views";
 import { ViewToolbarActions } from "../view-toolbar-actions";
-import { bindKanbanColumnAction, bindKanbanRowWrites, isPlannerArchiveColumn } from "./kanban-move";
+import { bindKanbanColumnAction, bindKanbanRowWrites, isPlannerTicketsBoard } from "./kanban-move";
 import type { ReactRegisteredKanbanRendererContribution } from "./kanban-presentation";
 import { loadKanbanRows, resolveKanbanQueryPresentation } from "./kanban-query-result";
 import { resolveKanbanRendererStorageKey } from "./kanban-view-storage";
+import { projectAcknowledgedMove } from "./project-kanban-move-counts";
 import {
-  applyColumnArchives,
+  projectKanbanBoard,
   projectKanbanColumnArchive,
   projectKanbanResourceChange,
-  projectKanbanResourceChanges,
 } from "./project-kanban-resource-change";
 import { useKanbanAttributes } from "./use-kanban-attributes";
+import { useKanbanFilterCounts } from "./use-kanban-filter-counts";
 import { useKanbanPageAttributes } from "./use-kanban-page-attributes";
 
 type KanbanReadResult = Awaited<ReturnType<typeof loadKanbanRows>>;
-
-const projectAcknowledgedMove = (snapshot: KanbanReadResult, move: KanbanRendererMove) => {
-  const rows = applyKanbanMove(snapshot.rows, move);
-  return rows === snapshot.rows ? snapshot : { ...snapshot, rows };
-};
 
 const boardCreations = (
   pending: readonly OperationPreview[],
@@ -161,6 +155,9 @@ const createRowWithRefreshHold = (
   };
 };
 
+const kanbanReadNotice = (error: string | undefined, initial: boolean, retry: () => void) =>
+  error ? <RendererReadNotice error={error} initial={initial} retry={retry} /> : null;
+
 export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
   const { workbench, placement, Renderer = KanbanRenderer } = props;
   useEffect(() => () => setWorkbenchSelection(workbench, placement.instanceId), [workbench, placement.instanceId]);
@@ -210,6 +207,7 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
     fields: kanbanPageFields(pageAttributes.attributes, settings),
     searchFields: kanbanSearchFields(settings),
     presentation: rendererPagePresentation(pageAttributes.attributes),
+    providerOwnsGrouping: isPlannerTicketsBoard(contribution.id),
     initialPageSize: contribution.initialPageSize,
     rowId: (row) => row.id,
   });
@@ -236,16 +234,17 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
     ]),
     refreshKey: rendererQueryKey([settings, filter, sorts, pageParams, ...(paged ? [pages.refreshKey] : [])]),
   };
+  const state = { settings, filter, sorts, pageParams, resource: placement.resource };
+  const ownerKey = rendererReadKey(placement);
   const read = useRendererRead<KanbanReadResult>({
     ...query,
     enabled: views.ready,
     workbench,
-    ownerKey: rendererReadKey(placement),
+    ownerKey,
     queryEvents: contribution.queryEvents,
     onAccept: pages.accept,
     projectResourceChange: (value, resource, change) => projectKanbanResourceChange(value, resource, change, filter),
     load: async (signal, _publish, accepted) => {
-      const state = { settings, filter, sorts, pageParams, resource: placement.resource };
       const loaded = await loadKanbanRows(contribution, state, pages, signal, accepted);
       // Rows equal to the last loaded board keep their objects, so a reload that changed nothing,
       // such as returning to the page, renders no cards again.
@@ -256,18 +255,13 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
     subscribe: contribution.subscribe,
   });
   const acceptedRows = read.acceptedValue?.rows ?? emptyRows;
-  const mutations = useCollectionOperations(workbench, query, acceptedRows, projectAcknowledgedMove);
-  const resourceChanges = useWorkbenchStore(workbench.resources.preview.store, (state) => state.changes);
-  const projectedBoard = projectKanbanResourceChanges(read.acceptedValue, resourceChanges, filter);
-  const movedRows = projectBoardRows(
-    projectedBoard?.rows ?? emptyRows,
-    mutations.pending,
-    contribution.id,
-    query.queryScope?.projectId,
+  const mutations = useCollectionOperations<KanbanReadResult>(workbench, query, acceptedRows, (snapshot, move) =>
+    projectAcknowledgedMove(snapshot, move, settings),
   );
-  const archives = pendingArchivedColumns(mutations.pending, query.projectionKey);
-  const board = applyColumnArchives(projectedBoard, movedRows, archives, filter);
-  const rows = archives.length ? (board?.rows ?? movedRows) : movedRows;
+  const resourceChanges = useWorkbenchStore(workbench.resources.preview.store, (state) => state.changes);
+  const board = projectKanbanBoard(read.acceptedValue, resourceChanges, mutations.pending, settings, filter, query);
+  const rows = board?.rows ?? emptyRows;
+  const page = useKanbanFilterCounts(workbench, contribution, ownerKey, state, pages.request, board?.page);
   const pendingCreations = boardCreations(
     mutations.pending,
     rows,
@@ -313,16 +307,14 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
     );
   }
 
-  const readNotice = read.error ? (
-    <RendererReadNotice error={read.error} initial={!read.value} retry={() => void read.retry()} />
-  ) : null;
+  const readNotice = kanbanReadNotice(read.error, !read.value, () => void read.retry());
 
   return (
     <WorkbenchKanbanViewFrame>
       {read.value ? readNotice : null}
       <Renderer
         page={pages.controls(
-          board?.page,
+          page,
           read.loading,
           paged,
           read.value?.position,
@@ -359,7 +351,7 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
           contribution.onColumnAction,
           workbench,
           async (columnId, actionId, write) => {
-            if (isPlannerArchiveColumn(contribution.id, actionId))
+            if (actionId === "archive_all" && isPlannerTicketsBoard(contribution.id))
               return mutations.archiveColumn(
                 { columnId, projectionKey: query.projectionKey },
                 () => mutate((snapshot) => snapshot, write),

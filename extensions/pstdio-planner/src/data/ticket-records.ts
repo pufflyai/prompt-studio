@@ -101,12 +101,19 @@ export const ticketRecords = (storage: ExtensionStorageApi) => {
       return outcome.state !== "refused";
     },
     delete: async (id: string) => {
-      const { record, stored } = await observe(id);
-      if (!stored) return;
-      await storage.records.commit({
-        operationId: storage.ids.create(),
-        edits: [{ recordId: ticketRecordId(storage, id), expectedRevision: record.revision, deleted: true }],
-      });
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const { record, stored } = await observe(id);
+        if (!stored) return;
+        const outcome = await storage.records.commitIfCurrent({
+          operationId: storage.ids.create(),
+          edits: [{ recordId: ticketRecordId(storage, id), expectedRevision: record.revision, deleted: true }],
+        });
+        if (!outcome) continue;
+        if (outcome.state === "refused" || outcome.state === "needs-attention")
+          throw new Error(outcome.reason ?? "Ticket deletion was refused");
+        return;
+      }
+      throw new Error(`Ticket ${id} kept changing while deleting`);
     },
   };
 };

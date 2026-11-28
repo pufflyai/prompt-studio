@@ -112,9 +112,10 @@ export const queryTicketPage = (
   ctx: TicketQueryContext,
   input: Partial<KanbanRendererQueryParams>,
   signal?: AbortSignal,
+  includeFilterStatistics = Boolean(input.page),
 ) =>
   readStableTicketPage(
     input.page?.cursor !== undefined || input.page?.revision !== undefined,
-    async () => (await readTicketViewPage(ctx, input, {}, input.page?.fields, Boolean(input.page))).result,
+    async () => (await readTicketViewPage(ctx, input, {}, input.page?.fields, includeFilterStatistics)).result,
     signal,
   );

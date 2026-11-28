@@ -1,4 +1,5 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
+import { type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
 import { text } from "pstdio-extensions/workbench";
 import type { WorkbenchCommandExecutionContext } from "../../core";
 import type { ResourceChange } from "../../core/registries/resources/resource-preview";
@@ -30,6 +31,20 @@ export const resolveWorkbenchResourceMutation = (command: ExtensionCommand | und
   )
     return { kind: "archive", resourceType: "ticket", idParam: "id" } as const;
   return undefined;
+};
+
+const leaveDeletingTicket = (context: WorkbenchExtensionCommandContext, resource: ResourceRef) => {
+  const { workbench } = context;
+  const { location, projectId } = workbench.pages.store.getState();
+  if (projectId !== context.projectId || location?.page.id !== "ticket" || !location.resource) return;
+  if (resourceKey({ projectId, ...location.resource }) !== resourceKey(resource)) return;
+  if (location.parent && resourceKey(location.parent.resource) !== resourceKey(resource)) {
+    workbench.pageLocations.navigateToParent();
+    return;
+  }
+  void workbench.navigation
+    .openPage({ page: { kind: "page", id: "tickets", extensionId: resource.extensionId ?? "pstdio.planner" } })
+    .catch(workbench.notifications.captureActionError("Open Tickets"));
 };
 
 const noteRenameVerifier = (
@@ -85,6 +100,7 @@ export const runResourceMutation = async (
   const rawLabel = mutation.kind === "rename" ? params?.[mutation.labelParam] : undefined;
   // Leave invalid input to the command; never display a title that it cannot save.
   if (mutation.kind === "rename" && (typeof rawLabel !== "string" || !rawLabel.trim())) return withoutPreview();
+  const deleteTicket = mutation.kind === "remove" && isPlannerDelete(command.id);
   const mutate = async () => {
     const result = context.workbench.resources.preview.submit(
       resource,
@@ -95,12 +111,13 @@ export const runResourceMutation = async (
       typeof rawLabel === "string" ? rawLabel : undefined,
     );
     if (mutation.kind === "rename" && !command.confirmation) execution?.onAdmitted?.();
+    if (deleteTicket && execution?.isViewerCurrent?.() !== false) leaveDeletingTicket(context, resource);
     return result;
   };
   if (mutation.kind !== "remove" && !command.confirmation) return mutate();
   return runCommandConfirmation(context, command, params, mutate, {
     resourceLabel: resource.label,
     signal: execution?.signal,
-    closeOnConfirm: mutation.kind === "remove" && isPlannerDelete(command.id),
+    closeOnConfirm: deleteTicket,
   });
 };

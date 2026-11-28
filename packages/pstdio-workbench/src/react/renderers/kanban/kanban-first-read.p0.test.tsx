@@ -26,7 +26,10 @@ const status = (options: { value: string; label: string }[]): AttributeDescripto
   type: { kind: "enum", options },
 });
 
-test("a board shows its first page when that page's fields update the declared attributes", async () => {
+test.each([
+  { id: "tasks", expectedReads: 2 },
+  { id: "pstdio.planner.view.tickets", expectedReads: 1 },
+])("$id shows its first page when that page updates the declared attributes", async ({ id, expectedReads }) => {
   environment.IS_REACT_ACT_ENVIRONMENT = true;
   core = createWorkbench();
   // Extension boards publish a page's attributes to the declared source before the page itself
@@ -35,9 +38,12 @@ test("a board shows its first page when that page's fields update the declared a
   const listeners = new Set<() => void>();
   const described = [status([{ value: "todo", label: "Todo" }])];
   const requests: CollectionPageRequest[] = [];
+  const countsStarted = Promise.withResolvers<void>();
+  const counts = Promise.withResolvers<void>();
+  responses.push(counts);
   const renderers = getWorkbenchRenderers(core);
   renderers.registerKanbanRenderer({
-    id: "tasks",
+    id,
     title: "Tasks",
     queryScope: { projectId: "project", extensionId: "example.tasks" },
     attributes: {
@@ -50,6 +56,14 @@ test("a board shows its first page when that page's fields update the declared a
     defaultSettings: { viewMode: "board", columnGrouping: "status", rowGrouping: "none", displayProperties: [] },
     executeQuery: () => [],
     executePage: async ({ page }) => {
+      if (page.limit === 0) {
+        countsStarted.resolve();
+        await counts.promise;
+        return {
+          rows: [],
+          page: { revision: "revision", cursor: null, total: 1, filteredTotal: 1, groups: [], statistics: {} },
+        };
+      }
       requests.push(page);
       const response = Promise.withResolvers<void>();
       responses.push(response);
@@ -61,7 +75,7 @@ test("a board shows its first page when that page's fields update the declared a
       };
     },
   });
-  const contribution = renderers.getKanbanRenderer("tasks")!;
+  const contribution = renderers.getKanbanRenderer(id)!;
   let shown: KanbanRendererProps | undefined;
   const Renderer = (props: KanbanRendererProps) => {
     shown = props;
@@ -86,17 +100,27 @@ test("a board shows its first page when that page's fields update the declared a
     declared = described;
     for (const listener of listeners) listener();
   });
-  await act(async () => responses[0].resolve());
+  await act(async () => responses[1].resolve());
 
   // The page that described the new choices must not be discarded for a second full read.
   expect(shown?.rows.map((row) => row.id)).toEqual(["first"]);
-  expect(responses).toHaveLength(2);
-  expect(requests[1].presentation?.status).toEqual({
-    emptyGroup: "No status",
-    options: [{ value: "todo", label: "Todo" }],
-  });
-
-  await act(async () => responses[1].resolve());
+  expect(requests).toHaveLength(expectedReads);
+  if (expectedReads === 2) {
+    expect(requests[1].presentation?.status).toEqual({
+      emptyGroup: "No status",
+      options: [{ value: "todo", label: "Todo" }],
+    });
+    await act(async () => responses[2].resolve());
+  } else {
+    expect(requests[0].presentation).toBeUndefined();
+    await countsStarted.promise;
+    expect(shown?.page?.result?.statistics).toBeUndefined();
+    await act(async () => counts.resolve());
+    expect(shown?.page?.result?.statistics).toEqual({});
+    await act(async () => shown?.page?.onSearchChange("Todo"));
+    expect(requests[1].presentation?.status?.options).toEqual([{ value: "todo", label: "Todo" }]);
+    await act(async () => responses[2].resolve());
+  }
   expect(shown?.rows.map((row) => row.id)).toEqual(["first"]);
   expect(shown?.page?.loading).toBe(false);
 });

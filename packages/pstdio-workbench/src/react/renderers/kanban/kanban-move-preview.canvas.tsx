@@ -77,7 +77,7 @@ const meta: CanvasMeta = { title: "Product/Workbench/Views/Kanban/Move preview" 
 export default meta;
 export const MoveBeforeSave: CanvasFrame = {
   id: "renderers-kanban-move-preview--move-before-save",
-  description: "Card edits update the board immediately and stay visible through a refresh.",
+  description: "Moving a card updates both column counts immediately. Changes stay visible through a refresh.",
   render: () => <DeferredMove />,
 };
 export const RestoreAfterFailure: CanvasFrame = {

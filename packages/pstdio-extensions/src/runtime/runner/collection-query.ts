@@ -16,9 +16,9 @@ export const boundedQueryStorage = (storage: ExtensionStorageApi): ExtensionStor
 });
 export const rejectUnboundedCollectionRead = boundedRead;
 
-const validateLimit = (limit: unknown): number => {
-  if (typeof limit !== "number" || !Number.isInteger(limit) || limit < 1 || limit > 500)
-    throw new Error("Collection queries need a bounded row limit between 1 and 500");
+const validateLimit = (limit: unknown, minimum = 1): number => {
+  if (typeof limit !== "number" || !Number.isInteger(limit) || limit < minimum || limit > 500)
+    throw new Error(`Collection queries need a bounded row limit between ${minimum} and 500`);
   return limit;
 };
 
@@ -38,7 +38,7 @@ export const validateCollectionQueryRequest = (
 ) => {
   if (!policy) return;
   const request = params.page as { limit?: number; offset?: number } | undefined;
-  const limit = validateLimit(policy.mode === "static" ? policy.maxRows : (request?.limit ?? 100));
+  const limit = policy.mode === "static" ? validateLimit(policy.maxRows) : validateLimit(request?.limit ?? 100, 0);
   if (request?.offset !== undefined && (!Number.isSafeInteger(request.offset) || request.offset < 0))
     throw new Error("Collection query offsets must be nonnegative safe integers");
   return limit;

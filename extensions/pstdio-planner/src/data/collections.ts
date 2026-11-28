@@ -82,10 +82,10 @@ export const ticketsCollection = (ctx: TicketContext) => {
         })(),
       ),
     // The ticket's blobs, file bodies and images alike, have no other owner.
-    delete: (id: string) =>
+    delete: (id: string, cleanupBlobs = true) =>
       queueTicketWrite(id, async () => {
         await records.delete(id);
-        await deleteTicketBlobs(ctx.storage, id);
+        if (cleanupBlobs) await deleteTicketBlobs(ctx.storage, id);
       }),
   };
 };

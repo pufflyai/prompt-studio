@@ -123,6 +123,7 @@ test("status moves keep loaded pages visible and the next scroll still appends",
     title: "Tickets",
     attributes: [],
     initialPageSize: 2,
+    defaultSettings: { columnGrouping: "status" },
     executeQuery: () => [],
     executePage: async ({ page: { offset = 0, limit } }) => {
       if (revision === 1) {
@@ -141,7 +142,10 @@ test("status moves keep loaded pages visible and the next scroll still appends",
           cursor: offset + limit < ids.length ? String(offset + limit) : null,
           total: ids.length,
           filteredTotal: ids.length,
-          groups: [],
+          groups: [
+            { field: "status", value: "todo", count: status === "todo" ? 8 : 7 },
+            ...(status === "done" ? [{ field: "status", value: "done", count: 1 }] : []),
+          ],
         },
       };
     },
@@ -181,11 +185,16 @@ test("status moves keep loaded pages visible and the next scroll still appends",
   expect(board.page?.onLoadMore).toBeUndefined();
   expect(board.rows.map(({ id }) => id)).toEqual(["0", "1", "2", "3"]);
   expect(board.rows[0].attributes.status).toBe("done");
+  expect(board.page?.result?.groups).toEqual([
+    { field: "status", value: "todo", count: 7 },
+    { field: "status", value: "done", count: 1 },
+  ]);
   expect(board.rows[2]).toBe(untouched);
   await act(async () => {
     move("todo");
   });
   expect(board.rows[0].attributes.status).toBe("todo");
+  expect(board.page?.result?.groups).toEqual([{ field: "status", value: "todo", count: 8 }]);
   expect(board.rows[2]).toBe(untouched);
   await act(async () => {
     release.resolve();

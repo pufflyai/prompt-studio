@@ -58,11 +58,13 @@ export const KanbanRendererToolbar = <TRow extends KanbanRendererRow>(props: Kan
   const optionsFor = (field: AttributeDescriptor): RuleValueOption[] => {
     const page = props.page?.result;
     const statistic = page?.statistics?.[field.id];
+    const groups = page?.groups.filter(({ field: id, parent }) => id === field.id && !parent) ?? [];
     const fullyLoaded = !props.page || (page && !page.cursor && (props.page.displayed?.offset ?? 0) === 0);
     const counts =
       statistic?.type === "top-values"
         ? new Map(statistic.values.map(({ label, count }) => [label, count]))
         : new Map(Object.entries(fullyLoaded ? countFilterValues(rows, field.id, attributes) : {}));
+    for (const group of groups) if (typeof group.value === "string") counts.set(group.value, group.count);
     const category = categories.find((entry) => entry.id === field.id);
     return (category?.options ?? []).map((option) => ({ ...option, count: counts.get(option.value) }));
   };

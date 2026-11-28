@@ -23,7 +23,7 @@ import { submitChangeRequestCommand } from "./change-requests";
 import { checkMergedPullRequestsCommand } from "./check-merged-pull-requests";
 import { cleanupBoardCommand } from "./cleanup-board";
 import { createTicketCommand } from "./create-ticket";
-import { deleteTicketCommand } from "./delete-ticket";
+import { cleanupDeletedTicketCommand, deleteTicketCommand } from "./delete-ticket";
 import { documentLinkCommand } from "./document-link";
 import { getTicketCommand } from "./get-ticket";
 import { getTicketContentCommand } from "./get-ticket-content";
@@ -212,6 +212,7 @@ export const plannerCommands = [
   archiveTicketColumnActionCommand,
   cleanupTicketWorkspacesCommand,
   deleteTicketCommand,
+  cleanupDeletedTicketCommand,
   writeTicketCommand,
   saveTicketCommand,
   pullTicketCommand,

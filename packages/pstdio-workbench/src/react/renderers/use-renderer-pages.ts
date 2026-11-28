@@ -18,6 +18,8 @@ export const useRendererPages = <TRow>(input: {
   fields: string[];
   searchFields?: string[];
   presentation?: CollectionPageRequest["presentation"];
+  /** This provider already knows grouping choices. Send viewer labels for search and collapse only. */
+  providerOwnsGrouping?: boolean;
   /** A growing list, such as a board, appends each page to the rows it already shows. */
   rowId?: (row: TRow) => string;
   initialPageSize?: number;
@@ -27,11 +29,13 @@ export const useRendererPages = <TRow>(input: {
   const collapsedGroups = collapse.scope === input.scope ? collapse.groups : [];
   const setCollapsedGroups = (groups: string[]) => setCollapse({ scope: input.scope, groups });
   const [limit, setLimit] = useState(clampCollectionPageSize(input.initialPageSize ?? defaultCollectionPageSize));
+  const needsPresentation = !input.providerOwnsGrouping || search.trim() || collapsedGroups.length > 0;
+  const presentation = needsPresentation ? input.presentation : undefined;
   const identity = JSON.stringify([
     input.identity,
     input.fields,
     input.searchFields,
-    input.presentation,
+    presentation,
     search,
     collapsedGroups,
     limit,
@@ -49,7 +53,7 @@ export const useRendererPages = <TRow>(input: {
     revision: current.offset ? current.revision : undefined,
     fields: input.fields,
     searchFields: input.searchFields,
-    presentation: input.presentation,
+    presentation,
     search,
     collapsedGroups,
     viewer: {

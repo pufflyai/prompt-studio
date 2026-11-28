@@ -8,7 +8,7 @@ export const queryTickets = queryTicketPage;
 export const queryTicketRenderer = async (
   ctx: Parameters<typeof queryTicketPage>[0],
   input: Partial<KanbanRendererQueryParams> & { fieldsOnly?: true },
-) => (input.fieldsOnly ? readTicketBoardFields(ctx) : queryTickets(ctx, input));
+) => (input.fieldsOnly ? readTicketBoardFields(ctx) : queryTickets(ctx, input, undefined, input.page?.limit === 0));
 
 export const queryTicketsCommand = defineCommand({
   id: "query-tickets",

@@ -46,9 +46,8 @@ export const bindKanbanRowWrites = (
     : undefined,
 });
 
-export const isPlannerArchiveColumn = (sourceId: string, actionId: string) =>
-  actionId === "archive_all" &&
-  (sourceId === "pstdio.planner.view.tickets" || sourceId === "pstdio.pstdio-planner.view.tickets");
+export const isPlannerTicketsBoard = (sourceId: string) =>
+  sourceId === "pstdio.planner.view.tickets" || sourceId === "pstdio.pstdio-planner.view.tickets";
 
 export const bindKanbanColumnAction = (
   action: KanbanRendererContribution["onColumnAction"],
