@@ -223,7 +223,7 @@ export const createOpencodeHarness = (
 
         const baselineCount = await fetchBaselineCount(ctx, input.agentSessionId, input.cwd);
 
-        const { messageComplete } = opencode.sendSessionMessage({
+        const { messageAccepted, messageComplete } = opencode.sendSessionMessage({
           signal,
           sessionId: input.agentSessionId,
           prompt: input.prompt,
@@ -240,6 +240,7 @@ export const createOpencodeHarness = (
           events: input.events,
           onHistoryRecovery: historyRecoveryLogger(ctx, input.agentSessionId),
           baselineCount,
+          messageAccepted,
           messageComplete,
           abortSignal: abortController.signal,
           pollIntervalMs: deps.pollIntervalMs,

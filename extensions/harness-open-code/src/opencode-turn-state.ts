@@ -38,10 +38,7 @@ const getTrailingAssistantCreatedAt = (rawMessages: OpencodeSessionMessage[]) =>
 const hasQuestionPart = (message: OpencodeSessionMessage) => {
   const parts = "parts" in message && Array.isArray(message.parts) ? message.parts : [];
   return parts.some(
-    (part) =>
-      part.type === "tool" &&
-      part.tool?.toLowerCase() === "question" &&
-      !["completed", "error", "failed", "output-error"].includes(part.state?.status ?? ""),
+    (part) => part.type === "tool" && part.tool?.toLowerCase() === "question" && part.state?.status === "running",
   );
 };
 
@@ -62,6 +59,11 @@ export const isTurnInFlight = (rawMessages: OpencodeSessionMessage[]) => {
   if (!tail) return false;
 
   return !isAssistantTurnDone(tail);
+};
+
+export const isTurnAwaitingQuestion = (rawMessages: OpencodeSessionMessage[]) => {
+  const tail = getTrailingAssistantMessage(rawMessages);
+  return !!tail && hasQuestionPart(tail) && !hasActiveNonQuestionToolPart(tail);
 };
 
 // Returns true only when the trailing message IS an assistant message AND it
