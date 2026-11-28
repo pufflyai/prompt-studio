@@ -218,8 +218,9 @@ export const mergeReasoningToolOnlyMessages = (messages: SessionMessage[]) => {
   return merged;
 };
 
-export const normalizeChatMessagesForDisplay = (messages: SessionMessage[], options: { streaming?: boolean } = {}) => {
+export const projectChatMessages = (messages: SessionMessage[], options: { streaming?: boolean } = {}) => {
   const normalized: SessionMessage[] = [];
+  const activityAnchors = new Map<string, string>();
   let activityBuffer: SessionMessage[] = [];
 
   const clearActivityBuffer = () => {
@@ -253,6 +254,8 @@ export const normalizeChatMessagesForDisplay = (messages: SessionMessage[], opti
     }
 
     if (activityBuffer.length > 0) {
+      const firstActivity = activityBuffer[0];
+      activityAnchors.set(displayMessage.id, firstActivity.animationKey ?? firstActivity.id);
       normalized.push({
         ...displayMessage,
         parts: [...activityBuffer.flatMap((activity) => activity.parts), ...displayMessage.parts],
@@ -266,8 +269,11 @@ export const normalizeChatMessagesForDisplay = (messages: SessionMessage[], opti
 
   flushTrailingActivity(Boolean(options.streaming));
 
-  return normalized;
+  return { messages: normalized, activityAnchors };
 };
+
+export const normalizeChatMessagesForDisplay = (messages: SessionMessage[], options: { streaming?: boolean } = {}) =>
+  projectChatMessages(messages, options).messages;
 
 export interface MessageGroup {
   userMessage: SessionMessage;

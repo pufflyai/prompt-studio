@@ -9,13 +9,21 @@ import { WorkbenchThemeProvider } from "../../theme/workbench-theme-provider";
 import type { NativeChatHostProps } from "./native-chat-host";
 import { NativeChatView } from "./native-chat-view";
 
-for (const mode of ["reply", "pending question", "inline question", "missing witness"] as const) {
+for (const mode of [
+  "reply",
+  "pending question",
+  "inline question",
+  "several replies",
+  "unfocused reply",
+  "missing witness",
+] as const) {
   test(`a focused ${mode} acknowledges only its actual displayed content`, async () => {
     const descriptors = Object.getOwnPropertyDescriptors(globalThis);
+    let focused = mode !== "unfocused reply";
     const globals = {
       document: Object.assign(new EventTarget(), {
         visibilityState: "visible",
-        hasFocus: () => true,
+        hasFocus: () => focused,
         querySelector: () => ({ textContent: "" }),
       }),
       window: new EventTarget(),
@@ -45,6 +53,9 @@ for (const mode of ["reply", "pending question", "inline question", "missing wit
     const session = createChatSession({
       initial: {
         messages: [
+          ...(mode === "several replies"
+            ? [{ id: "older", role: "assistant" as const, parts: [{ type: "text" as const, text: "First reply" }] }]
+            : []),
           {
             id: "reply",
             role: "assistant",
@@ -67,7 +78,9 @@ for (const mode of ["reply", "pending question", "inline question", "missing wit
           },
         ],
         observedChange: "receipt",
-        ...(mode === "missing witness" ? {} : { observedChangeMessageIds: ["reply"] }),
+        ...(mode === "missing witness"
+          ? {}
+          : { observedChangeMessageIds: mode === "several replies" ? ["older", "reply"] : ["reply"] }),
         ...(question ? { observedChangeQuestionId: "new-question" } : {}),
       },
       query: async () => ({}),
@@ -102,6 +115,20 @@ for (const mode of ["reply", "pending question", "inline question", "missing wit
       await act(async () => {
         panel.props.onVisibleMessageIdsChange!(["reply"]);
       });
+      if (mode === "unfocused reply") {
+        expect(receipts).toEqual([]);
+        await act(async () => {
+          panel.props.onVisibleMessageIdsChange!([]);
+        });
+        focused = true;
+        await act(async () => {
+          globals.window.dispatchEvent(new Event("focus"));
+        });
+        expect(receipts).toEqual([]);
+        await act(async () => {
+          panel.props.onVisibleMessageIdsChange!(["reply"]);
+        });
+      }
       if (mode === "pending question") {
         await act(async () => {
           panel.props.onVisibleQuestionChange!("older-question");

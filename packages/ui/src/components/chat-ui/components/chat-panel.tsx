@@ -12,16 +12,12 @@ import { AutoScroll } from "./auto-scroll";
 import { getRecentUserPrompts } from "./chat-input-history";
 import type { ChatInputQuestionPrompt, ChatInputQuestionResponse } from "./chat-input-question-prompt";
 import { ChatMessageList } from "./chat-message-list";
+import { buildChatTranscript } from "./chat-message-rows";
 import { ChatOutlineHost } from "./chat-outline";
 import { ChatPanelComposer, useQueuedFollowUpComposer } from "./chat-panel-composer";
 import { ChatQuestionNavigationContext, useChatQuestionNavigation } from "./chat-question-navigation";
 import type { ComposerDecision } from "./composer-decision";
-import {
-  groupMessagesByTurn,
-  normalizeChatMessagesForDisplay,
-  type QueuedFollowUp,
-  type SessionMessage,
-} from "./message-types";
+import type { QueuedFollowUp, SessionMessage } from "./message-types";
 import type { QueuedFollowUpMoveDirection } from "./queued-follow-up-list-state";
 import { useChatVisibility } from "./use-chat-visibility";
 import { WorkingIndicator } from "./working-indicator";
@@ -195,11 +191,10 @@ export const ChatPanel = (props: ChatPanelProps) => {
 
   const [outlineHost, setOutlineHost] = useState<HTMLDivElement | null>(null);
   const panelStyles = useRecipe({ recipe: chatPanelRecipe })();
-  const merged = useMemo(() => normalizeChatMessagesForDisplay(messages, { streaming }), [messages, streaming]);
+  const { messages: merged, rows } = useMemo(() => buildChatTranscript(messages, streaming), [messages, streaming]);
   const hasMessages = merged.length > 0;
   const messageListKey = conversationKey ?? merged[0]?.id;
   const messageListIdentity = hasMessages ? (messageListKey ?? "active-conversation") : null;
-  const { groups, leadingResponses } = groupMessagesByTurn(merged);
   const [expandedStickyMessageIds, setExpandedStickyMessageIds] = useState(() => new Set<string>());
   const [readyMessageListKey, setReadyMessageListKey] = useState<string | null>(null);
   const showLoadingState = !hasMessages && loading;
@@ -231,7 +226,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
     props,
     isMessageViewportReady,
     activeQuestionPrompt?.callId,
-    merged,
+    rows,
   );
   const queuedComposer = useQueuedFollowUpComposer({
     queuedFollowUps,
@@ -266,9 +261,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
                     <ChatMessageList
                       key={messageListIdentity}
                       outlineHost={outlineHost}
-                      leadingResponses={leadingResponses}
-                      groups={groups}
-                      streaming={streaming}
+                      rows={rows}
                       hideActiveQuestionForms={hideActiveQuestionForms}
                       expandedStickyMessageIds={expandedStickyMessageIds}
                       onToggleStickyMessage={toggleStickyMessageExpanded}

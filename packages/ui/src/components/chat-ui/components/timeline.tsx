@@ -1,7 +1,7 @@
 import { Box, Button, Card, Timeline as ChakraTimeline, chakra, Image, Span, Stack, Text } from "@chakra-ui/react";
 import { ChevronUpIcon } from "lucide-react";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { DiffEditor } from "@/components/diff-viewer/lazy-diff-editor";
 import { ImageViewer } from "@/components/image-viewer/image-viewer";
 import { ResourceBadge } from "@/components/primitives/resource-badge";
@@ -10,6 +10,7 @@ import type { ChatLinkProps } from "../links/chat-link";
 import { ChatLinkAnchor } from "../links/chat-link-anchor";
 import { ChatLinkProvider, useChatLinkHandler } from "../links/chat-link-context";
 import type { IconName } from "../utils/get-icon";
+import { ChatToolExpansionContext } from "./chat-tool-expansion";
 import { IndicatorView } from "./timeline-indicator";
 import { TitleInline } from "./timeline-title";
 import { QuestionFormBlockView, TodoListBlockView } from "./timeline-tool-blocks";
@@ -299,6 +300,7 @@ function TimelineItemRow({
 
 interface TimelineFromJSONProps extends ChatLinkProps {
   data: TimelineDoc;
+  expansionKey?: string;
 }
 
 export function TimelineFromJSON(props: TimelineFromJSONProps) {
@@ -311,19 +313,26 @@ export function TimelineFromJSON(props: TimelineFromJSONProps) {
 }
 
 function TimelineContent(props: TimelineFromJSONProps) {
-  const { data } = props;
+  const { data, expansionKey } = props;
   const handler = useChatLinkHandler();
   const openFile = handler
     ? (path: string) => {
         void handler.open({ source: path, origin: "tool" });
       }
     : undefined;
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const expansion = useContext(ChatToolExpansionContext);
+  const [expanded, setExpanded] = useState(() => expansion?.get(expansionKey ?? "") ?? new Set<string>());
 
   const getKey = (it: Item, idx: number) => (it.id ? `id:${it.id}` : `idx:${idx}`);
 
   const toggle = (key: string) => {
-    setExpanded((prev) => ({ ...prev, [key]: !prev[key] }));
+    const next = new Set(expanded);
+    if (!next.delete(key)) next.add(key);
+    if (expansion && expansionKey) {
+      if (next.size) expansion.set(expansionKey, next);
+      else expansion.delete(expansionKey);
+    }
+    setExpanded(next);
   };
 
   return (
@@ -332,7 +341,7 @@ function TimelineContent(props: TimelineFromJSONProps) {
         const key = getKey(item, idx);
         const hasBlocks = (item.blocks?.length ?? 0) > 0;
         const canExpand = (item.expandable ?? true) && hasBlocks;
-        const isOpen = canExpand ? (expanded[key] ?? false) : hasBlocks;
+        const isOpen = canExpand ? expanded.has(key) : hasBlocks;
 
         return (
           <TimelineItemRow

@@ -1,4 +1,15 @@
-import { getAssistantMessageActionTargetId, type MessageGroup, type SessionMessage } from "./message-types";
+import {
+  getAssistantMessageActionTargetId,
+  groupMessagesByTurn,
+  type MessageGroup,
+  projectChatMessages,
+  type SessionMessage,
+} from "./message-types";
+
+export interface ChatMessagePartRange {
+  start: number;
+  end: number;
+}
 
 export type ChatMessageRow = {
   key: string;
@@ -6,8 +17,21 @@ export type ChatMessageRow = {
   message: SessionMessage;
 } & (
   | { type: "user"; endIndex: number }
-  | { type: "response"; userIndex: number | null; showAssistantActions: boolean; isActiveTurn: boolean }
+  | {
+      type: "response";
+      userIndex: number | null;
+      partRange?: ChatMessagePartRange;
+      showAssistantActions: boolean;
+      isActiveTurn: boolean;
+      streaming: boolean;
+    }
 );
+
+// Small response rows keep rich editors and tool views outside the viewport unmounted.
+const MAX_RESPONSE_PARTS_PER_ROW = 4;
+
+export const isChatMessageContinuation = (row: ChatMessageRow) =>
+  row.type === "response" && row.partRange !== undefined && row.partRange.end < row.message.parts.length;
 
 const singlePart = (message: SessionMessage) => (message.parts.length === 1 ? message.parts[0] : undefined);
 
@@ -22,7 +46,32 @@ const repeatablePrompt = (group: MessageGroup) => {
   if (group.responses.every((response) => singlePart(response)?.type === "error")) return part.text;
 };
 
-export const buildChatMessageRows = (leadingResponses: SessionMessage[], groups: MessageGroup[], streaming = false) => {
+const appendResponseRows = (rows: ChatMessageRow[], response: Extract<ChatMessageRow, { type: "response" }>) => {
+  const { message, key } = response;
+  const partCount = message.parts.length;
+  if (partCount <= MAX_RESPONSE_PARTS_PER_ROW) {
+    rows.push(response);
+    return;
+  }
+  for (let start = 0; start < partCount; start += MAX_RESPONSE_PARTS_PER_ROW) {
+    const end = Math.min(start + MAX_RESPONSE_PARTS_PER_ROW, partCount);
+    const isLast = end === partCount;
+    rows.push({
+      ...response,
+      // The offset stays with the same content as later parts stream in.
+      key: start === 0 ? key : `chat-continuation:${key}:${start}`,
+      partRange: { start, end },
+      showAssistantActions: isLast && response.showAssistantActions,
+    });
+  }
+};
+
+export const buildChatMessageRows = (
+  leadingResponses: SessionMessage[],
+  groups: MessageGroup[],
+  streaming = false,
+  activityAnchors?: ReadonlyMap<string, string>,
+) => {
   const rows: ChatMessageRow[] = [];
 
   const appendResponses = (responses: SessionMessage[], userIndex: number | null, isActiveTurn: boolean) => {
@@ -44,14 +93,16 @@ export const buildChatMessageRows = (leadingResponses: SessionMessage[], groups:
         previous.messageIds.push(message.id);
         continue;
       }
-      rows.push({
+      const isActionTarget = message.id === actionId;
+      appendResponseRows(rows, {
         type: "response",
-        key: message.id,
+        key: activityAnchors?.get(message.id) ?? message.animationKey ?? message.id,
         message,
         messageIds: [message.id],
         userIndex,
-        showAssistantActions: message.id === actionId,
+        showAssistantActions: isActionTarget,
         isActiveTurn,
+        streaming: streaming && isActiveTurn && isActionTarget,
       });
     }
   };
@@ -86,6 +137,15 @@ export const buildChatMessageRows = (leadingResponses: SessionMessage[], groups:
   return rows;
 };
 
+export const buildChatTranscript = (messages: SessionMessage[], streaming: boolean) => {
+  const display = projectChatMessages(messages, { streaming });
+  const { groups, leadingResponses } = groupMessagesByTurn(display.messages);
+  return {
+    messages: display.messages,
+    rows: buildChatMessageRows(leadingResponses, groups, streaming, display.activityAnchors),
+  };
+};
+
 export const getChatStickyRowIndex = (rows: ChatMessageRow[], index: number) => {
   const row = rows[index];
   return row?.type === "user" ? index : (row?.userIndex ?? null);
@@ -93,5 +153,9 @@ export const getChatStickyRowIndex = (rows: ChatMessageRow[], index: number) => 
 
 export const hasChatRowGap = (rows: ChatMessageRow[], index: number) => {
   const next = rows[index + 1];
-  return Boolean(next) && (next.type === "user" || getChatStickyRowIndex(rows, index) === null);
+  return (
+    Boolean(next) &&
+    !isChatMessageContinuation(rows[index]) &&
+    (next.type === "user" || getChatStickyRowIndex(rows, index) === null)
+  );
 };

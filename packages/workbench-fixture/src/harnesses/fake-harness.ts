@@ -15,6 +15,7 @@ import { l10n, reconcileMessageHistory } from "@pstdio/sdk/extensions";
 import { createAsyncQuestionSession } from "./async-question-session";
 import {
   DEFAULT_LONG_STREAM,
+  LONG_STREAM_ACTIVITY_TRIGGER,
   LONG_STREAM_PROMPT_TRIGGER,
   type LongStreamShape,
   replayLongStream,
@@ -217,6 +218,7 @@ export const createFakeHarness = (longStream: LongStreamShape = DEFAULT_LONG_STR
             startIndex: 1,
             shape: longStream,
             signal,
+            activityOnly: input.prompt.includes(LONG_STREAM_ACTIVITY_TRIGGER),
             afterTurnStart: input.prompt.includes(HOLD_PROMPT_TRIGGER)
               ? async (turn) => {
                   // Let browser checks observe the first two responses before the replay advances.
@@ -264,6 +266,7 @@ export const createFakeHarness = (longStream: LongStreamShape = DEFAULT_LONG_STR
             startIndex: startIndex + 1,
             shape: longStream,
             signal,
+            activityOnly: input.prompt.includes(LONG_STREAM_ACTIVITY_TRIGGER),
             push: (patch) => {
               messages[Number(patch.path.slice("/messages/".length))] = patch.value as SessionMessage;
               input.events.push(patch);

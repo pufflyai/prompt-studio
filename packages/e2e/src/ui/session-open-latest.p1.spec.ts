@@ -22,7 +22,7 @@ test("opens a session at its latest reply and keeps the reading position when re
   for (const title of ["Long conversation", "Another conversation"]) {
     const prompt =
       title === "Long conversation"
-        ? "Replay __fake_long_stream__"
+        ? "Replay __fake_long_stream__ __fake_activity_only__"
         : `[Open long conversation](/projects/${project.id}/session?resource=${encodeURIComponent(`pstdio://extension-resource/session/${longSessionId}`)})`;
     const response = await request.post(`${apiBase}/v1/sessions`, {
       data: { project_id: project.id, title, prompt, agent: fakeHarnessId },
@@ -42,6 +42,7 @@ test("opens a session at its latest reply and keeps the reading position when re
   const scrollTop = () => viewport.evaluate((element) => element.scrollTop);
   const latestStep = side.getByText(/^Step 30\./).last();
   await expect(latestStep).toBeInViewport();
+  await expect.poll(() => side.locator("[data-lexical-editor]").count()).toBeLessThan(30);
   await expect.poll(gap).toBeLessThanOrEqual(2);
 
   // Nothing new arrived: the same transcript comes back where the reader left it.

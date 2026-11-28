@@ -58,6 +58,7 @@ export const scenarios = [
   },
   {
     id: "B4",
+    workloadVersion: 2,
     label: "Work during agent streaming",
     platforms: primary,
     file: "packages/e2e/src/perf/critical/streaming-work.p3.bench.ts",
@@ -68,6 +69,7 @@ export const scenarios = [
       updatesPerTurn: 8,
       intervalMs: 25,
       toolResultsPerTurn: 1,
+      activityOnlyTurns: 28,
       idleSettleMs: 2_000,
       idleSampleMs: 10_000,
     },
