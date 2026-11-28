@@ -43,6 +43,7 @@ export {
   diffEditingState,
   dockedWorkbenchRegions,
   EXTENSION_API_VERSION,
+  editorSlots,
   extensionPanelRegions,
   gitEvents,
   isFileSourcePosition,
@@ -181,7 +182,7 @@ export { registerWebviewResourceAction } from "./webview-resource-action";
 export { matchesResourceWhen } from "./when";
 export const projectPrefix = () => ({ $prefix: "project" as const });
 
-export type { WebviewHostProps } from "pstdio-api-contracts/extension-kernel";
+export type { EditorSelectionContext, WebviewHostProps } from "pstdio-api-contracts/extension-kernel";
 export { homePages, workspaceCommands, workspacePages, workspaceViews } from "pstdio-api-contracts/extension-kernel";
 export type {
   PerformanceCapture,

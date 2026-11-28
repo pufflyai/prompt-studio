@@ -125,9 +125,10 @@ const openSavedWork = async (
       .click();
     await expect(page.getByTestId("content-editable").filter({ visible: true }).first()).toBeVisible(firstOpen);
     await page.goto(new URL(routes.home, descriptor.origin).href);
+    await expect(page.frameLocator('iframe[title="Home"]:visible').getByTestId("start-page")).toBeVisible(firstOpen);
     await expect(
-      page.frameLocator('iframe[title="Home"]:visible').getByText(fixture.name, { exact: true }),
-    ).toBeVisible(firstOpen);
+      page.getByRole("banner", { name: "App header" }).getByText(fixture.name, { exact: true }),
+    ).toBeVisible();
     await page.goto(new URL(routes.conversation, descriptor.origin).href);
     await expect(page.getByText("Keep the change small.", { exact: false }).first()).toBeVisible(firstOpen);
     await page.screenshot({ path: join(evidence, "saved-conversation.png") });

@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { createTreeNavigator } from "../../../react/renderers/tree/tree-navigator";
 import { createWorkbench, type WorkbenchCore } from "../../workbench-core";
+import { getWorkbenchRenderers } from "../../workbench-renderers";
 import { createLevelNavigation } from "./navigation-level-composition";
 
 const registerPage = (workbench: WorkbenchCore, pageId: string, resourceKind?: string) => {
@@ -43,6 +45,85 @@ const setup = () => {
 };
 
 describe("level navigation", () => {
+  test("a Sidenav row with a required resource uses normal navigation validation", async () => {
+    const { workbench } = setup();
+    const level = registerPage(workbench, "level", "ticket");
+    contribute(workbench, { kind: "page", id: "test.page.level", extensionId: "test" }, "content", () => [
+      { id: "items", nodes: [] },
+    ]);
+    workbench.modes.setActiveMode("project");
+    getWorkbenchRenderers(workbench).registerTreeRenderer({
+      id: "navigation",
+      title: "Navigation",
+      getBody: () => [],
+      getChildren: () => [],
+    });
+    const errors: unknown[] = [];
+    createTreeNavigator({
+      workbench,
+      treeViewId: "navigation",
+      isSidenav: true,
+      onOpenResourceError: (e) => errors.push(e),
+    })({ nodeId: "level", intent: { id: "target", payload: { kind: "page", page: level } } });
+    await Bun.sleep(0);
+    expect(errors).toHaveLength(1);
+    expect(workbench.pages.store.getState().navigationLocation).toBeUndefined();
+    await workbench.dispose();
+  });
+
+  test("entering a Sidenav level leaves an empty Main empty", () => {
+    const { workbench, navigation } = setup();
+    const level = registerPage(workbench, "level");
+    contribute(workbench, { kind: "page", id: "test.page.level", extensionId: "test" }, "content", () => [
+      { id: "items", nodes: [] },
+    ]);
+    workbench.modes.setActiveMode("project");
+    const layout = workbench.layout.getLayout();
+    createTreeNavigator({ workbench, treeViewId: "navigation", isSidenav: true })({
+      nodeId: "level",
+      intent: { id: "target", payload: { kind: "page", page: level } },
+    });
+    expect(workbench.pages.store.getState().location).toBeUndefined();
+    expect(workbench.layout.getLayout()).toBe(layout);
+    expect(navigation.getGroupScope()?.active).toContain("level");
+    workbench.dispose();
+  });
+  test("entering and leaving a Sidenav level preserves Main's page and layout", async () => {
+    const { workbench, navigation } = setup();
+    const home = registerPage(workbench, "home");
+    const level = registerPage(workbench, "level");
+    contribute(workbench, project, "content", () => [{ id: "root", nodes: [{ id: "home", label: "Home" }] }]);
+    contribute(workbench, { kind: "page", id: "test.page.level", extensionId: "test" }, "content", () => [
+      { id: "level", nodes: [{ id: "item", label: "Item" }] },
+    ]);
+    workbench.pageLocations.navigate({ kind: "page", page: home });
+    const location = workbench.pages.store.getState().location;
+    const layout = workbench.layout.getLayout();
+    getWorkbenchRenderers(workbench).registerTreeRenderer({
+      id: "navigation",
+      title: "Navigation",
+      getBody: () => [],
+      getChildren: () => [],
+    });
+    const navigate = createTreeNavigator({ workbench, treeViewId: "navigation", isSidenav: true });
+    navigate({ nodeId: "level", intent: { id: "target", payload: { kind: "page", page: level } } });
+    await Bun.sleep(0);
+    expect(workbench.pages.store.getState().location).toBe(location);
+    expect(workbench.layout.getLayout()).toBe(layout);
+    expect(rows(await navigation.getSections("content"))).toEqual(["item", "pinned:home"]);
+    await workbench.commands.executeCommand("workbench.action.navigateToRootLevel");
+    expect(rows(await navigation.getSections("content"))).toEqual(["home"]);
+    expect(workbench.pages.store.getState().location).toBe(location);
+    expect(workbench.layout.getLayout()).toBe(layout);
+    createTreeNavigator({ workbench, treeViewId: "navigation" })({
+      nodeId: "level",
+      intent: { id: "target", payload: { kind: "page", page: level } },
+    });
+    await Bun.sleep(0);
+    expect(workbench.pages.store.getState().activePageId).toBe("test.page.level");
+    expect(workbench.pages.store.getState().navigationLocation).toBeUndefined();
+    await workbench.dispose();
+  });
   test("keeps lazy children available for enclosing rows pinned to the header or footer", async () => {
     const { workbench, navigation } = setup();
     const page = registerPage(workbench, "details");

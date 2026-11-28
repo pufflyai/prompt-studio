@@ -88,7 +88,7 @@ export const ChatPanelComposer = (props: ChatPanelComposerProps) => {
   const editing = queuedComposer.isEditing && !hasPendingResponse;
   const editor = <QueuedComposerInput {...props} editing={editing} hasQueuedFollowUps={hasQueuedFollowUps} />;
   return (
-    <Stack css={composerStyles.root}>
+    <Stack css={composerStyles.root} data-workbench-composer="">
       <Box className="ps-chat-composer__workspace" css={composerStyles.workspace}>
         {(workspaceHub || activity) && (
           <Flex align="center" minW="0">

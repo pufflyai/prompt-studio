@@ -18,6 +18,7 @@ import { findAttribute, NO_GROUPING } from "./types";
 
 interface BuildKanbanRendererListItemsInput<TRow extends KanbanRendererRow> {
   presorted?: boolean;
+  hasPageGroupCounts?: boolean;
   settings: KanbanRendererSettings;
   sorts: ViewSort[];
   /** The view's search text, marked in each row title. */
@@ -68,6 +69,8 @@ export const buildKanbanRendererListItems = <TRow extends KanbanRendererRow>(
     if (typeof status !== "string") return {};
     return getStatusPresentation("status", status);
   };
+  const remainingRows = (group: { count?: number; rows: KanbanRendererRow[] }) =>
+    input.hasPageGroupCounts && group.count !== undefined ? Math.max(0, group.count - group.rows.length) : undefined;
 
   const toListItem = (row: TRow, placement?: { columnKey?: string; rowKey?: string }): KanbanRendererListItem => {
     const shorthand = typeof row.attributes.id === "string" ? row.attributes.id : undefined;
@@ -129,6 +132,7 @@ export const buildKanbanRendererListItems = <TRow extends KanbanRendererRow>(
       title: group.label,
       isGroup: true,
       countBadge: group.count ?? group.rows.length,
+      remainingRows: remainingRows(group),
       ...getStatusPresentation(groupingAttributeId, group.key),
       onDropRow:
         (onMove || onAttributeChange) && settings.columnGrouping !== NO_GROUPING
@@ -168,36 +172,37 @@ export const buildKanbanRendererListItems = <TRow extends KanbanRendererRow>(
     return sorted(visibleRows).map((row) => toListItem(row as TRow));
   }
 
-  return grouped.map((column) =>
-    column.subgroups.length > 0
-      ? {
-          id: `group::${column.key}`,
-          title: column.label,
-          isGroup: true,
-          countBadge: column.count ?? column.rows.length,
-          ...getStatusPresentation(settings.columnGrouping, column.key),
-          onDropRow:
-            onMove || onAttributeChange
-              ? (draggedId: string) =>
-                  runKanbanAction(
-                    "Move row",
-                    () =>
-                      onMove
-                        ? onMove({
-                            rowId: draggedId,
-                            attributes: buildKanbanMove({
-                              rowId: draggedId,
-                              ...settings,
-                              sorts,
-                              targetColumnId: column.key,
-                            }).attributes,
-                          })
-                        : onAttributeChange!(draggedId, settings.columnGrouping, column.key),
-                    onActionError,
-                  )
-              : undefined,
-          children: column.subgroups.map((group) => toGroupListItem(group, { columnKey: column.key })),
-        }
-      : toGroupListItem(column),
-  );
+  return grouped.map((column) => {
+    if (!column.subgroups.length) return toGroupListItem(column);
+    const children = column.subgroups.map((group) => toGroupListItem(group, { columnKey: column.key }));
+    return {
+      id: `group::${column.key}`,
+      title: column.label,
+      isGroup: true,
+      countBadge: column.count ?? column.rows.length,
+      remainingRows: children.some((group) => group.remainingRows) ? 0 : remainingRows(column),
+      ...getStatusPresentation(settings.columnGrouping, column.key),
+      onDropRow:
+        onMove || onAttributeChange
+          ? (draggedId: string) =>
+              runKanbanAction(
+                "Move row",
+                () =>
+                  onMove
+                    ? onMove({
+                        rowId: draggedId,
+                        attributes: buildKanbanMove({
+                          rowId: draggedId,
+                          ...settings,
+                          sorts,
+                          targetColumnId: column.key,
+                        }).attributes,
+                      })
+                    : onAttributeChange!(draggedId, settings.columnGrouping, column.key),
+                onActionError,
+              )
+          : undefined,
+      children,
+    };
+  });
 };

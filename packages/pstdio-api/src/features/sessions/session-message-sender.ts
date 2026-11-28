@@ -1,4 +1,4 @@
-import type { SessionMessageSender, SessionMessageSource } from "pstdio-api-contracts";
+import type { SessionMessageSender, SessionMessageSource, WorkbenchOrigin } from "pstdio-api-contracts";
 import type { SessionsRouteDeps } from "./deps";
 
 // Sender labels are copied into durable queue rows; keep the display scalar small.
@@ -13,13 +13,16 @@ const senderDisplayName = (name: string) => {
   return label;
 };
 
+import type { WorkbenchSender } from "./workbench-context";
+
 export const resolveMessageSender = async (
   deps: SessionsRouteDeps,
   projectId: string,
   source?: SessionMessageSource,
+  workbenchOrigin?: WorkbenchOrigin,
 ) => {
-  if (!source) return undefined;
-  if (source.type === "session") {
+  if (!source && !workbenchOrigin) return undefined;
+  if (source?.type === "session") {
     const session =
       (await deps.sessionService.get(source.id)) ??
       (await deps.personalHistoryService.getSession(source.id, projectId));
@@ -35,5 +38,6 @@ export const resolveMessageSender = async (
     type: "user",
     id: status.login?.accountId ?? "local",
     name: senderDisplayName(status.login?.email || "Local user"),
-  } satisfies SessionMessageSender;
+    ...(workbenchOrigin && { workbenchOrigin }),
+  } satisfies WorkbenchSender;
 };

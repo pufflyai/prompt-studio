@@ -6,7 +6,7 @@ Product interaction and styling requirements live in the Workbench and interacti
 
 Find the relevant records:
 
-- RB 4.A.4 — 3. Styling rules
+- RB 4.A.4 — 3. Styling rules, including shared empty-state components
 - RB 4.A.5 — 4. Navigation and tabs
 - RB 4.A.6 — 5. Feedback
 - RB 4.A.7 — 6. Interaction
@@ -15,3 +15,5 @@ Find the relevant records:
 Keep appearance and component states in Canvas. Read Planner’s refinement policy and update its linked design before implementation when enabled. Record why Canvas was skipped when disabled or unavailable.
 
 Product policy pointers: RB 4.A.9 (scope) and RB 4.A.10 (parameter editor).
+
+Code review must stay within the agreed design. Reviewers must not recommend major UI or UX changes; follow [review scope](0004-ci.md#4-review-scope). Review findings do not authorize a redesign.

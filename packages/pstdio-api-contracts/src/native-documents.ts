@@ -46,5 +46,5 @@ export const createFileRendererLoadKey = (input: FileRendererLoadKeyInput) => {
 };
 
 /** A document address follows the loaded view, never a browser-supplied file path. */
-export const createNativeDocumentKey = (input: NativeDocumentTarget) =>
+export const createNativeDocumentKey = (input: FileRendererLoadKeyInput) =>
   bytesToHex(sha256(new TextEncoder().encode(createFileRendererLoadKey(input))));

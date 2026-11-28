@@ -2,6 +2,7 @@ import { watch as fsWatch, mkdirSync, statSync } from "node:fs";
 import { isAbsolute, join, relative, sep } from "node:path";
 import { isPreparationHost } from "pstdio-extensions";
 import { createRootWatcherClient } from "./extension-root-watcher-client";
+import type { ExtensionWatchProcess } from "./extension-watch-process";
 
 type SourceWatcher = {
   close: () => void;
@@ -62,10 +63,17 @@ const defaultWatch: WatchSource = (path, listener, onError) => {
   return watcher;
 };
 
-export const createExtensionRootWatcher = async (
+export const createExtensionRootWatcher = (
+  input: CreateExtensionRootWatcherInput,
+  watchProcess?: ExtensionWatchProcess,
+) =>
+  isPreparationHost && !input.watch && !input.ensureRoot
+    ? createRootWatcherClient(input, watchProcess)
+    : createLocalExtensionRootWatcher(input);
+
+export const createLocalExtensionRootWatcher = async (
   input: CreateExtensionRootWatcherInput,
 ): Promise<ExtensionRootWatcher> => {
-  if (isPreparationHost && !input.watch && !input.ensureRoot) return createRootWatcherClient(input);
   const debounceMs = input.debounceMs ?? 150;
   const ensureRoot = input.ensureRoot ?? defaultEnsureRoot;
   const registrations = new Map<string, WatchedRootRegistration>();

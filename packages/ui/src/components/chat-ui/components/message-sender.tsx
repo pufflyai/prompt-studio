@@ -4,12 +4,15 @@ import { Tooltip } from "@/components/primitives/tooltip";
 import { useChatLinkHandler } from "../links/chat-link-context";
 import type { SessionMessageSender } from "./message-types";
 
+export const hasVisibleMessageSender = (sender?: SessionMessageSender) =>
+  Boolean(sender && (sender.type !== "user" || sender.id !== "local"));
+
 export const MessageSender = (props: { sender?: SessionMessageSender }) => {
   const { sender } = props;
   const handler = useChatLinkHandler();
   const openSession = sender?.type === "session" ? handler?.openSession : undefined;
   const styles = useRecipe({ key: "chatMessageSender" })({ interactive: Boolean(openSession) });
-  if (!sender) return null;
+  if (!sender || !hasVisibleMessageSender(sender)) return null;
   const avatar = <ActivityAvatar actor={{ name: sender.name }} />;
   return (
     <Tooltip content={sender.name}>

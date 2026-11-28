@@ -1,4 +1,7 @@
 name: Release Packages
+# Verify runs name their candidate so the scheduled dry run and the repair loop can find them.
+# Other runs keep GitHub's default title, because a blank run-name falls back to it.
+run-name: ${{ inputs.channel == 'verify' && format('Release Packages · verify {0}', inputs.source_sha) || '' }}
 
 # Host releases build and verify every artifact before publishing. The manual packages
 # channel publishes only SDK/UI previews. See ADRs 0072 and 0107.
@@ -131,14 +134,12 @@ jobs:
     outputs:
       release: ${{ steps.verify.outputs.release || needs.prepare_patch.outputs.release || steps.stable.outputs.release || steps.nightly.outputs.release }}
       channel: ${{ steps.channel.outputs.channel }}
-      version: ${{ steps.verify.outputs.version || needs.prepare_patch.outputs.version || steps.stable.outputs.version || steps.nightly.outputs.version || steps.existing.outputs.version }}
-      tag: ${{ steps.verify.outputs.tag || needs.prepare_patch.outputs.tag || steps.stable.outputs.tag || steps.nightly.outputs.tag || steps.existing.outputs.tag }}
-      commit: ${{ steps.verify.outputs.commit || needs.prepare_patch.outputs.commit || steps.stable.outputs.commit || steps.nightly.outputs.commit || steps.existing.outputs.commit }}
+      version: ${{ steps.verify.outputs.version || needs.prepare_patch.outputs.version || steps.stable.outputs.version || steps.nightly.outputs.version }}
+      tag: ${{ steps.verify.outputs.tag || needs.prepare_patch.outputs.tag || steps.stable.outputs.tag || steps.nightly.outputs.tag }}
+      commit: ${{ steps.verify.outputs.commit || needs.prepare_patch.outputs.commit || steps.stable.outputs.commit || steps.nightly.outputs.commit }}
       previous_tag: ${{ steps.verify.outputs.previous_tag || needs.prepare_patch.outputs.previous_tag || steps.stable.outputs.previous_tag }}
       harness_smoke: ${{ steps.harness_smoke.outputs.required }}
       harness_smoke_baseline: ${{ steps.harness_smoke.outputs.baseline }}
-      candidate_run_id: ${{ steps.existing.outputs.artifact_run_id }}
-      candidate_attempt: ${{ steps.existing.outputs.artifact_attempt }}
       source_sha: ${{ steps.verify.outputs.source_sha || (inputs.channel == 'patch' && inputs.source_sha || (steps.channel.outputs.channel == 'nightly' && github.sha || steps.stable.outputs.commit)) }}
       # Nightly tags are pruned, so nightly builds install core extensions from the main commit.
       extension_ref: ${{ steps.verify.outputs.commit || (steps.channel.outputs.channel == 'nightly' && github.sha || needs.prepare_patch.outputs.tag || steps.stable.outputs.tag) }}
@@ -214,27 +215,18 @@ jobs:
           if [ -n "$LAST_TAG" ] && [ "$(gh api "repos/$GH_REPO/commits/$LAST_TAG" --jq '.parents[0].sha')" = "$GITHUB_SHA" ]; then
             echo "Main has not changed since $LAST_TAG."
             echo "changed=false" >> "$GITHUB_OUTPUT"
-            echo "previous_candidate_tag=$LAST_TAG" >> "$GITHUB_OUTPUT"
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Recover exact artifacts for daily unchanged-candidate validation
-        id: existing
-        continue-on-error: true
-        if: steps.changed.outputs.changed == 'false'
-        env:
-          LAST_TAG: ${{ steps.changed.outputs.previous_candidate_tag }}
-        run: bun scripts/ci/production-existing-candidate.ts "$LAST_TAG" "$GITHUB_SHA"
-
       - name: Install dependencies
-        if: steps.changed.outputs.changed == 'true' || (steps.changed.outputs.changed == 'false' && steps.existing.outcome == 'failure')
+        if: steps.changed.outputs.changed == 'true'
         run: bun scripts/ci/install-native-dependencies.ts
 
       # The version change is never pushed to main. The tag keeps it so every job builds the same versions.
       - name: Version and tag the nightly
         id: nightly
-        if: steps.changed.outputs.changed == 'true' || (steps.changed.outputs.changed == 'false' && steps.existing.outcome == 'failure')
+        if: steps.changed.outputs.changed == 'true'
         run: |
           set -euo pipefail
           PSTDIO_STABLE_TAG=$(gh release view --json tagName --jq .tagName)
@@ -425,11 +417,12 @@ jobs:
       previous-tag: ${{ needs.plan.outputs.previous_tag }}
       candidate-ref: ${{ needs.plan.outputs.commit }}
 
-  # A daily nightly and every stable candidate get the same deep diagnostics.
-  # Start advisory nightly diagnostics after the publisher settles so release checks get runners first.
+  # Full production validation gates stable, patch and verify candidates. Nightlies publish after
+  # the build, desktop release flows and upgrade paths pass; the twice-daily Release Dry Run
+  # (release-dry-run.yml) runs this validation on the next stable candidate instead.
   production:
-    needs: [plan, release_build, containers, desktop, publish_nightly]
-    if: ${{ !cancelled() && needs.plan.outputs.release == 'true' }}
+    needs: [plan, release_build, containers, desktop]
+    if: ${{ !cancelled() && needs.plan.outputs.release == 'true' && needs.plan.outputs.channel != 'nightly' }}
     permissions:
       contents: read
       actions: read
@@ -442,21 +435,6 @@ jobs:
       artifact_attempt: ${{ needs.release_build.outputs.artifact_attempt }}
       channel: ${{ needs.plan.outputs.channel }}
       stable_tag: ${{ needs.plan.outputs.previous_tag }}
-
-  production_unchanged:
-    needs: plan
-    if: ${{ !cancelled() && needs.plan.result == 'success' && needs.plan.outputs.release != 'true' && needs.plan.outputs.channel == 'nightly' }}
-    permissions:
-      contents: read
-      actions: read
-      pull-requests: read
-    uses: ./.github/workflows/production-validation.yml
-    with:
-      ref: ${{ needs.plan.outputs.commit }}
-      source_sha: ${{ needs.plan.outputs.source_sha }}
-      artifact_run_id: ${{ needs.plan.outputs.candidate_run_id }}
-      artifact_attempt: ${{ needs.plan.outputs.candidate_attempt }}
-      channel: nightly
 
   # Publishes only when every check passed. Each step skips work an earlier attempt finished,
   # so re-running this job completes a release that stopped halfway. The GitHub release is
@@ -582,8 +560,8 @@ jobs:
   # Performance measurements start independently when a candidate exists or after publication.
   # A dispatch failure remains advisory and cannot fail an otherwise delivered release.
   benchmarks:
-    needs: [plan, release_build, production, production_unchanged, publish, publish_nightly]
-    if: ${{ !cancelled() && (needs.publish.result == 'success' || needs.publish_nightly.result == 'success' || (needs.plan.outputs.channel == 'nightly' && needs.plan.outputs.release != 'true') || needs.production.outputs.candidate_artifact_id != '') }}
+    needs: [plan, release_build, production, publish]
+    if: ${{ !cancelled() && (needs.publish.result == 'success' || needs.production.outputs.candidate_artifact_id != '') }}
     continue-on-error: true
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -596,9 +574,9 @@ jobs:
       COMMIT: ${{ needs.plan.outputs.commit }}
       TARGETS: ${{ needs.plan.outputs.targets }}
       SOURCE_SHA: ${{ needs.plan.outputs.source_sha }}
-      ARTIFACT_RUN_ID: ${{ needs.plan.outputs.release == 'true' && github.run_id || needs.plan.outputs.candidate_run_id }}
-      ARTIFACT_ATTEMPT: ${{ needs.release_build.outputs.artifact_attempt || needs.plan.outputs.candidate_attempt }}
-      CANDIDATE_ARTIFACT_ID: ${{ needs.production.outputs.candidate_artifact_id || needs.production_unchanged.outputs.candidate_artifact_id }}
+      ARTIFACT_RUN_ID: ${{ github.run_id }}
+      ARTIFACT_ATTEMPT: ${{ needs.release_build.outputs.artifact_attempt }}
+      CANDIDATE_ARTIFACT_ID: ${{ needs.production.outputs.candidate_artifact_id }}
       CANDIDATE_ARTIFACT_RUN_ID: ${{ github.run_id }}
       CHANNEL: ${{ needs.plan.outputs.channel }}
       WORKFLOW_REF: ${{ github.event.repository.default_branch }}

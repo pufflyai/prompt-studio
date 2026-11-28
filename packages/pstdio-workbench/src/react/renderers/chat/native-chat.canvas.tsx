@@ -4,7 +4,6 @@ import { AlertMessage, EmptyState } from "@pstdio/ui";
 import { ChatPanel } from "@pstdio/ui/chat-ui";
 import { useState } from "react";
 import { createChatSession } from "../../../extensions/contributions/chat-session";
-import { NativeChatDraftRecovery } from "./native-chat-draft-recovery";
 import type { NativeChatHostProps } from "./native-chat-host";
 import { NativeChatView } from "./native-chat-view";
 
@@ -31,19 +30,6 @@ export const OtherDevice = () => (
     submitDisabled
     readOnlyQueue
     messages={[{ id: "history", role: "assistant", parts: [{ type: "text", text: "History from another device." }] }]}
-  />
-);
-export const RecoveredDraft = () => (
-  <ChatPanel
-    {...composer}
-    messages={[]}
-    chatInputDefaultValue="New typing"
-    conversationNotices={
-      <NativeChatDraftRecovery
-        recovered={[{ text: "Earlier saved work", attachments: [{ id: "file", name: "notes.txt" }], values: {} }]}
-        onRestore={() => undefined}
-      />
-    }
   />
 );
 
@@ -199,6 +185,7 @@ export const ConversationFailure = () => {
 
 export const ReopenSession = () => {
   const [open, setOpen] = useState(true);
+  const [selected, setSelected] = useState(true);
   const [panelVisible, setPanelVisible] = useState(true);
   const [session] = useState(() =>
     createChatSession({
@@ -227,14 +214,18 @@ export const ReopenSession = () => {
         <Button disabled={!open} onClick={() => setPanelVisible((current) => !current)}>
           {panelVisible ? "Hide panel" : "Show panel"}
         </Button>
+        <Button disabled={!open || !panelVisible} onClick={() => setSelected((current) => !current)}>
+          {selected ? "Select another session" : "Return to session"}
+        </Button>
       </HStack>
-      <Box flex="1" minH="0" display={open && panelVisible ? "block" : "none"}>
+      <Box flex="1" minH="0" display={open && panelVisible && selected ? "block" : "none"}>
         <NativeChatView
           session={session}
           conversationKey="reopen-session"
           action={undefined}
           placementOpen={open}
-          visible={open && panelVisible}
+          placementSelected={selected}
+          visible={open && panelVisible && selected}
         />
       </Box>
     </Stack>

@@ -21,6 +21,7 @@ export const RegionScrollArea = (props: RegionScrollAreaProps) => {
   const { children, horizontal = false, hidden = false } = props;
   return (
     <ScrollArea
+      data-workbench-region-scroll=""
       display={hidden ? "none" : "flex"}
       flex="1"
       minH="0"

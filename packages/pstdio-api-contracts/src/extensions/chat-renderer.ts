@@ -41,14 +41,14 @@ export const chatQueuedRequestSchema = z.strictObject({
   steeringDelivery: z.object({ id: z.string(), runStartedAt: z.string() }).nullable().optional(),
   sending: z.boolean().optional(),
 });
-const chatDraftContentSchema = z.strictObject({
+/**
+ * The unsent composer input of one conversation. Control values are kept with it but are not draft content.
+ * Unknown fields, such as the restore list older releases saved, are dropped.
+ */
+export const chatDraftSchema = z.object({
   text: z.string(),
   attachments: z.array(chatAttachmentSchema),
   values: controlValuesSchema,
-});
-export const chatDraftSchema = chatDraftContentSchema.extend({
-  /** Unsent drafts recovered after editing raced an asynchronous read. */
-  recovered: z.array(chatDraftContentSchema).optional(),
 });
 const chatInputTagSchema = z.object({
   label: z.string(),
@@ -194,8 +194,6 @@ export const chatRendererActionResultSchema = z.strictObject({
 const revision = z.number().int().nonnegative();
 export const chatRendererEventSchema = z.union([
   z.strictObject({ revision, snapshot: chatRendererSnapshotSchema }),
-  /** Recover a failed asynchronous operation without overwriting newer composer work. */
-  z.strictObject({ revision, recoverDraft: chatDraftSchema }),
   z.strictObject({
     revision,
     patch: z

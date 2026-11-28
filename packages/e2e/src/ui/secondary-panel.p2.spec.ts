@@ -1,5 +1,5 @@
 import { folderProjectInput } from "../helpers/folder-project";
-import { homeFrame } from "../helpers/home-loading";
+import { homePage } from "../helpers/home-loading";
 import { attachTerminalFocus, recordTerminalFocus } from "../helpers/terminal-focus-evidence";
 import { expect, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
@@ -37,7 +37,7 @@ const getSecondaryHeader = (page: import("@playwright/test").Page) =>
 
 const addTerminal = async (page: import("@playwright/test").Page) => {
   // The shell mounts before project boot applies its saved panel layout.
-  await expect(homeFrame(page).getByText("Project home", { exact: true })).toBeVisible();
+  await expect(homePage(page)).toBeVisible();
   await expect(page.getByRole("button", { name: /^(Show|Hide) Bottom Panel$/ })).toBeVisible();
   const showSecondary = page.getByRole("button", { name: "Show Bottom Panel" });
   if (await showSecondary.isVisible()) await showSecondary.click();

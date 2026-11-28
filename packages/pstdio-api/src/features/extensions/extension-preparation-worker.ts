@@ -97,7 +97,7 @@ const handle = createPreparationHandler({
   "checkout.dispose": (input: { id: string }) => {
     disposePreparationStage(input.id);
   },
-  "watch.update": updatePreparationWatcher,
+  "watch.update": (input: Parameters<typeof updatePreparationWatcher>[0]) => updatePreparationWatcher(input),
   "watch.dispose": (input: { id: string }) => disposePreparationWatcher(input.id),
   "install.settle": (input: { transaction: Parameters<typeof settlePreparedInstallOnWorker>[0]; commit: boolean }) =>
     settlePreparedInstallOnWorker(input.transaction, input.commit),

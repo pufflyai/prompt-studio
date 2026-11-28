@@ -5,6 +5,7 @@ import type { WorkbenchPageContribution } from "../../registries/pages/page-regi
 
 interface NavigationLevelsInput {
   location: PageLocation | undefined;
+  navigationLocation?: PageLocation | null;
   pages: readonly WorkbenchPageContribution[];
   navigationTrees: NavigationTreeRegistry;
 }
@@ -47,7 +48,11 @@ export const leavesProjectNavigation = (location: PageLocation, input: ProjectNa
 export const resolveNavigationLevels = (input: NavigationLevelsInput) => {
   const levels: { owner: NonNullable<ReturnType<NavigationTreeRegistry["resolveOwner"]>>; location: PageLocation }[] =
     [];
-  for (let current = input.location; current; current = current.parent) {
+  for (
+    let current = input.navigationLocation === undefined ? input.location : input.navigationLocation;
+    current;
+    current = current.parent
+  ) {
     const owner = levelOwner(current, input);
     if (owner && !levels.some((level) => level.owner.id === owner.id)) levels.unshift({ owner, location: current });
   }

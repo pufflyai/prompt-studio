@@ -13,6 +13,7 @@ const readCatalog = async <T>(query: ScopedQuery<T>) => {
 };
 export const getProjectExtensionMetadata = (projectId: string) =>
   readCatalog(getProjectExtensionQueries(projectId).metadata);
+
 export const executeExtensionCommand = (
   projectId: string,
   commandId: string,

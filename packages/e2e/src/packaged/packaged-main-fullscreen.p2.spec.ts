@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { folderProjectInput } from "../helpers/folder-project";
-import { homeFrame, homePage } from "../helpers/home-loading";
+import { homePage } from "../helpers/home-loading";
 import { waitForDefaultExtensions } from "../scripts/default-extensions-readiness";
 import { type Browser, chromium, expect, test } from "../scripts/playwright-test";
 import { packagedFixtureExtensions } from "./packaged-fixture-extensions";
@@ -61,6 +61,10 @@ test("packaged Main fullscreen exits with Escape and resets on reload", async ()
     const project = (await response.json()) as { id: string };
     await expect(page.getByRole("option", { name: "Home", exact: true })).toBeVisible();
     await expect(homePage(page)).toBeVisible();
+    const attachedSide = page.getByTestId("workbench-side-panel-attached");
+    await expect(attachedSide).toBeVisible();
+    await page.getByRole("button", { name: "Hide Side Panel", exact: true }).click();
+    await expect(attachedSide).toBeHidden();
     const enter = page.getByRole("button", { name: "Enter Main fullscreen", exact: true });
     await enter.click();
     await expect(page.getByRole("button", { name: "Exit Main fullscreen", exact: true })).toBeVisible();
@@ -76,7 +80,7 @@ test("packaged Main fullscreen exits with Escape and resets on reload", async ()
     await expect(page.getByRole("dialog", { name: "Side Panel", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Close Side Panel", exact: true }).click();
     await expect(bubble).toBeVisible();
-    await homeFrame(page).getByText("Project home", { exact: true }).click();
+    await homePage(page).click();
     await page.keyboard.press("Escape");
     await expect(enter).toBeFocused();
     await enter.click();

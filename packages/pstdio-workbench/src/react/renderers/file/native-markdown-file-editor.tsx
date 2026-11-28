@@ -17,6 +17,8 @@ interface NativeMarkdownFileEditorProps {
   open: boolean;
   placeholder?: string;
   sectionNavigation?: MarkdownEditorProps["sectionNavigation"];
+  selectionToolbar?: MarkdownEditorProps["selectionToolbar"];
+  onSourceSelection?: MarkdownEditorProps["onSourceSelection"];
   onActiveSectionChange?: MarkdownEditorProps["onActiveSectionChange"];
   errorNotice?: ReactNode;
 }
@@ -83,6 +85,8 @@ export const NativeMarkdownFileEditor = (props: NativeMarkdownFileEditorProps) =
             defaultState=""
             placeholder={placeholder}
             sectionNavigation={sectionNavigation}
+            selectionToolbar={props.selectionToolbar}
+            onSourceSelection={props.onSourceSelection}
             onActiveSectionChange={onActiveSectionChange}
             isEditable
           />

@@ -100,13 +100,30 @@ export const ticketRecords = (storage: ExtensionStorageApi) => {
       });
       return outcome.state !== "refused";
     },
-    delete: async (id: string) => {
-      const { record, stored } = await observe(id);
-      if (!stored) return;
-      await storage.records.commit({
-        operationId: storage.ids.create(),
-        edits: [{ recordId: ticketRecordId(storage, id), expectedRevision: record.revision, deleted: true }],
-      });
+    delete: async (id: string, beforeCommit?: () => Promise<void>) => {
+      const recordId = ticketRecordId(storage, id);
+      let record = await storage.records.read(recordId);
+      if (!record.exists) {
+        // Older projects may still have this ticket in the legacy collection.
+        await migratePlannerStorage({ storage });
+        record = await storage.records.read(recordId);
+      }
+      if (!live(record)) return record.deleted;
+      await beforeCommit?.();
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const outcome = await storage.records.commitIfCurrent({
+          operationId: storage.ids.create(),
+          edits: [{ recordId, expectedRevision: record.revision, deleted: true }],
+        });
+        if (outcome) {
+          if (outcome.state === "refused" || outcome.state === "needs-attention")
+            throw new Error(outcome.reason ?? "Ticket deletion was refused");
+          return true;
+        }
+        record = await storage.records.read(recordId);
+        if (!live(record)) return record.deleted;
+      }
+      throw new Error(`Ticket ${id} kept changing while deleting`);
     },
   };
 };

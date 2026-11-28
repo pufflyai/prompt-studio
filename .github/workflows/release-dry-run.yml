@@ -1,0 +1,63 @@
+name: Release Dry Run
+
+# Twice a day, verify the next stable candidate with every release-only check, without publishing.
+# The candidate is the head of the Changesets version PR: the exact commit a stable release would
+# ship. Release Packages owns the verification; this workflow only selects and dispatches it.
+# A failed dry run starts the release-dry-run-repair loop in the repo-local pstdio-dev extension.
+on:
+  schedule:
+    - cron: "0 9,21 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: write
+      pull-requests: read
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Verify the version PR head once
+        run: |
+          set -euo pipefail
+          # The verify run gets release signing secrets, so the candidate must be this repository's own
+          # branch head. A fork PR can use the same branch name; never select one.
+          candidate=$(gh pr list --head changeset-release/main --base main --state open --json headRefOid,isCrossRepository \
+            --jq 'map(select(.isCrossRepository | not)) | .[0].headRefOid // empty')
+          if [ -z "$candidate" ]; then
+            echo "Skipped: no open Changesets version PR, so there is no stable candidate to verify." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if ! branch=$(gh api "repos/$GH_REPO/git/ref/heads/changeset-release/main" --jq .object.sha 2>/dev/null) || [ "$branch" != "$candidate" ]; then
+            echo "Skipped: version PR head $candidate is not the head of this repository's changeset-release/main." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          subject=$(gh api "repos/$GH_REPO/commits/$candidate" --jq '.commit.message | split("\n")[0]')
+          if [ "$subject" != "Version Packages" ]; then
+            echo "Skipped: changeset-release/main head $candidate is not a Version Packages commit." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          # Release Packages names verify runs after their candidate. Rerunning unchanged code is a retry,
+          # so skip a candidate that already has a running or finished verify run. Cancelled runs don't count.
+          title="Release Packages · verify $candidate"
+          existing=$(gh run list --workflow release-packages.yml --event workflow_dispatch --limit 200 \
+            --json databaseId,displayTitle,status,conclusion \
+            --jq "map(select(.displayTitle == \"$title\" and .conclusion != \"cancelled\")) | .[0].databaseId // empty")
+          if [ -n "$existing" ]; then
+            echo "Skipped: $candidate already has verify run $existing." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          gh workflow run release-packages.yml --ref main -f channel=verify -f source_sha="$candidate"
+          echo "Dispatched a verify run for $candidate." | tee -a "$GITHUB_STEP_SUMMARY"

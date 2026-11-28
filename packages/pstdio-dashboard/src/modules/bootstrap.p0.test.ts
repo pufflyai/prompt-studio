@@ -8,7 +8,9 @@ import { createHomeModule, dashboardHomePage } from "@/home-page.fixture";
 import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import {
+  clearDashboardExtensionsReadyProject,
   getDashboardExtensionsReadyProjectId,
+  setDashboardExtensionsReadyProject,
   setDashboardExtensionsRegisteredProject,
 } from "@/shared/extensions/extension-readiness";
 import { clearCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
@@ -39,6 +41,32 @@ const browserAt = (url: string): WorkbenchPageLocationBrowser => {
 };
 
 describe("createBootstrapModule", () => {
+  test("opens attached Side on the first launch after project tools are ready", async () => {
+    const workbench = createWorkbench({ defaultPage: dashboardHomePage, initialSidePanelMode: "closed" });
+    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    const start = workbench.registerModule(createHomeModule());
+    const bootstrap = workbench.registerModule(createBootstrapModule({ openInitialSideChat: true }));
+
+    try {
+      setDashboardExtensionsRegisteredProject(workbench, "project-1");
+      await flushMicrotasks();
+      expect(workbench.sidePanel.getMode()).toBe("closed");
+      setDashboardExtensionsReadyProject(workbench, "project-1");
+      await flushMicrotasks();
+      expect(workbench.sidePanel.getMode()).toBe("attached");
+      workbench.sidePanel.setMode("closed");
+      clearDashboardExtensionsReadyProject(workbench);
+      setDashboardExtensionsReadyProject(workbench, "project-1");
+      await flushMicrotasks();
+      expect(workbench.sidePanel.getMode()).toBe("closed");
+    } finally {
+      bootstrap.dispose();
+      start.dispose();
+      await workbench.dispose();
+    }
+  });
+
   test("waits for project contributions before opening the configured default page", async () => {
     const workbench = createWorkbench({ defaultPage: dashboardHomePage });
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });

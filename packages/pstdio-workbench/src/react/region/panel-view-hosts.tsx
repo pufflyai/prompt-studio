@@ -118,6 +118,7 @@ const PanelViewPortal = (props: {
   region?: ViewRegion;
   active: boolean;
   placementOpen: boolean;
+  placementSelected: boolean;
 }) => {
   const { workbench, placement, slot, headerSlot, headerActive, region, active } = props;
   const view = useWorkbenchStore(workbench.views.store, () =>
@@ -185,7 +186,7 @@ const PanelViewPortal = (props: {
         if (region) workbench.focus.setActiveRegion(isPanel(region) ? region : getWorkbenchPanelForMenuRegion(region));
       }}
     >
-      {/* The retained view owns its viewport, so another tab cannot reset its scroll position. */}
+      {/* Each retained view owns its viewport independently of the other tabs. */}
       <UiScopeActivity active={active}>
         <RegionScrollArea>
           {/* Preserve collection state while deferring updates and reads for hidden pages. */}
@@ -196,6 +197,7 @@ const PanelViewPortal = (props: {
               region={region}
               visible={active}
               placementOpen={props.placementOpen}
+              placementSelected={props.placementSelected}
               sizing={props.sizing}
             />
           </Activity>
@@ -294,21 +296,20 @@ const ProjectViewHosts = (props: { workbench: WorkbenchCore; slots: ViewSlots })
           ? (peers.find((p) => p.widgetId === layout.regions[region].activeWidgetId) ?? peers[0])
           : undefined;
         const headerSurface = region && slots["page-header"][region]?.active ? "page-header" : "header";
+        const placementSelected = content?.widgetId === placement.widgetId || selected?.widgetId === placement.widgetId;
         return (
           <PanelViewPortal
             key={key}
             workbench={workbench}
             placement={placement}
             placementOpen={open.has(placement.widgetId)}
+            placementSelected={placementSelected}
             region={region}
             slot={region ? slots.content[region]?.node : undefined}
             sizing={slots.content[region as ViewRegion]?.sizing}
             headerSlot={region && isPanel(region) ? slots[headerSurface][region]?.node : undefined}
             headerActive={Boolean(region && isPanel(region) && slots[headerSurface][region]?.active)}
-            active={
-              (content?.widgetId === placement.widgetId || selected?.widgetId === placement.widgetId) &&
-              (!region || slots.content[region]?.active !== false)
-            }
+            active={placementSelected && (!region || slots.content[region]?.active !== false)}
           />
         );
       })}

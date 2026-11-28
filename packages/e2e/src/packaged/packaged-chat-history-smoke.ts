@@ -13,7 +13,8 @@ export const expectPackagedChatHistory = async (
   const side = page.locator('[data-workbench-panel="side"]');
   const replayTab = page.getByRole("tab", { name: "Motion replay", exact: true });
   const instanceId = await replayTab.locator("..").getAttribute("data-workbench-tab");
-  const log = page.locator(`[data-workbench-instance="${instanceId}"]`).getByRole("log", { includeHidden: true });
+  const conversation = page.locator(`[data-workbench-instance="${instanceId}"]`);
+  const log = conversation.getByRole("log", { includeHidden: true });
   const viewport = log.locator('[data-scope="scroll-area"][data-part="viewport"]').first();
   await viewport.evaluate((element) => {
     element.dispatchEvent(new WheelEvent("wheel", { deltaY: -100, bubbles: true }));
@@ -60,21 +61,11 @@ export const expectPackagedChatHistory = async (
     logTestPhase("Packaged chat history: reopen");
     await replayTab.click();
     await expect(replayTab).toHaveAttribute("aria-selected", "true");
-    // Switching collection tabs preserves the existing view and reading position.
+    // Selecting the retained session starts at latest without reloading its history owner.
     await expect
-      .poll(() =>
-        viewport.evaluate((element) => {
-          const user = element.querySelector('[data-chat-message-list-item="user"]');
-          return user
-            ? Math.abs(user.getBoundingClientRect().top - element.getBoundingClientRect().top)
-            : Number.POSITIVE_INFINITY;
-        }),
-      )
-      .toBeLessThan(20);
-    logTestPhase(
-      `Packaged chat history: restored position, latest controls=${await page.getByRole("button", { name: "Scroll to latest message", exact: true }).count()}`,
-    );
-    await page.getByRole("button", { name: "Scroll to latest message", exact: true }).click();
+      .poll(() => viewport.evaluate((element) => element.scrollHeight - element.clientHeight - element.scrollTop))
+      .toBeLessThanOrEqual(2);
+    await expect(page.getByRole("button", { name: "Scroll to latest message", exact: true })).toBeHidden();
     logTestPhase("Packaged chat history: show final response");
     await expect(page.getByText(/^Step 30\./).filter({ visible: true })).toBeVisible();
     expect(historyReads).toBe(0);
@@ -100,7 +91,7 @@ export const expectPackagedChatHistory = async (
     logTestPhase("Packaged chat history: recover overflow without an error alert");
     await expectPackagedChatOverflowRecovery(page, sessionId, baseUrl, headers);
     logTestPhase("Packaged chat history: recover observation after connection loss");
-    const retry = page.getByRole("alert").getByRole("button", { name: "Retry", exact: true });
+    const retry = conversation.getByRole("alert").getByRole("button", { name: "Retry", exact: true });
     await page.evaluate(() => Reflect.get(window, "interruptChatStream")());
     await expect(retry).toBeVisible();
     await expect(page.getByText(/^Step 30\./).filter({ visible: true })).toBeVisible();

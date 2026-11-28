@@ -2,7 +2,7 @@ import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { readTagDefinitions } from "./definition-query";
 import { ticketTagAttributeId } from "./mappers";
 import { assertOneTagValue, sameTicketTags, tagValue, withTagValue } from "./ticket-tags";
-import type { Ticket } from "./types";
+import type { StoredTicket } from "./types";
 
 const selectedTagOptions = (value: unknown, options: Set<string>) => {
   if (Array.isArray(value)) return value.filter((id): id is string => typeof id === "string" && options.has(id));
@@ -11,11 +11,11 @@ const selectedTagOptions = (value: unknown, options: Set<string>) => {
 };
 
 /** Validate the complete edit before storing any of its values. */
-export const ticketWithAttributes = async (
+export const ticketWithAttributes = async <T extends StoredTicket>(
   storage: ExtensionStorageApi,
-  ticket: Ticket,
+  ticket: T,
   attributes: Record<string, unknown>,
-) => {
+): Promise<T> => {
   let statusId = ticket.statusId;
   let tags = ticket.tags ?? {};
   const tagDefinitions = Object.keys(attributes).some((id) => id !== "status") ? await readTagDefinitions(storage) : [];

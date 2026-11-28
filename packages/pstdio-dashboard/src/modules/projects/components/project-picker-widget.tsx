@@ -138,7 +138,7 @@ export const ProjectPickerWidget = (props: { input: WorkbenchPanelRenderInput })
 
   return (
     <SearchModalContent
-      title={t("title")}
+      title={input.instance.pageContext ? undefined : t("title")}
       showSearch={showSearch}
       searchValue={searchTerm}
       searchPlaceholder={t("list.searchPlaceholder")}

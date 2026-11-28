@@ -232,6 +232,74 @@ test("a successful write keeps its preview and admission barrier when reconcilia
   expect({ reads, writes }).toEqual({ reads: 2, writes: 2 });
 });
 
+test("pending writes wait for an active recovery and the other matching writes", async () => {
+  const { operations, subject } = setup();
+  const recoveryRead = Promise.withResolvers<void>();
+  const otherWrite = Promise.withResolvers<void>();
+  const failure = new Error("Initial read failed");
+  let reads = 0;
+  const first = operations.submit({
+    subjects: [subject],
+    domain: "move",
+    title: "Move ticket",
+    write: () => undefined,
+    reconcile() {
+      if (++reads === 1) throw failure;
+      return recoveryRead.promise;
+    },
+  });
+  await expect(first.result).rejects.toBe(failure);
+  const recovery = operations.check(first.id);
+  expect(operations.getSnapshot().pending[0]?.status).toBe("reconciling");
+
+  const other = operations.submit({
+    subjects: [operationSubject("ticket", "project", "planner", "device", "ticket-2")],
+    domain: "move",
+    title: "Move another ticket",
+    write: () => otherWrite.promise,
+  });
+  const barrier = operations.waitForPending(({ domain }) => domain === "move");
+  const outcome = barrier.then(
+    () => "ready",
+    () => "failed",
+  );
+  const current = () => Promise.race([outcome, Bun.sleep(0).then(() => "waiting")]);
+  const beforeRecovery = await current();
+  recoveryRead.resolve();
+  await recovery;
+  const afterRecovery = await current();
+  otherWrite.resolve();
+  await other.result;
+
+  expect(beforeRecovery).toBe("waiting");
+  expect(afterRecovery).toBe("waiting");
+  expect(await outcome).toBe("ready");
+  await expect(first.result).rejects.toBe(failure);
+});
+
+test("authority retirement releases a pending barrier while verification is still running", async () => {
+  const { queries, operations, subject } = setup();
+  const verification = Promise.withResolvers<{ status: "confirmed"; result: undefined }>();
+  const initialError = new Error("Connection lost");
+  const move = operations.submit({
+    subjects: [subject],
+    domain: "move",
+    title: "Move ticket",
+    write() {
+      throw initialError;
+    },
+    check: () => verification.promise,
+  });
+  await expect(move.result).rejects.toBe(initialError);
+  const recovery = operations.check(move.id);
+  const barrier = operations.waitForPending(({ domain }) => domain === "move");
+  queries.setAuthority({ accountId: "work" });
+  await expect(barrier).rejects.toThrow("authority");
+  verification.resolve({ status: "confirmed", result: undefined });
+  await recovery;
+  await expect(move.result).rejects.toBe(initialError);
+});
+
 test("account retirement fences queued execution and isolates recovery even without query entries", async () => {
   const { queries, operations, subject } = setup();
   const gate = Promise.withResolvers<void>();

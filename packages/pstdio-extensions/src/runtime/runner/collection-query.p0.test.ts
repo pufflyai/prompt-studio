@@ -108,9 +108,10 @@ test("paged providers cannot omit counts or return more rows than requested; old
   expect((await run(undefined, 3)).ok).toBe(true);
 });
 
-test("invalid page limits are rejected before a collection provider performs work", async () => {
+test("paged queries allow zero rows for summaries and reject invalid limits before running", async () => {
   const { api: storage } = makeStorage();
   let reads = 0;
+  const metadata = { revision: "r", cursor: null, total: 120, filteredTotal: 120, groups: [] };
   const runtime = buildRuntime({
     views: [
       {
@@ -122,20 +123,27 @@ test("invalid page limits are rejected before a collection provider performs wor
           queryMode: "paged",
           query: async () => {
             reads++;
-            return { rows: [], page: { revision: "r", cursor: null, total: 0, filteredTotal: 0, groups: [] } };
+            return { rows: [], page: metadata };
           },
         },
       },
     ],
   });
   const runner = createCommandRunner(runtime, { buildEnvironment: () => stubEnvironment(storage) });
-  const result = await runner.execute({
-    commandId: runtime.privateHandlers[0]!.id,
-    projectId: "p1",
-    params: { page: { limit: 501 } },
-  });
-  expect(result.ok).toBe(false);
+  const execute = (limit: number) =>
+    runner.execute({
+      commandId: runtime.privateHandlers[0]!.id,
+      projectId: "p1",
+      params: { page: { limit } },
+    });
+  expect((await execute(-1)).ok).toBe(false);
+  expect((await execute(501)).ok).toBe(false);
   expect(reads).toBe(0);
+  expect(await execute(0)).toMatchObject({ ok: true, value: { rows: [], page: metadata } });
+  expect(reads).toBe(1);
+  expect(() =>
+    validateCollectionQueryResult({ mode: "paged" }, { page: { limit: 0 } }, { rows: [{ id: "a" }], page: metadata }),
+  ).toThrow("more than 0 rows");
 });
 
 test("row limits include deeply nested table resources", async () => {

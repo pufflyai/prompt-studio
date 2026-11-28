@@ -122,58 +122,6 @@ test("a closed presentation channel releases retained resources when publishing 
   expect(closed).toBe(1);
 });
 
-test("a native watch hands off failed input through recovery events without consuming it before durable save", async () => {
-  const { saveNativeSubmission, readNativeSubmissions } = await import("./native-submission");
-  const controller = new AbortController();
-  const events: unknown[] = [];
-  let closed = 0;
-  const ctx = makeCommandContext({
-    storage: createMemoryStorage({ indexes: [nativeSubmissionIndex] }),
-    params: {},
-    overrides: {
-      signal: controller.signal,
-      stream: {
-        write: async (event) => {
-          events.push(event);
-          if (event && typeof event === "object" && "recoverDraft" in event) controller.abort();
-        },
-      },
-      sessions: {
-        get: async () => ({ ...session, status: "failed", lastRequestStarted: "2026-11-06T00:00:00.000Z" }),
-        getExecutionState: async () => ({ kind: "local", available: true }),
-        getQueuedMessages: async () => ({
-          messages: [],
-          queue: { requests: [], activeRunStartedAt: null, steeringAvailable: false, steeringUnavailableReason: null },
-        }),
-        getHarnessCommands: async () => ({ harnessId: "agent", commands: [], modes: [], slashCommands: true }),
-        getForkState: async () => ({ supported: false, disabledReason: null }),
-        retainResources: async () => ({
-          close: () => {
-            closed++;
-          },
-        }),
-        stream: async () => {
-          controller.abort();
-        },
-      },
-    },
-  });
-  const draft = { text: "Native objective", attachments: [], values: { harness: { harnessId: "agent", model: "B" } } };
-  await saveNativeSubmission(
-    ctx,
-    "s",
-    { draft, operation: { kind: "command", text: "/goal Native objective" } },
-    "before",
-    true,
-    undefined,
-    "browser",
-  );
-  await watchConversation(ctx, { type: "session", id: "s" }, "browser");
-  expect(events).toContainEqual({ revision: 1, recoverDraft: draft });
-  expect(await readNativeSubmissions(ctx, "s", true)).toHaveLength(1);
-  expect(closed).toBe(1);
-});
-
 test("live reply patches keep 67 unchanged 4KiB history messages in the native owner", async () => {
   const controller = new AbortController();
   const frames: import("@pstdio/sdk/extensions").ChatRendererStreamEvent[] = [];

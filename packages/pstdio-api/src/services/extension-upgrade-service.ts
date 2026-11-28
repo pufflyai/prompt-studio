@@ -135,8 +135,34 @@ const upgradableOrigin = (
 const upgradeRef = (entry: ExtensionCatalogEntry | undefined, release: ExtensionRelease | null) =>
   entry && entry.origin.ref !== "{hostRelease}" ? entry.origin.ref : release?.ref;
 
+const releaseRefFor = (entry: ExtensionCatalogEntry, release: ExtensionRelease | null) => {
+  const ref = upgradeRef(entry, release);
+  if (ref !== undefined) return ref;
+  throw new ExtensionUpgradeUnavailableError("This extension requires a Prompt Studio host release ref.");
+};
+
 const releaseCommitKey = (origin: { url: string; path: string }, ref: string) =>
   `${origin.url}\0${origin.path}\0${ref}`;
+
+const createReleaseCommitCache = (resolveCommit: typeof resolveExtensionReleaseCommit) => {
+  const commits = new Map<string, Promise<string>>();
+  const get = (origin: { url: string; path: string }, ref: string) => {
+    const key = releaseCommitKey(origin, ref);
+    let commit = commits.get(key);
+    if (!commit) {
+      commit = resolveCommit(origin.url, ref, origin.path).catch((error) => {
+        if (commits.get(key) === commit) commits.delete(key);
+        throw error;
+      });
+      commits.set(key, commit);
+    }
+    return commit;
+  };
+  return {
+    get,
+    invalidate: (origin: { url: string; path: string }, ref: string) => commits.delete(releaseCommitKey(origin, ref)),
+  };
+};
 
 export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps) => {
   const install = deps.installExtensionSource ?? installExtensionSourceDefault;
@@ -145,27 +171,9 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
   const separateLocalProvider = (projectId: string, current: UpgradeInstance) =>
     findLocalProvider(catalog, deps.extensionService, projectId, current);
   const publishedAlternative = createPublishedExtensionAlternative(catalog, deps.release);
-  const releaseCommits = new Map<string, Promise<string>>();
+  const releaseCommits = createReleaseCommitCache(deps.resolveReleaseCommit ?? resolveExtensionReleaseCommit);
   const catalogEntry = async (installName: string) => selectExtensionCatalogEntry(await catalog, installName);
-  const releaseRefFor = (entry: ExtensionCatalogEntry) => {
-    const ref = upgradeRef(entry, deps.release);
-    if (ref !== undefined) return ref;
-    throw new ExtensionUpgradeUnavailableError("This extension requires a Prompt Studio host release ref.");
-  };
-  const currentReleaseCommit = (origin: { url: string; path: string }, releaseRef: string) => {
-    const key = releaseCommitKey(origin, releaseRef);
-    let commit = releaseCommits.get(key);
-    if (!commit) {
-      commit = (deps.resolveReleaseCommit ?? resolveExtensionReleaseCommit)(origin.url, releaseRef, origin.path).catch(
-        (error) => {
-          if (releaseCommits.get(key) === commit) releaseCommits.delete(key);
-          throw error;
-        },
-      );
-      releaseCommits.set(key, commit);
-    }
-    return commit;
-  };
+  const catalogReleaseRef = (entry: ExtensionCatalogEntry) => releaseRefFor(entry, deps.release);
   // A Git install from the catalog's own repository and folder is host-managed, so it moves
   // to the registry. Any other Git or local source stays under its owner's control.
   const canMoveToRegistry = async (
@@ -190,7 +198,7 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
     if (!bundled && deps.release?.source !== "workspace" && !(await isGitAvailable())) return false;
     if (!parsed) return compatibilityError(source) !== null;
     try {
-      return parsed.commit !== (await currentReleaseCommit(parsed, releaseRef));
+      return parsed.commit !== (await releaseCommits.get(parsed, releaseRef));
     } catch (error) {
       // Keep the recovery action available when the release ref cannot be checked yet.
       return !(error instanceof GitUnavailableError);
@@ -204,12 +212,14 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
     const origin = parsed ?? entry?.origin;
     const releaseRef = upgradeRef(entry, deps.release);
     if (!origin || !releaseRef || !upgradableOrigin(await catalog, entry, parsed)) return false;
+    if (deps.release?.source === "workspace" && entry?.origin.ref === "{hostRelease}" && compatibilityError(source))
+      return true;
     return canUpgradeGitSource(source, parsed, origin, releaseRef);
   };
   const requireCatalogEntry = async (installName: string) => {
     const entry = await catalogEntry(installName);
     if (!entry) throw new ExtensionUpgradeUnavailableError(`No catalog entry for extension: ${installName}`);
-    releaseRefFor(entry);
+    catalogReleaseRef(entry);
     return entry;
   };
 
@@ -251,10 +261,15 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
     install,
     registry,
     requireCatalogEntry,
-    releaseRefFor,
+    releaseRefFor: catalogReleaseRef,
   });
 
-  const installSource = createExtensionSourceInstaller({ deps, install, catalogEntry, releaseRefFor });
+  const installSource = createExtensionSourceInstaller({
+    deps,
+    install,
+    catalogEntry,
+    releaseRefFor: catalogReleaseRef,
+  });
 
   type InstalledSource = NonNullable<Awaited<ReturnType<ExtensionService["getInstalledSource"]>>>;
   type ExistingInstance = NonNullable<Awaited<ReturnType<ExtensionService["getProjectExtensionInstance"]>>>;
@@ -302,8 +317,8 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
       ...toExtensionEnableInput(installed),
     });
     const installedOrigin = parseExtensionSourceRef(installedSource.source_ref);
-    const releaseRef = entry ? releaseRefFor(entry) : deps.release?.ref;
-    if (installedOrigin && releaseRef) releaseCommits.delete(releaseCommitKey(installedOrigin, releaseRef));
+    const releaseRef = entry ? catalogReleaseRef(entry) : deps.release?.ref;
+    if (installedOrigin && releaseRef) releaseCommits.invalidate(installedOrigin, releaseRef);
 
     return {
       changed: source.source_hash !== installed.sourceHash,

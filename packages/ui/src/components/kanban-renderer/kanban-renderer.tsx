@@ -170,6 +170,9 @@ export const KanbanRenderer = <TRow extends KanbanRendererRow>(props: KanbanRend
           settings,
           sorts,
           presorted: Boolean(props.page),
+          hasPageGroupCounts: props.page?.result?.groups.some(
+            (group) => !group.parent && group.field === settings.columnGrouping,
+          ),
           search: deferredSearch,
           visibleRows,
           grouped,
@@ -217,6 +220,7 @@ export const KanbanRenderer = <TRow extends KanbanRendererRow>(props: KanbanRend
         <KanbanRendererToolbar
           itemLabel={props.itemLabel}
           rows={rows}
+          page={props.page}
           storageKey={storageKey}
           attributes={attributes}
           defaultSettings={defaultSettings}
@@ -263,6 +267,7 @@ export const KanbanRenderer = <TRow extends KanbanRendererRow>(props: KanbanRend
         listKey={`${settings.columnGrouping}:${settings.rowGrouping}`}
         onLoadMore={props.page?.result?.cursor ? props.page.onLoadMore : undefined}
         loadingMore={props.page?.loading}
+        pageCursor={props.page?.result?.cursor}
       />
       {createRow && onCreateRow && createColumnId ? (
         <KanbanRendererCreateDialog

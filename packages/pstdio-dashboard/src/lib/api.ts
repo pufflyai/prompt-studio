@@ -49,6 +49,25 @@ export const buildAbsoluteApiUrl = (path: string, baseHref = globalThis.location
 // The browser session secret is a bearer credential. A server without auth ignores it.
 export const apiClientOptions = () => ({ baseUrl: resolveApiBaseUrl(), token: readBrowserSession() ?? "" });
 
+const plannerBoardMove =
+  /\/extensions\/commands\/(?:pstdio\.planner|pstdio\.pstdio-planner)\.view\.tickets\.kanban\.onMove\/execute$/;
+const maximumKeepaliveBytes = 64 * 1024;
+let pendingKeepaliveBytes = 0;
+
+const fetchRuntimeRequest = async (url: RequestInfo | URL, init?: RequestInit) => {
+  const path = url instanceof Request ? url.url : String(url);
+  if (!plannerBoardMove.test(path) || typeof init?.body !== "string") return fetch(url, init);
+  const bytes = new TextEncoder().encode(init.body).byteLength;
+  if (!bytes || pendingKeepaliveBytes + bytes > maximumKeepaliveBytes) return fetch(url, init);
+  pendingKeepaliveBytes += bytes;
+  try {
+    // A sent card move can finish when a reload destroys the workbench.
+    return await fetch(url, { ...init, keepalive: true });
+  } finally {
+    pendingKeepaliveBytes -= bytes;
+  }
+};
+
 const runtimeClients = new WeakMap<RuntimeCollections, PstdioClient>();
 
 /** The runtime's client owns its shared resource transport for the whole connection lifetime. */
@@ -56,7 +75,7 @@ export const getRuntimeApiClient = (owner: RuntimeCollections) => {
   if (owner.isDisposed()) throw new Error("Runtime is disposed");
   let client = runtimeClients.get(owner);
   if (!client) {
-    client = createClient(owner.connection);
+    client = createClient({ ...owner.connection, fetch: fetchRuntimeRequest as typeof fetch });
     runtimeClients.set(owner, client);
     owner.onDispose(() => runtimeClients.delete(owner));
   }

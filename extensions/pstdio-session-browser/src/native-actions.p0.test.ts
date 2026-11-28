@@ -126,12 +126,12 @@ test("tagged native input invokes the public operation once, keeps saved request
   expect(result.snapshot?.draftTag).toBeNull();
   expect(result.snapshot?.sentTag?.label).toBe("Goal");
   expect(commandIntent({ ...tagged, ...result.snapshot?.values })).toBeUndefined();
-  const saved = await readNativeSubmissions(ctx, "s", true);
+  const saved = await readNativeSubmissions(ctx, "s");
   expect(saved[0]?.body.draft).toMatchObject({ text: "Keep the full objective", values: tagged });
   expect(saved[0]?.value.previousRequest).toBe("before");
 });
 
-test("hiding a submitted reference preserves pending recovery and refuses another session's record", async () => {
+test("hiding a submitted reference keeps its record and refuses another session's record", async () => {
   const { nativeSubmissionIndex, readNativeSubmissions, saveNativeSubmission } = await import("./native-submission");
   const ctx = makeCommandContext({ storage: createMemoryStorage({ indexes: [nativeSubmissionIndex] }), params: {} });
   const draft = { text: "Objective", attachments: [], values };
@@ -144,7 +144,7 @@ test("hiding a submitted reference preserves pending recovery and refuses anothe
   );
   const result = await nativeAction(ctx, "s", { type: "operation", id: `hide-native:${recordId}`, values });
   expect(result?.snapshot).toMatchObject({ sentTag: null });
-  expect((await readNativeSubmissions(ctx, "s", true))[0]?.body.draft.text).toBe("Objective");
+  expect((await readNativeSubmissions(ctx, "s"))[0]?.body.draft.text).toBe("Objective");
   await expect(
     nativeAction(ctx, "other", { type: "operation", id: `hide-native:${recordId}`, values }),
   ).rejects.toThrow("this conversation");

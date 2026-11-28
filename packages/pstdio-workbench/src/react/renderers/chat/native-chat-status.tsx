@@ -1,43 +1,21 @@
 import { Box, Button, Flex, Text } from "@chakra-ui/react";
 import type { ChatRendererSnapshot } from "@pstdio/sdk/extensions";
 import { ActionErrorSlot, AlertMessage, UnresolvedSubmission } from "@pstdio/ui";
-import type { OperationStatus } from "../../../core/registries/mutations/operation-types";
-import type { TrackedChatAction } from "../../../extensions/contributions/chat-action-operations";
-import { chatDraftContentKey } from "../../../extensions/contributions/chat-draft-recovery";
 import type { ChatSession } from "../../../extensions/contributions/chat-session";
-import { NativeChatDraftRecovery } from "./native-chat-draft-recovery";
 import type { NativeChatHostServices } from "./native-chat-host";
-import type { useNativeChatActions } from "./use-native-chat-actions";
 
 interface NativeChatNoticesProps {
   host: NativeChatHostServices;
   state: ReturnType<ChatSession["getSnapshot"]>;
   session: ChatSession;
 }
-export const NativeChatNotices = ({ host, state, session }: NativeChatNoticesProps) => {
-  const {
-    draft,
-    pending,
-    conversation: { notice },
-  } = state;
+export const NativeChatNotices = ({ host, state }: Omit<NativeChatNoticesProps, "session">) => {
+  const { notice } = state.conversation;
   return (
     <>
       {host.account?.notice}
       {(host.messages ?? state.messages).length > 0 ? (host.account?.setup ?? host.account?.progress) : null}
       {host.linkNotice}
-      <NativeChatDraftRecovery
-        recovered={draft.recovered}
-        hidden={(saved) =>
-          Boolean(
-            pending?.some(
-              (item) =>
-                (item.unresolved?.recovery.isRetained() || (item.failure && !item.failureDismissed)) &&
-                chatDraftContentKey(item) === chatDraftContentKey(saved),
-            ),
-          )
-        }
-        onRestore={session.restoreDraft}
-      />
       {notice ? <Text>{notice}</Text> : null}
     </>
   );
@@ -67,7 +45,6 @@ export const NativeChatErrors = ({ state, session }: Omit<NativeChatNoticesProps
               status="error"
               title="Message not sent"
               onClose={() => session.dismissSubmission(item.message.id)}
-              endElement={<Button onClick={() => session.restoreSubmission(item.message.id)}>Restore draft</Button>}
             >
               {item.failure}
             </AlertMessage>
@@ -88,31 +65,8 @@ export const NativeChatErrors = ({ state, session }: Omit<NativeChatNoticesProps
     </Box>
   );
 };
-const pendingAction = {
-  queue: ["Updating the queue…", "Queue change could not be confirmed. See System activity."],
-  approve: ["Sending approval response…", "Approval response could not be confirmed. See System activity."],
-  stop: ["Stopping the session…", "Stop request could not be confirmed. See System activity."],
-} as const;
-
-export const NativeChatPendingAction = (props: { action: TrackedChatAction["type"]; status: OperationStatus }) => (
-  <Text role="status" textStyle="label/XS" color="fg.muted">
-    {pendingAction[props.action][props.status === "unknown" || props.status === "unconfirmed" ? 1 : 0]}
-  </Text>
-);
-
-export const NativeChatComposerHeader = (
-  props: Omit<NativeChatNoticesProps, "host"> & {
-    pending: ReturnType<typeof useNativeChatActions>;
-  },
-) => (
-  <>
-    {Object.values(props.pending).map((entry) =>
-      entry ? (
-        <NativeChatPendingAction key={entry.id.description} action={entry.intent.action.type} status={entry.status} />
-      ) : null,
-    )}
-    <NativeChatErrors state={props.state} session={props.session} />
-  </>
+export const NativeChatComposerHeader = (props: Omit<NativeChatNoticesProps, "host">) => (
+  <NativeChatErrors state={props.state} session={props.session} />
 );
 
 interface NativeChatResourcesProps {

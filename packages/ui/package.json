@@ -16,6 +16,8 @@
   ],
   "type": "module",
   "sideEffects": [
+    "./dist/index.js",
+    "./dist/theme.js",
     "**/*.css"
   ],
   "nx": {

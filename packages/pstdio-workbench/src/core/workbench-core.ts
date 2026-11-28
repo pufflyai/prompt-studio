@@ -49,6 +49,7 @@ import { createSettingsRegistry } from "./registries/settings/settings-registry"
 import { createStatusRegistry } from "./registries/statuses/status-registry";
 import { createFileIconThemeRegistry } from "./registries/themes/file-icon-theme-registry";
 import { createThemeRegistry } from "./registries/themes/theme-registry";
+import { getRendererReadCache, type RendererReadRegistry } from "./registries/views/renderer-read-registry";
 import { createContextKeyService } from "./shared/context/context-key-service";
 import { createWorkbenchActivation } from "./workbench-activation";
 import {
@@ -79,6 +80,20 @@ import { requirePanelOpen } from "./controllers/shell/panel-open-policy";
 import { restorePanelPolicy, workbenchPanelPolicy } from "./controllers/shell/workbench-panel-policy";
 import { createWorkbenchHost } from "./workbench-core-host";
 
+const readPanelMenuOpen = (core: WorkbenchCore | undefined, widgetId: string) =>
+  core?.panelMenuState.store.getState().openByMenuId[`panel-menu:${widgetId}`];
+
+const resourcePreviewForReads = (
+  reads: RendererReadRegistry,
+  operations: ReturnType<typeof getWorkbenchOperations>,
+) => {
+  const preview = createResourcePreview(operations);
+  const cache = getRendererReadCache(reads);
+  const subscription = preview.subscribeRefresh(cache.refreshResource);
+  cache.onDispose(() => subscription.dispose());
+  return preview;
+};
+
 export const createWorkbench = (input: createWorkbenchInput = {}) => {
   const queryContext = createWorkbenchQueryContext(input.queries);
   input = { ...input, queries: queryContext.queries };
@@ -95,19 +110,15 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
 
   const layoutCache = createCoreLayoutCache(input, () => core);
   const cachedInput = { ...input, persistence: undefined, layoutPersistence: layoutCache.layout };
+  const getPanelMenuOpen = (widgetId: string) => readPanelMenuOpen(core, widgetId);
   const locationAwareLayout = createLayoutModel({
+    getPanelMenuOpen,
     resolvePanelMenuSide: createMenuHeaderSideResolver(() => core),
     defaultRegionVisibility: {
       ...input.defaultPanelOpenByRegionId,
       side: (input.initialSidePanelMode ?? "floating") !== "closed",
     },
-    // The active mode owns region policy; the host input is the fallback. Resolved
-    // lazily because the mode registry is created after the layout model.
-    getRegionSettings: (regionId, activeModeId = core?.modes.getActiveModeId()) => {
-      const activeMode = activeModeId ? core?.modes.getMode(activeModeId) : undefined;
-      return { ...input.regionSettings?.[regionId], ...activeMode?.regionSettings?.[regionId] };
-    },
-    ...layoutPanelGuards(() => core),
+    ...layoutPanelGuards(() => core, input.regionSettings),
     normalizeLayout: (layout) => restorePanelPolicy(core, layout),
     getDetachedOwners: () => (core ? pageContentOwners(core.pages) : []),
     persistence: layoutCache.layout,
@@ -174,7 +185,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   });
 
   const resources = createResourceRegistry({
-    preview: createResourcePreview(getWorkbenchOperations(queryContext.queries)),
+    preview: resourcePreviewForReads(views.reads, getWorkbenchOperations(queryContext.queries)),
     remove: (resource, retained) => removeWorkbenchResource(core, resource, retained, layoutCache.removeResource),
     getPrimary: () => core.getPrimaryResource(),
     resolveView: views.getView,
@@ -196,6 +207,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   });
 
   const pages = createLiveWorkbenchPageRegistry({
+    getPanelMenuOpen,
     ...createResourceViewerRuntime(() => core),
     ...createPageLayoutCacheHandlers(layoutCache),
     loadModeLayout: layoutCache.readMode,

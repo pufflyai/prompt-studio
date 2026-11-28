@@ -71,7 +71,8 @@ export const expectPackagedQueuedSubmission = async (page: Page, sessionId: stri
     held.resolve();
   }
   await expect(page.getByText("Message not sent", { exact: true }).filter({ visible: true })).toBeVisible();
-  await page.getByRole("button", { name: "Restore draft", exact: true }).click();
+  // The failed message returns to the composer by itself; there is no restore action.
   await expect(editor).toHaveText(prompt);
+  await expect(page.getByRole("button", { name: "Restore draft", exact: true })).toHaveCount(0);
   await page.unroute(path);
 };

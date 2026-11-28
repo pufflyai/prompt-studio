@@ -46,6 +46,8 @@ export interface WebviewEditingSnapshot {
   revision: number;
   /** Latest local revision acknowledged by the save command. */
   savedRevision: number;
+  /** Snapshot version of the latest Settings Reset, when the editor should discard local fields. */
+  resetVersion?: number;
   /** Present on command sessions, independent of already accepted commands. */
   hasDrafts?: boolean;
   pendingCommands?: number;

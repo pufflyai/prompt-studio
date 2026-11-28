@@ -109,6 +109,9 @@ export const buildResourceListItems = (input: ResourceListItemsInput): KanbanRen
     rowGrouping: "none",
     structureRows: rows,
   });
+  const hasPageGroupCounts = input.page?.result?.groups.some(
+    (group) => !group.parent && group.field === settings.columnGrouping,
+  );
   return applyKanbanPageCounts(
     grouped,
     input.page?.result?.groups,
@@ -120,6 +123,8 @@ export const buildResourceListItems = (input: ResourceListItemsInput): KanbanRen
       path: [group.key],
       group,
       field,
+      remainingRows:
+        hasPageGroupCounts && group.count !== undefined ? Math.max(0, group.count - group.rows.length) : undefined,
       children: nest([group.key], group.rows, 0),
       onCreate: onCreate ? () => onCreate(group.key) : undefined,
     }),
@@ -131,18 +136,20 @@ interface ResourceListGroupItemInput {
   path: string[];
   group: { key: string; label: string; rows: KanbanRendererRow[]; count?: number };
   field: AttributeDescriptor | undefined;
+  remainingRows?: number;
   children: KanbanRendererListItem[];
   onCreate?: () => void;
 }
 
 const resourceListGroupItem = (input: ResourceListGroupItemInput): KanbanRendererListItem => {
-  const { path, group, field, children } = input;
+  const { path, group, field, children, remainingRows } = input;
   const option = field ? findEnumOption(field.type, group.key) : undefined;
   return {
     id: JSON.stringify(["group", ...path]),
     title: group.label,
     isGroup: true,
     countBadge: group.count ?? group.rows.length,
+    remainingRows,
     statusIcon: getIconComponent(option?.icon),
     statusColorPalette: option?.color,
     note: option?.note,

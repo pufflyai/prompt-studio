@@ -14,6 +14,7 @@ import { runExtensionPreparation } from "./extension-preparation";
 import { createExtensionRootWatcher } from "./extension-root-watcher";
 import { hashExtensionSourceAsync, type LoadedExtensionSnapshot } from "./extension-runtime";
 import { createExtensionSourceWatcher } from "./extension-source-watcher";
+import { createExtensionWatchProcess } from "./extension-watch-process";
 import { createExtensionWebviewBuildManager } from "./extension-webview-build-manager";
 import { EXTENSION_INSTALLING_MARKER, resolvePstdioHome } from "./install-extension-source";
 import type { ProjectExtensionRuntimeCatalog } from "./project-extension-runtime-catalog";
@@ -44,7 +45,11 @@ export const createInstalledExtensionRuntime = (input: {
   workspaceService: ReturnType<typeof createWorkspaceService>;
   webviewBuilds: boolean;
 }) => {
-  const stopPreparation = retainExtensionPreparation();
+  const releasePreparation = retainExtensionPreparation();
+  const watchProcess = process.platform === "darwin" ? createExtensionWatchProcess() : undefined;
+  const stopPreparation = async () => {
+    await Promise.all([releasePreparation(), watchProcess?.stop()]);
+  };
   const userHome = resolvePstdioHome({ env: process.env });
   const userExtensionsRoot = join(userHome, "extensions");
   const createRootWatcher = input.createRootWatcher ?? createExtensionRootWatcher;
@@ -96,10 +101,14 @@ export const createInstalledExtensionRuntime = (input: {
     }));
   };
 
-  const rootWatcher = createRootWatcher({
-    listExtensionRoots: async () => [userExtensionRootRegistration, ...(await listRepoExtensionRootRegistrations())],
-    onError: (err) => apiLogger.error({ err, event: "extensions.root_watcher.error" }, "Extension root watcher failed"),
-  });
+  const rootWatcher = createRootWatcher(
+    {
+      listExtensionRoots: async () => [userExtensionRootRegistration, ...(await listRepoExtensionRootRegistrations())],
+      onError: (err) =>
+        apiLogger.error({ err, event: "extensions.root_watcher.error" }, "Extension root watcher failed"),
+    },
+    watchProcess,
+  );
   // Project setup/adoption already provisions accepted content. An attachment
   // reconciles from that baseline so unchanged sources cannot reopen workspace
   // setup after creation returns; edits made before watching still differ.
@@ -206,13 +215,16 @@ export const createInstalledExtensionRuntime = (input: {
     candidateInspection.cancel(sourcePath);
     return webviewBuildManager.refresh(sourcePath, reason);
   };
-  const sourceWatcher = createSourceWatcher({
-    listInstalledSources: listExistingInstalledSources,
-    onSourceChanged: (sourcePath) => refreshFrontend(sourcePath),
-    onSourceAttached: (sourcePath) => refreshFrontend(sourcePath, "attachment"),
-    afterSourceChanged: provisionWhenSourceChanged,
-    onError: (err) => apiLogger.error({ err, event: "extensions.source_watcher.error" }, "Extension watcher failed"),
-  });
+  const sourceWatcher = createSourceWatcher(
+    {
+      listInstalledSources: listExistingInstalledSources,
+      onSourceChanged: (sourcePath) => refreshFrontend(sourcePath),
+      onSourceAttached: (sourcePath) => refreshFrontend(sourcePath, "attachment"),
+      afterSourceChanged: provisionWhenSourceChanged,
+      onError: (err) => apiLogger.error({ err, event: "extensions.source_watcher.error" }, "Extension watcher failed"),
+    },
+    watchProcess,
+  );
 
   const refreshWatchers = async () => {
     await (await rootWatcher).refresh();

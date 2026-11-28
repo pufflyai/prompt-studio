@@ -170,6 +170,8 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LocationA
     registerWidget: contributionRegistrations.registerWidget,
   });
   const widgetOpeners = createWidgetOpeners({
+    setLayout,
+    getPanelMenuOpen: input.getPanelMenuOpen,
     resolvePanelMenuSide: input.resolvePanelMenuSide,
     getLayout,
     requireWidget,

@@ -45,6 +45,7 @@ export interface LayoutPersistenceAdapter {
 }
 
 export interface CreateLayoutModelInput {
+  getPanelMenuOpen?(widgetId: string): boolean | undefined;
   resolvePanelMenuSide?(
     owner: WorkbenchWidgetPlacement,
     menu: RegisteredWidgetContribution,

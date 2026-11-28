@@ -10,7 +10,7 @@ import {
   type RowData,
   useDataTableViewStore,
 } from "@pstdio/ui/data-table";
-import { type ReactNode, useSyncExternalStore } from "react";
+import { type ReactNode, useEffect, useSyncExternalStore } from "react";
 import { useShallow } from "zustand/react/shallow";
 import type {
   DataTableRendererQueryResult,
@@ -21,6 +21,7 @@ import type {
 import { rendererReadKey } from "../../../core";
 import { acceptRendererPage } from "../../../core/registries/renderers/renderer-page";
 import { runUserAction } from "../../../core/shared/run-user-action";
+import { boundedResource, setWorkbenchSelection } from "../../../core/workbench-context";
 import type { CommandParamFieldRenderer } from "../../command-palette/command-params-dialog";
 import { useWorkbenchResourceActionResolver } from "../../menus/resource-actions";
 import { useWorkbenchStore } from "../../shared/use-workbench-store";
@@ -85,6 +86,24 @@ const emptyTablePlaceholder = (
   return (
     <EmptyState h="full" title={contribution.emptyTitle ?? "No rows"} description={contribution.emptyDescription} />
   );
+};
+
+const useTableWorkbenchSelection = (
+  workbench: WorkbenchCore,
+  placement: WorkbenchPanelInstance,
+  lookup: ReturnType<typeof buildDataTableRendererData>["rowByData"],
+) => {
+  const { instanceId } = placement;
+  useEffect(() => () => setWorkbenchSelection(workbench, instanceId), [workbench, instanceId]);
+  return (rows: RowData[]) => {
+    const projectId = workbench.pages.store.getState().projectId;
+    if (!projectId) return;
+    const items = rows.slice(0, 100).flatMap((row) => {
+      const item = boundedResource(lookup.get(row)?.resource, projectId);
+      return item ? [item] : [];
+    });
+    setWorkbenchSelection(workbench, instanceId, items.length ? { kind: "resources", items } : { kind: "none" });
+  };
 };
 
 export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
@@ -175,6 +194,7 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
     (read.loading && !read.value) ||
     pageColumns.pending(read.value?.position?.fields, pages.request.fields, read.error);
   const model = buildDataTableRendererData(rows, columns);
+  const reportSelection = useTableWorkbenchSelection(workbench, placement, model.rowByData);
   const labels = Object.fromEntries(
     columns.filter((column) => column.label).map((column) => [column.id, column.label!]),
   );
@@ -270,6 +290,7 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
         columnRenderers={renderers}
         initialPageSize={contribution.initialPageSize}
         pageSizeOptions={contribution.pageSizeOptions}
+        onSelectedRowsChange={reportSelection}
         selectionMode={contribution.selectionMode}
         selectionActions={selectionActions}
         rowActions={rowActions}

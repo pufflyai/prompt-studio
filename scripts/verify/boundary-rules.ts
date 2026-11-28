@@ -196,7 +196,7 @@ export const PRIVATE_EXPORT_LIMITS: Record<string, number> = {
   // Root, records, text, relay, encryption, presence and append-only logs.
   "pstdio-sync": 7,
   // ADR0147 adds the pure compiled input inspector alongside app and runtime routes.
-  "pstdio-api": 3,
+  "pstdio-api": 4,
   "pstdio-api-contracts": 7,
   // ADR0147 owns six preparation transport, worker, cache and pure revision-input modules.
   "pstdio-extensions": 18,

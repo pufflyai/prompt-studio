@@ -25,7 +25,7 @@ import type {
   WorkbenchPageResourceCodec,
 } from "./page-registry-types";
 import { refreshPageResources, refreshResourceLocation } from "./page-resource-refresh";
-import { pageStateKey } from "./page-state-key";
+import { pageStateKey, pageStateOwnerKey } from "./page-state-key";
 
 export type {
   CreateWorkbenchPageRegistryInput,
@@ -76,6 +76,18 @@ export const createWorkbenchPageRegistry = <Value>(
     operation: "navigate" | "select" = "navigate",
   ) =>
     batchWorkbenchChanges(() => {
+      const previous = store.getState();
+      const page = state.pages[state.activePageId ?? ""];
+      if (
+        state.navigationLocation !== undefined &&
+        (previous.projectId !== state.projectId ||
+          previous.activeModeId !== state.activeModeId ||
+          previous.activePageId !== state.activePageId ||
+          (page &&
+            pageStateOwnerKey(page, previous.location?.resource, input.resources) !==
+              pageStateOwnerKey(page, state.location?.resource, input.resources)))
+      )
+        state = { ...state, navigationLocation: undefined };
       state = normalizeState?.(state, operation) ?? state;
       const storeBeforeRuntime = store.getState();
       const previousPublishingState = publishingState;
@@ -107,6 +119,9 @@ export const createWorkbenchPageRegistry = <Value>(
     store,
     getContent() {
       return resolvePageContent(store.getState());
+    },
+    setNavigationLocation(navigationLocation) {
+      store.setState({ navigationLocation }, false, "setNavigationLocation");
     },
 
     registerPage(page) {
@@ -228,6 +243,7 @@ export const createWorkbenchPageRegistry = <Value>(
           pageStates,
           projectId,
           location: undefined,
+          navigationLocation: undefined,
           activePageId: undefined,
           activeModeId: undefined,
           placements,

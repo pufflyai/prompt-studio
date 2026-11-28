@@ -70,7 +70,7 @@ export const DesktopProjectTabs = (props: DesktopProjectTabsProps) => {
   }));
   // Clicking the tab of the project the user is already in leaves the open Sidenav level instead.
   const selectTab = (id: string) => {
-    if (id === selected) workbench.pageLocations.navigateToRootLevel();
+    if (id === selected) workbench.pages.setNavigationLocation(null);
     else controller.select(id);
   };
   if (typeof selected !== "string") return <WindowTitleBar platform={platform} />;

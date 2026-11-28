@@ -4,9 +4,10 @@ import { type ComponentType, type ReactNode, useRef, useState } from "react";
 import type { ResourceContextAction } from "@/components/overlays/resource-context-menu";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { useVirtualizer } from "@/utils/use-virtualizer";
-import { CollectionLoadMore } from "../collection-view/collection-load-more";
+import { CollectionPageBoundary } from "../collection-view/collection-page-boundary";
 import type { AttributeBadge } from "./kanban-renderer-helpers";
 import { KanbanRendererListRow } from "./kanban-renderer-list-row";
+import { KanbanListSkeletonRows } from "./kanban-renderer-skeleton";
 import { shouldVirtualizeKanban } from "./kanban-renderer-virtualization";
 
 export interface KanbanRendererListItem {
@@ -21,6 +22,8 @@ export interface KanbanRendererListItem {
   onCreate?: () => void;
   expandOnClick?: boolean;
   countBadge?: number;
+  /** Unloaded rows in this group, when the provider supplies a full count. */
+  remainingRows?: number;
   countColorPalette?: string;
   statusIcon?: ComponentType<{ size?: number | string }>;
   statusColor?: string;
@@ -40,6 +43,7 @@ export type KanbanRendererListExpandedState = Record<string, boolean>;
 export interface KanbanRendererListProps {
   onLoadMore?: () => void;
   loadingMore?: boolean;
+  pageCursor?: string | null;
   items: KanbanRendererListItem[];
   selectedItemId?: string | null;
   expandedGroups?: KanbanRendererListExpandedState;
@@ -53,17 +57,20 @@ export interface FlattenedKanbanRendererListItem {
   depth: number;
   isGroup: boolean;
   canExpand: boolean;
+  pageBoundary?: true;
 }
 
 export const flattenKanbanRendererListItems = (
   items: KanbanRendererListItem[],
   expanded: KanbanRendererListExpandedState,
   depth = 0,
+  includePageBoundaries = false,
 ) => {
   const rows: FlattenedKanbanRendererListItem[] = [];
 
   for (const item of items) {
-    const canExpand = (item.children?.length ?? 0) > 0;
+    const hasMore = (item.remainingRows ?? 0) > 0;
+    const canExpand = (item.children?.length ?? 0) > 0 || (includePageBoundaries && hasMore);
     rows.push({
       id: item.id,
       item,
@@ -73,7 +80,17 @@ export const flattenKanbanRendererListItems = (
     });
 
     if (canExpand && getRowIsExpanded(expanded, item.id)) {
-      rows.push(...flattenKanbanRendererListItems(item.children ?? [], expanded, depth + 1));
+      rows.push(...flattenKanbanRendererListItems(item.children ?? [], expanded, depth + 1, includePageBoundaries));
+      if (includePageBoundaries && hasMore) {
+        rows.push({
+          id: JSON.stringify(["next-page", item.id]),
+          item,
+          depth: depth + 1,
+          isGroup: false,
+          canExpand: false,
+          pageBoundary: true,
+        });
+      }
     }
   }
 
@@ -88,6 +105,11 @@ const updateExpandedState = (expandedState: KanbanRendererListExpandedState, row
   return { ...expandedState, [rowId]: isExpanded };
 };
 
+const pageSkeletonCount = 3;
+const listRowEstimate = 35;
+const skeletonCount = (row?: FlattenedKanbanRendererListItem) =>
+  Math.min(pageSkeletonCount, row?.item.remainingRows ?? pageSkeletonCount);
+
 export const KanbanRendererList = (props: KanbanRendererListProps) => {
   const { items, selectedItemId = null, expandedGroups, onItemClick, onExpandedGroupChange } = props;
   const [localExpandedGroups, setLocalExpandedGroups] = useState<KanbanRendererListExpandedState>({});
@@ -95,8 +117,20 @@ export const KanbanRendererList = (props: KanbanRendererListProps) => {
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
   const [focusedItemId, setFocusedItemId] = useState<string | null>(null);
   const expanded = expandedGroups ?? localExpandedGroups;
-  const rows = flattenKanbanRendererListItems(items, expanded);
+  const hasNextPage = Boolean(props.pageCursor || props.onLoadMore || props.loadingMore);
+  const pagedGroups = items.some((item) => item.remainingRows !== undefined);
+  const rows = flattenKanbanRendererListItems(items, expanded, 0, hasNextPage && pagedGroups);
   const virtualize = shouldVirtualizeKanban(rows.length);
+  const pageBoundary = (row?: FlattenedKanbanRendererListItem) => (
+    <CollectionPageBoundary
+      key={props.pageCursor ?? rows.length}
+      loading={props.loadingMore && !draggedItemId}
+      onLoadMore={draggedItemId ? undefined : props.onLoadMore}
+      loadingLabel={row ? `Loading more items in ${row.item.title}` : undefined}
+      placeholder={<KanbanListSkeletonRows count={skeletonCount(row)} depth={row?.depth} />}
+      reservePlaceholderSpace
+    />
+  );
 
   const handleExpandedChange = (rowId: string, isExpanded: boolean) => {
     onExpandedGroupChange?.(rowId, isExpanded);
@@ -109,12 +143,13 @@ export const KanbanRendererList = (props: KanbanRendererListProps) => {
   const { virtualizer, virtualItems, totalSize } = useVirtualizer<HTMLDivElement, HTMLDivElement>({
     count: rows.length,
     enabled: virtualize,
-    onChange: (instance, scrolling) => {
-      if (scrolling && instance.range && instance.range.endIndex >= rows.length - 1) props.onLoadMore?.();
-    },
     getScrollElement: () => viewport.current,
     getItemKey: (index) => rows[index].id,
-    estimateSize: (index) => (rows[index].isGroup ? 29 : 35),
+    estimateSize: (index) => {
+      const row = rows[index];
+      if (row.pageBoundary) return skeletonCount(row) * listRowEstimate;
+      return row.isGroup ? 29 : listRowEstimate;
+    },
     overscan: 10,
     // Active rows keep their DOM node when scrolled beyond the visible range.
     rangeExtractor: (range) => {
@@ -131,24 +166,7 @@ export const KanbanRendererList = (props: KanbanRendererListProps) => {
     : rows.map((row, index) => ({ row, index, start: undefined }));
 
   return (
-    <ScrollArea
-      flex="1"
-      minH="0"
-      viewportRef={viewport}
-      viewportProps={{
-        "aria-label": "Collection list",
-        onScroll: (event) => {
-          if (virtualize) return;
-          const viewport = event.currentTarget;
-          if (viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight > 8) return;
-          if (!props.loadingMore) props.onLoadMore?.();
-        },
-        onWheel: (event) => {
-          const viewport = event.currentTarget;
-          if (event.deltaY > 0 && viewport.scrollHeight <= viewport.clientHeight) props.onLoadMore?.();
-        },
-      }}
-    >
+    <ScrollArea flex="1" minH="0" viewportRef={viewport} viewportProps={{ "aria-label": "Collection list" }}>
       <Box position={virtualize ? "relative" : undefined} height={virtualize ? `${totalSize}px` : undefined}>
         {renderedRows.map(({ row, index, start }) => {
           return (
@@ -165,24 +183,26 @@ export const KanbanRendererList = (props: KanbanRendererListProps) => {
                 if (!event.currentTarget.contains(event.relatedTarget)) setFocusedItemId(null);
               }}
             >
-              <KanbanRendererListRow
-                row={row}
-                isExpanded={getRowIsExpanded(expanded, row.id)}
-                selectedItemId={selectedItemId}
-                activeDropTargetId={activeDropTargetId}
-                draggedItemId={draggedItemId}
-                onDraggedItemChange={setDraggedItemId}
-                onDropTargetChange={setActiveDropTargetId}
-                onItemClick={onItemClick}
-                onExpandedChange={handleExpandedChange}
-              />
+              {row.pageBoundary ? (
+                pageBoundary(row)
+              ) : (
+                <KanbanRendererListRow
+                  row={row}
+                  isExpanded={getRowIsExpanded(expanded, row.id)}
+                  selectedItemId={selectedItemId}
+                  activeDropTargetId={activeDropTargetId}
+                  draggedItemId={draggedItemId}
+                  onDraggedItemChange={setDraggedItemId}
+                  onDropTargetChange={setActiveDropTargetId}
+                  onItemClick={onItemClick}
+                  onExpandedChange={handleExpandedChange}
+                />
+              )}
             </Box>
           );
         })}
       </Box>
-      {props.onLoadMore ? (
-        <CollectionLoadMore label="Load more rows" loading={props.loadingMore} onLoadMore={props.onLoadMore} />
-      ) : null}
+      {hasNextPage && !pagedGroups ? pageBoundary() : null}
     </ScrollArea>
   );
 };

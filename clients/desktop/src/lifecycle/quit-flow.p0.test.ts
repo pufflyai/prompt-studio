@@ -72,10 +72,7 @@ const createHarness = (input: {
 };
 
 describe("desktop quit flow with a broken interface", () => {
-  test.each([
-    false,
-    true,
-  ])("a broken closing interface does not stop owned shutdown (confirmed: %s)", async (confirmed) => {
+  test("a broken closing interface does not stop confirmed shutdown", async () => {
     const requests: boolean[] = [];
     const { flow, calls } = createHarness({
       refreshRuntime: async () => runtime,
@@ -84,14 +81,14 @@ describe("desktop quit flow with a broken interface", () => {
       },
       requestShutdown: async (force) => {
         requests.push(force);
-        return confirmed && !force
+        return !force
           ? { state: "active", activity: { ...noActivity, sessions: [{ id: "s1", label: "Session" }] } }
           : { state: "accepted" };
       },
     });
     await flow.requestQuit();
-    if (confirmed) await flow.confirmQuit();
-    expect(requests).toEqual(confirmed ? [false, true] : [false]);
+    await flow.confirmQuit();
+    expect(requests).toEqual([false, true]);
     expect(calls).toContain("waitForExit");
     expect(calls).toContain("quitApp");
     expect(flow.isQuitAllowed()).toBe(true);
@@ -141,6 +138,28 @@ describe("desktop quit flow with a broken interface", () => {
     await flow.requestQuit();
     expect(calls).toContain("quitApp");
   });
+});
+
+test("quits as soon as an idle runtime accepts shutdown", async () => {
+  const { flow, calls } = createHarness({
+    refreshRuntime: async () => runtime,
+    showLifecycle: async () => {
+      calls.push("showLifecycle");
+    },
+  });
+
+  await flow.requestQuit();
+
+  expect(calls).toEqual(["quitApp"]);
+  expect(flow.isQuitAllowed()).toBe(true);
+});
+
+test("an idle upgrade still waits for the runtime to exit", async () => {
+  const { flow, calls } = createHarness({ refreshRuntime: async () => runtime });
+
+  await flow.requestUpgrade();
+
+  expect(calls).toEqual(["waitForExit", "install-update"]);
 });
 
 describe("desktop quit flow", () => {
@@ -407,7 +426,7 @@ test("an ordinary quit after dismissing an upgrade never requests a relaunch", a
   await flow.cancelQuit();
   busy = false;
   await flow.requestQuit();
-  expect(calls).toEqual(["showQuitConfirmation", "waitForExit", "quitApp"]);
+  expect(calls).toEqual(["showQuitConfirmation", "quitApp"]);
 });
 
 test("an upgrade and a concurrent runtime exit hand off to the installer once", async () => {

@@ -14,6 +14,12 @@ Press **Mod+P** (Cmd+P on macOS, Ctrl+P elsewhere), or choose **Search** in the 
 
 **Reopen latest tab** in search restores the most recently closed tab in the current project.
 
+## Find in a Markdown document
+
+With the editor focused, press **Cmd+F** on macOS or **Ctrl+F** on Windows or Linux.
+Find searches the visible text of that editor, including text with inline formatting.
+Press **Enter** for the next match, **Shift+Enter** for the previous match, or **Escape** to close Find and return to the editor.
+
 ## Add your tool to search
 
 An extension lists its items with the `commandPaletteResources` contribution; its commands appear with their labels and shortcut hints. See [Contributions](../../references/extensions/0004-contribution-api.md#contribution-surfaces) and [Commands and processes](../../references/extensions/0003-command-and-process-api.md).

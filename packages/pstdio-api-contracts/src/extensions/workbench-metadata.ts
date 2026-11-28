@@ -126,8 +126,8 @@ export const workbenchExtensionViewBodySchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("chat"),
     draftKey: z.string().min(1),
-    legacySessionDraft: z.boolean().optional(),
-    browserDraft: z.object({ acknowledgeRecoveryHandlerId: z.string().optional() }).optional(),
+    // Runtimes before PS-1405 also sent a recovery handler here; it is dropped.
+    browserDraft: z.object({}).optional(),
     initial: chatRendererSnapshotSchema.optional(),
     queryHandlerId: z.string(),
     actionHandlerId: z.string(),

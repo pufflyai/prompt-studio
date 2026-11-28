@@ -7,6 +7,7 @@ import {
   type WorkbenchPanelInstance,
 } from "../../../core";
 import { toPanelInstance } from "../../../core/registries/layout/panel-api";
+import { resolvePanelMenuRegionState } from "../../panel-menu/panel-menu-placements";
 import { useTreePresentationState, useTreeViewState } from "./tree-presentation-state";
 import { createTreeNavigator } from "./tree-view";
 import { useTreeData } from "./use-tree-data";
@@ -129,8 +130,12 @@ for (const [region, params] of (["side", "secondary"] as const).flatMap((region)
       await w.navigation.openTarget({ kind: "page", page: page("files"), resource: file("src/app.ts") });
       w.movePanel(w.pages.getContent()!.widgetId, region);
       let tree: Parameters<Parameters<typeof MenuTree>[0]["capture"]>[0] | undefined;
-      const render = async () => {
-        const menu = w.layout.getLayout().regions[`${region}-left-menu`].widgets[0]!;
+      const originalMenu = w.layout.getLayout().regions[`${region}-left-menu`].widgets[0]!;
+      const originalMenuId = originalMenu.widgetId;
+      const render = async (menuId = originalMenuId) => {
+        const menu = w.layout
+          .getLayout()
+          .regions[`${region}-left-menu`].widgets.find((item) => item.widgetId === menuId)!;
         const element = (
           <MenuTree workbench={w} placement={toPanelInstance(menu)} capture={(value) => (tree = value)} />
         );
@@ -162,6 +167,25 @@ for (const [region, params] of (["side", "secondary"] as const).flatMap((region)
       expect(w.pages.store.getState().location?.page).toEqual(page("home"));
       await render();
       expect(tree?.activeNodeId).toBe(params ? "src/app.ts" : "src/other.ts");
+      if (params) {
+        const menus = w.layout.getLayout().regions[`${region}-left-menu`];
+        const activeMenu = menus.widgets.find((item) => item.widgetId === menus.activeWidgetId)!;
+        expect(activeMenu.menuOwnerWidgetId).toBe(layout.regions[region].activeWidgetId);
+        expect(resolvePanelMenuRegionState(w, `${region}-left-menu`).widgets.map((item) => item.widgetId)).toEqual([
+          activeMenu.widgetId,
+        ]);
+        expect(activeMenu.resource?.metadata?.path).toBe("src/other.ts");
+        await render(activeMenu.widgetId);
+        expect(tree?.activeNodeId).toBe("src/other.ts");
+        await act(async () => {
+          w.layout.activatePanel(originalMenu.menuOwnerWidgetId!);
+        });
+        expect(resolvePanelMenuRegionState(w, `${region}-left-menu`).widgets.map((item) => item.widgetId)).toEqual([
+          originalMenuId,
+        ]);
+        await render();
+        expect(tree?.activeNodeId).toBe("src/app.ts");
+      }
     } finally {
       await act(async () => renderer?.unmount());
       await w.dispose();

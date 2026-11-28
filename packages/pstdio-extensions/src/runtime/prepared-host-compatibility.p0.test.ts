@@ -1,5 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
-import { copyFileSync, mkdirSync, mkdtempSync, rmSync, statSync, utimesSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, statSync, utimesSync, writeFileSync } from "node:fs";
+import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
@@ -11,7 +12,8 @@ afterEach(async () => {
   for (const child of children) child.kill();
   await Promise.all([...children].map((child) => child.exited));
   children.clear();
-  for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
+  // Windows can keep a just-exited copied host executable locked for a moment.
+  for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 const observeHost = async (executable: string, home: string, source: string, scenario: string) => {

@@ -21,12 +21,14 @@ export const ActivityEvent = (props: ActivityEventProps) => {
 
   return (
     <Timeline.Item gap="xs" minH="24px" paddingX="md" {...rootProps}>
-      <Timeline.Connector>
-        <Timeline.Separator borderColor="border" />
-        <Timeline.Indicator outline="none" border="none" background="bg">
-          <ActivityAvatar actor={actor} icon={icon} color={iconColor} background={iconBackground} />
-        </Timeline.Indicator>
-      </Timeline.Connector>
+      {icon || actor?.showAvatar !== false ? (
+        <Timeline.Connector>
+          <Timeline.Separator borderColor="border" />
+          <Timeline.Indicator outline="none" border="none" background="bg">
+            <ActivityAvatar actor={actor} icon={icon} color={iconColor} background={iconBackground} />
+          </Timeline.Indicator>
+        </Timeline.Connector>
+      ) : null}
       <Timeline.Content gap="0" minW="0">
         <Timeline.Title
           marginTop="0"

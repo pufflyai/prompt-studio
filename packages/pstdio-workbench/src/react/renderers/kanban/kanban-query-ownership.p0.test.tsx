@@ -1,6 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
 import { ChakraProvider, psTheme } from "@pstdio/ui";
-import type { KanbanRendererProps } from "@pstdio/ui/kanban-renderer";
+import { type KanbanRendererProps, useKanbanRendererStore } from "@pstdio/ui/kanban-renderer";
 import { Activity, useSyncExternalStore } from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { createWorkbench, getWorkbenchRenderers } from "../../../core";
@@ -108,6 +108,256 @@ test("production duplicate boards share semantic queries while retaining indepen
   expect(calls).toBe(5);
   await act(async () => tree?.update(content(true)));
   expect(calls).toBe(6);
+});
+
+test("status moves keep loaded pages visible and the next scroll still appends", async () => {
+  environment.IS_REACT_ACT_ENVIRONMENT = true;
+  core = createWorkbench();
+  const renderers = getWorkbenchRenderers(core);
+  const release = Promise.withResolvers<void>();
+  let revision = 0;
+  let status = "todo";
+  let refreshStarted = false;
+  renderers.registerKanbanRenderer({
+    id: "tickets",
+    title: "Tickets",
+    attributes: [],
+    initialPageSize: 2,
+    defaultSettings: { columnGrouping: "status" },
+    executeQuery: () => [],
+    executePage: async ({ page: { offset = 0, limit } }) => {
+      if (revision === 1) {
+        refreshStarted = true;
+        await release.promise;
+      }
+      const ids = Array.from({ length: 8 }, (_, index) => String(index));
+      return {
+        rows: ids.slice(offset, offset + limit).map((id) => ({
+          id,
+          title: id,
+          attributes: { status: id === "0" ? status : "todo" },
+        })),
+        page: {
+          revision: String(revision),
+          cursor: offset + limit < ids.length ? String(offset + limit) : null,
+          total: ids.length,
+          filteredTotal: ids.length,
+          groups: [
+            { field: "status", value: "todo", count: status === "todo" ? 8 : 7 },
+            ...(status === "done" ? [{ field: "status", value: "done", count: 1 }] : []),
+          ],
+        },
+      };
+    },
+    onMove: ({ attributes }) => {
+      status = String(attributes.status);
+      revision++;
+    },
+  });
+  let board!: KanbanRendererProps;
+  const Renderer = (props: KanbanRendererProps) => {
+    board = props;
+    return null;
+  };
+  await act(async () => {
+    tree = create(
+      <ChakraProvider value={psTheme}>
+        <WorkbenchKanbanView
+          workbench={core}
+          contribution={renderers.getKanbanRenderer("tickets")!}
+          placement={{ instanceId: "tickets", panelId: "tickets", closable: false }}
+          Renderer={Renderer}
+        />
+      </ChakraProvider>,
+    );
+  });
+  expect(board.rows.map(({ id }) => id)).toEqual(["0", "1"]);
+  await act(async () => board.page?.onLoadMore?.());
+  const untouched = board.rows[2];
+  const moves: Promise<void>[] = [];
+  const move = (next: string) =>
+    moves.push(Promise.resolve(board.onMove?.({ rowId: "0", attributes: { status: next } })));
+  await act(async () => {
+    move("done");
+  });
+  expect(refreshStarted).toBe(true);
+  expect(board.page?.loading).toBe(false);
+  expect(board.page?.onLoadMore).toBeUndefined();
+  expect(board.rows.map(({ id }) => id)).toEqual(["0", "1", "2", "3"]);
+  expect(board.rows[0].attributes.status).toBe("done");
+  expect(board.page?.result?.groups).toEqual([
+    { field: "status", value: "todo", count: 7 },
+    { field: "status", value: "done", count: 1 },
+  ]);
+  expect(board.rows[2]).toBe(untouched);
+  await act(async () => {
+    move("todo");
+  });
+  expect(board.rows[0].attributes.status).toBe("todo");
+  expect(board.page?.result?.groups).toEqual([{ field: "status", value: "todo", count: 8 }]);
+  expect(board.rows[2]).toBe(untouched);
+  await act(async () => {
+    release.resolve();
+    await Promise.all(moves);
+  });
+  expect(revision).toBe(2);
+  expect(board.rows[2]).toBe(untouched);
+  expect(board.page?.onLoadMore).toBeFunction();
+  await act(async () => board.page?.onLoadMore?.());
+  expect(board.rows.map(({ id }) => id)).toEqual(["0", "1", "2", "3", "4", "5"]);
+});
+
+test("switching Planner from board to list keeps the loaded pages and their next cursor", async () => {
+  environment.IS_REACT_ACT_ENVIRONMENT = true;
+  core = createWorkbench();
+  const id = "pstdio.planner.view.tickets";
+  const renderers = getWorkbenchRenderers(core);
+  const requests: [number, string | undefined][] = [];
+  renderers.registerKanbanRenderer({
+    id,
+    title: "Tickets",
+    attributes: [],
+    initialPageSize: 50,
+    defaultSettings: { displayProperties: [] },
+    executeQuery: () => [],
+    executePage: async ({ page: { offset = 0, limit, cursor } }) => {
+      requests.push([offset, cursor]);
+      return {
+        rows: Array.from({ length: limit }, (_, index) => ({
+          id: String(offset + index),
+          title: `Ticket ${offset + index}`,
+          attributes: {},
+        })),
+        page: {
+          revision: "r1",
+          cursor: String(offset + limit),
+          total: 3000,
+          filteredTotal: 3000,
+          groups: [],
+          statistics: {},
+        },
+      };
+    },
+  });
+  let renderer!: KanbanRendererProps;
+  let showList!: () => void;
+  const Renderer = (props: KanbanRendererProps) => {
+    renderer = props;
+    const setSettings = useKanbanRendererStore(props.storageKey, (state) => state.setSettings);
+    showList = () => setSettings({ viewMode: "list" });
+    return null;
+  };
+  await act(async () => {
+    tree = create(
+      <ChakraProvider value={psTheme}>
+        <WorkbenchKanbanView
+          workbench={core}
+          contribution={renderers.getKanbanRenderer(id)!}
+          placement={{ instanceId: "paged-tickets", panelId: id, closable: false }}
+          Renderer={Renderer}
+        />
+      </ChakraProvider>,
+    );
+  });
+  await act(async () => renderer.page?.onLoadMore?.());
+  expect(renderer.rows).toHaveLength(100);
+  const firstRow = renderer.rows[0];
+
+  await act(async () => showList());
+  expect(requests).toEqual([
+    [0, undefined],
+    [50, "50"],
+  ]);
+  expect(renderer.rows).toHaveLength(100);
+  expect(renderer.rows[0]).toBe(firstRow);
+
+  await act(async () => renderer.page?.onLoadMore?.());
+  expect(requests).toEqual([
+    [0, undefined],
+    [50, "50"],
+    [100, "100"],
+  ]);
+  expect(renderer.rows).toHaveLength(150);
+  expect(renderer.rows[0]).toBe(firstRow);
+});
+
+test.each([
+  false,
+  true,
+])("returning to a hidden board keeps an acknowledged move visible (pending schema refresh: %s)", async (schemaRefresh) => {
+  environment.IS_REACT_ACT_ENVIRONMENT = true;
+  core = createWorkbench();
+  const renderers = getWorkbenchRenderers(core);
+  const save = Promise.withResolvers<void>();
+  const refresh = Promise.withResolvers<void>();
+  let status = "todo";
+  let reads = 0;
+  const unchanged = { id: "other", title: "Other", attributes: { status: "todo" } };
+  renderers.registerKanbanRenderer({
+    id: "tickets",
+    title: "Tickets",
+    attributes: [],
+    executeQuery: () => [],
+    executePage: async (_state, signal) => {
+      reads++;
+      if (reads > 1) {
+        const aborted = new Promise<never>((_resolve, reject) =>
+          signal.addEventListener("abort", () => reject(signal.reason), { once: true }),
+        );
+        await Promise.race([refresh.promise, aborted]);
+      }
+      return {
+        rows: [{ id: "ticket", title: "Ticket", attributes: { status } }, unchanged],
+        attributes: schemaRefresh ? [{ id: "status", label: "Status", type: { kind: "string" as const } }] : undefined,
+        page: { revision: String(reads), cursor: null, total: 2, filteredTotal: 2, groups: [] },
+      };
+    },
+    onMove: async ({ attributes }) => {
+      await save.promise;
+      status = String(attributes.status);
+    },
+  });
+  let board!: KanbanRendererProps;
+  const Renderer = (props: KanbanRendererProps) => {
+    board = props;
+    return null;
+  };
+  const content = (visible: boolean) => (
+    <ChakraProvider value={psTheme}>
+      <Activity mode={visible ? "visible" : "hidden"}>
+        <WorkbenchKanbanView
+          workbench={core}
+          contribution={renderers.getKanbanRenderer("tickets")!}
+          placement={{ instanceId: "tickets", panelId: "tickets", closable: false }}
+          Renderer={Renderer}
+        />
+      </Activity>
+    </ChakraProvider>
+  );
+  await act(async () => {
+    tree = create(content(true));
+  });
+  let move: Promise<void> | void;
+  await act(async () => {
+    move = board.onMove!({ rowId: "ticket", attributes: { status: "blocked" } });
+  });
+  expect(board.rows[0].attributes.status).toBe("blocked");
+  const stableRow = board.rows[1];
+  await act(async () => tree?.update(content(false)));
+  await act(async () => {
+    save.resolve();
+    await move;
+  });
+  expect(reads).toBe(schemaRefresh ? 2 : 1);
+  await act(async () => tree?.update(content(true)));
+  expect(reads).toBe(schemaRefresh ? 3 : 2);
+  const returning = board.rows;
+  await act(async () => refresh.resolve());
+  expect(returning[0].attributes.status).toBe("blocked");
+  expect(returning[1]).toBe(stableRow);
+  expect(board.rows[0].attributes.status).toBe("blocked");
+  expect(board.rows[1]).toBe(stableRow);
+  expect(board.page?.result?.revision).toBe(schemaRefresh ? "3" : "2");
 });
 
 test("create and open leaves the departing board stale until it is visible again", async () => {
@@ -218,12 +468,15 @@ test("create and open leaves the departing board stale until it is visible again
   expect(calls).toBe(5);
 });
 
-test("column actions defer board reconciliation until their writes finish", async () => {
+test("column actions wait for earlier row moves and defer reconciliation until their own write finishes", async () => {
   environment.IS_REACT_ACT_ENVIRONMENT = true;
   core = createWorkbench();
   let output: KanbanRendererProps | undefined;
   let reads = 0;
+  let moved = false;
+  let actionStarted = false;
   let archived = false;
+  const moveSaved = Promise.withResolvers<void>();
   const saving = Promise.withResolvers<void>();
   const entered = Promise.withResolvers<void>();
   const renderers = getWorkbenchRenderers(core);
@@ -233,9 +486,14 @@ test("column actions defer board reconciliation until their writes finish", asyn
     attributes: [],
     executeQuery: () => {
       reads++;
-      return archived ? [] : [{ id: "row", title: "Row", attributes: {} }];
+      return archived ? [] : [{ id: "row", title: "Row", attributes: { status: moved ? "done" : "todo" } }];
+    },
+    onMove: async () => {
+      await moveSaved.promise;
+      moved = true;
     },
     onColumnAction: async () => {
+      actionStarted = true;
       renderers.refreshKanbanRenderer("column action board");
       entered.resolve();
       await saving.promise;
@@ -261,8 +519,16 @@ test("column actions defer board reconciliation until their writes finish", asyn
   });
   expect(reads).toBe(1);
   let action: Promise<unknown> | undefined;
+  let movement: Promise<void> | void;
   await act(async () => {
+    movement = output!.onMove!({ rowId: "row", attributes: { status: "done" } });
     action = Promise.resolve(output!.onColumnAction!("done", "archive"));
+  });
+  expect(actionStarted).toBe(false);
+  expect(reads).toBe(1);
+  await act(async () => {
+    moveSaved.resolve();
+    await movement;
     await entered.promise;
   });
   const pendingReads = reads;
@@ -270,7 +536,7 @@ test("column actions defer board reconciliation until their writes finish", asyn
     saving.resolve();
     await action;
   });
-  expect(pendingReads).toBe(1);
-  expect(reads).toBe(2);
+  expect(pendingReads).toBe(2);
+  expect(reads).toBe(3);
   expect(output!.rows).toEqual([]);
 });

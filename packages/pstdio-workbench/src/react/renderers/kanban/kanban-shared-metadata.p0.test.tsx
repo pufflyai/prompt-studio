@@ -196,9 +196,9 @@ for (const queryMode of ["legacy", "paged"] as const) {
       }
       const before = calls;
       await act(async () => getWorkbenchRenderers(workbench).refreshKanbanRenderer("tasks"));
-      expect(output.get("third")!.rows[0].title).toBe(`First ${calls}`);
-      expect(calls).toBe(before + 1);
-      expectColumns("Ready", ["third"]);
+      expect(output.get("third")!.rows[0].title).toBe(`First ${before + 1}`);
+      expect(calls).toBe(before + (queryMode === "paged" ? 2 : 1));
+      expectColumns("Ready", ["third"], ["todo", "done"]);
       includeAttributes = true;
       clearPresentation = true;
       await act(async () => getWorkbenchRenderers(workbench).refreshKanbanRenderer("tasks"));

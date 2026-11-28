@@ -1,5 +1,4 @@
-import { Box } from "@chakra-ui/react";
-import { contributionRefId } from "@pstdio/sdk/extensions";
+import { contributionRefId, resourceKey } from "@pstdio/sdk/extensions";
 import type { NavigationTreeOwner, TreeContext, WorkbenchModuleContext, WorkbenchPageContribution } from "../../core";
 import { WorkbenchResourceActivity } from "../../react/resource-activity/resource-activity";
 import type { InternalRegisterWorkbenchExtensionContributionsInput } from "./workbench-extension-host-types";
@@ -86,15 +85,15 @@ export const registerResourcePageMenus = (input: InternalRegisterWorkbenchExtens
             const resource = instance.resource;
             const binding = resource && workbench.resources.getKind(resource.type, resource.extensionId)?.activity;
             return resource && binding ? (
-              <Box h="full" overflow="auto">
-                <WorkbenchResourceActivity
-                  workbench={workbench}
-                  binding={binding}
-                  resource={resource}
-                  visible={visible !== false}
-                  menu
-                />
-              </Box>
+              <WorkbenchResourceActivity
+                key={resourceKey(resource)}
+                workbench={workbench}
+                binding={binding}
+                resource={resource}
+                ownerInstanceId={instance.menuOwnerWidgetId}
+                visible={visible !== false}
+                menu
+              />
             ) : null;
           },
         },

@@ -1,15 +1,19 @@
 import { type QueryScope, type ResourceRef, resourceKey, type ScopedQueryClient } from "@pstdio/sdk/extensions";
 import {
   changeStatus,
+  checkRecoveryEntry,
   dismissOperationProgress,
   type Entry,
   emptySnapshot,
+  findRecoveryEntry,
   initialPreview,
   reconcileProjectAvailability,
   recoveryStatus,
   retiredError,
   retireOperations,
+  settleRecoveryAttempt,
   snapshotForOperations,
+  waitForPendingOperations,
 } from "./operation-state";
 import type {
   OperationFailure,
@@ -79,7 +83,7 @@ const createRejectionReconciler = (
 };
 
 const discardEntry = (entry: Entry, clearDraft: (entry: Entry) => void) => {
-  if (!entry.controller.signal.aborted || entry.onDiscardAfterRetirement) entry.onDiscard?.();
+  if (!entry.controller.signal.aborted) entry.onDiscard?.();
   entry.onDiscard = undefined;
   clearDraft(entry);
 };
@@ -103,7 +107,7 @@ const retainUnsentEntry = (entry: Entry, error: Error) => {
   entry.check = undefined;
   changeStatus(entry, "rejected");
   entry.error = error;
-  entry.reject(error);
+  entry.completion.reject(error);
 };
 
 const createWorkbenchOperations = (queries: ScopedQueryClient) => {
@@ -151,7 +155,8 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
   const fail = (entry: Entry, error: unknown, status: OperationFailure | "unconfirmed") => {
     changeStatus(entry, status);
     entry.error = error;
-    entry.reject(error);
+    entry.completion.reject(error);
+    settleRecoveryAttempt(entry, { error });
     changed();
   };
 
@@ -164,10 +169,7 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
     changed();
   });
 
-  const findRecovery = (id: symbol) => {
-    const entry = entries.get(id);
-    return entry?.owner === owner && recoveryStatus(entry.preview.status) && !queries.isDisposed() ? entry : undefined;
-  };
+  const findRecovery = (id: symbol) => findRecoveryEntry(entries.get(id), owner, queries.isDisposed());
 
   const clearDraft = (entry: Entry) => {
     if (entry.controller.signal.aborted || entry.preview.status === "rejected" || entry.releaseOnDiscard) {
@@ -191,6 +193,8 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
       listeners.add(listener);
       return () => void listeners.delete(listener);
     },
+    waitForPending: (matches: (operation: OperationPreview) => boolean) =>
+      waitForPendingOperations(entries.values(), owner, matches),
     updateRetiredProjectAvailability(isAvailable: ProjectRecoveryAvailability) {
       if (!queries.isDisposed() && reconcileProjectAvailability(entries.values(), owner, isAvailable)) publish();
     },
@@ -206,7 +210,7 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
         scope: { ...scope, projectId: input.projectId ?? scope.projectId },
         controller: new AbortController(),
         preview: initialPreview(input, id, scope.projectId),
-        reject: result.reject,
+        completion: result,
         source: input.source,
         sourceCommand: input.sourceCommand,
         recoverySource: input.recoverySource,
@@ -215,7 +219,6 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
         recoveryFiles: input.recoveryFiles,
         releaseOnDiscard: input.releaseOnDiscard,
         onDiscard: input.onDiscard,
-        onDiscardAfterRetirement: input.onDiscardAfterRetirement,
         dismissed: false,
       };
       const signal = entry.controller.signal;
@@ -238,6 +241,7 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
         if (signal.aborted) return;
         settleReconciledDraft(entry, input.retainedAfterReconcile, finish, changed);
         result.resolve(value);
+        settleRecoveryAttempt(entry);
         input.onReconciled?.();
       };
       const reconcileRejection = createRejectionReconciler(entry, input.reconcileRejection, { publish, fail });
@@ -301,8 +305,7 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
       };
     },
     check(id: symbol) {
-      const entry = findRecovery(id);
-      if (entry && !entry.controller.signal.aborted) return entry.check?.();
+      return checkRecoveryEntry(findRecovery(id));
     },
     /** Capture before starting a read that can prove a particular saved outcome. */
     captureRecoveryConfirmation() {

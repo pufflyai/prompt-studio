@@ -100,7 +100,7 @@ it must not stop execution or discard recoverable input.
 Patches add/replace/remove a whole canonical message at `/messages/<index>`, or
 replace the array at `/messages`. Reduce nested content patches before emitting.
 Use `chatRendererStreamFrames(event)` from `@pstdio/sdk/extensions` when writing
-events, including snapshots, patches and draft recovery. Await each frame in order
+events, including snapshots and patches. Await each frame in order
 and finish one event before writing the next. Small events stay unchanged; large
 events become bounded `ChatRendererStreamEvent` fragments within the existing
 64 KiB command-stream limit. The native owner validates and reconstructs one event
@@ -122,11 +122,7 @@ retaining displayed history and drafts. It never replays user actions or agent w
 and stops when the observation is released. A late overflow clears only the
 incomplete-event error still owned by that watch; newer action errors remain visible.
 Other connection errors offer Retry.
-Refresh events follow the normal native renderer path. A versioned `recoverDraft`
-event restores work after an accepted asynchronous native operation fails. The
-host restores an unchanged cleared composer, or retains the failed work under
-`recovered` when newer text, files or settings exist; persistence follows either
-path, including after the view closes.
+Refresh events follow the normal native renderer path.
 
 Use `ctx.sessions.getConversation`, `getConversationSources`, `stream`,
 `getQueuedMessages` and `getHarnessCommands`; do not duplicate transcripts or
@@ -167,49 +163,26 @@ intent metadata. Each key applies only if that control has not changed since the
 action began. Unrelated live/query controls do not suppress it; newer values for
 the same control win. Accepted action values are saved without requiring another
 keystroke, including after unmount. Query/stream values supply defaults for controls
-not locally owned. Replacing the complete draft values (including restoring a
-recovered draft) releases ownership of removed keys, allowing current defaults to
-fill those keys again.
+not locally owned. Replacing the complete draft values releases ownership of
+removed keys, allowing current defaults to fill those keys again.
 
-Views can opt into browser storage with `browserDraft: {}`. This keeps unsent text,
-attachment references, controls and recovered drafts in the current browser profile,
-scoped by host, project, view and resource. Main and Side share that local draft.
-The query receives its control `values`; actions and stream commands receive a
-`draftClientId` identifying the browser profile. Providers can use that identity to
-route accepted-input recovery to the sending browser without sharing unsent drafts.
-If the identity cannot be stored, it is omitted; accepted input must stay unowned
-and recoverable instead of being assigned an identity that disappears on reload.
+Views can opt into host drafts with `browserDraft: {}`. The host keeps one unsent
+draft per conversation: its text, attachment references and control values, scoped
+by host, project, view and resource. Main and Side share it. It survives switching
+conversations, reloading and, on desktop, restarting the app. Sending clears it.
+Text typed before a stored draft loads wins, and the stored copy is dropped. Control
+values are kept with the draft but are not draft content; a draft without text or
+files is removed. Each change is written immediately, so quitting right after typing
+keeps it. The query receives the control `values`. There is no synchronization
+between browsers or devices and no restore list. This mode cannot be combined with
+`loadDraft` or `saveDraft` callbacks and requires the `view.chat.browser-draft.v1`
+capability.
 
-An optional `browserDraft.acknowledgeRecovery(ctx, input)` callback receives the
-original recovered `draft`, `draftKey`, `draftClientId` and renderer context only
-after every nonempty primary and recovered body has a durable local copy. The host
-preserves newer typing alongside the recovered bodies. Failed, denied or absent
-browser storage reports an error and never acknowledges recovery. Providers must
-keep their recovery source until this callback confirms it. The browser mode cannot
-be combined with `loadDraft` or `saveDraft` callbacks. It requires the additive
-`view.chat.browser-draft.v1` capability, an `engines.pstdio` minimum of `^0.5.1`,
-and a supporting published SDK and host. Released SDK 0.48.0 exposes API 0.5.0 and
-does not contain this option.
-
-Sessions uses this generic browser mode. Its separate `legacySessionDraft` option
-only transfers an older host Sessions draft after a successful save; it does not
-choose the view's ongoing persistence mode.
-
-For views with a provider-managed loader, `loadDraft` and `saveDraft` control persistence. Persist the complete
-`ChatDraft`, including `recovered`. Saves wait for hydration and follow edit order.
-When typing races an older saved draft, both texts and attachment lists survive.
-Restore saved draft swaps them without discarding current work. Failed hydration
-prevents overwriting unread storage; save errors stay visible. Saves may finish
-after the view closes. Project and draft identity must also scope storage keys.
-
-For provider-managed drafts, the native host synchronously stages unacknowledged edits in browser storage,
-scoped by project, view and canonical resource/draft identity. A document reload
-can restore text, uploaded-file references and control values before provider
-reads finish. The provider remains the durable draft owner: matching save
-acknowledgements clear staged edits, while an older acknowledgement cannot clear
-newer typing. Recovery merges a different provider draft using the existing
-`recovered` behavior. This journal contains unsent drafts, not transcripts or
-execution state; closing a view does not discard an unacknowledged edit.
+For views with a provider-managed loader, `loadDraft` and `saveDraft` control persistence.
+Saves wait for hydration and follow edit order. Text typed before the provider draft
+loads wins. Failed hydration prevents overwriting unread storage; save errors stay
+visible. Saves may finish after the view closes. Project and draft identity must
+also scope storage keys.
 
 Backend providers can apply canonical `/messages` patches with
 `applySessionMessagePatch` from `@pstdio/sdk/extensions`, without installing the UI
@@ -310,12 +283,6 @@ idle/queue guards. Both paths preserve independent transcript identity.
 Queue steering must pass the `activeRunStartedAt` captured with the selected
 request along with its revision, rather than reading a newer run when clicked.
 
-The transitional view option `legacySessionDraft: true` transfers one legacy
-Sessions browser draft for the same project and draft identity. It requires
-`loadDraft` and `saveDraft`: the host saves both bodies (using `recovered` when
-necessary) before acknowledging the unchanged legacy text/files. A failed save
-leaves the old keys intact. It exposes no generic browser-storage capability.
-
 ## Delivery order
 
 The PS-60 host prerequisite ships before separate Sessions extension adoption.
@@ -335,8 +302,8 @@ new canonical echo replaces it once. Acceptance releases the request lock while
 accepted pending rows remain until their separate echoes. Consecutive sends keep
 separate identities even for identical text and files. An action result with an explicit
 `sentTag` (including null), or a terminal message snapshot, ends a no-message
-operation without waiting for a transcript echo. Rejection restores the submitted draft or retains it beside newer
-unsent work. Questions keep their separate draft semantics, and a streaming
+operation without waiting for a transcript echo. Rejection returns the submitted text and files to the composer,
+ahead of any newer typing. Questions keep their separate draft semantics, and a streaming
 conversation's queued follow-up remains queue-owned.
 
 When a first submit replaces its invoking draft viewer with a newly created
@@ -370,9 +337,11 @@ remain owned by the workbench.
 
 ### Pending queued input
 
+Removing, moving and editing queued messages show at once and run in order, one after another. Each change waits for the one before it and finds its message again in the queue that change returned, because positions and revisions change after a move. If an earlier change fails or loses its response, the changes waiting behind it are refused with an error. The queue stays editable meanwhile and no progress line is shown. Approvals and Stop also show no progress line; a repeated approval or Stop for the same target is refused while the first is pending. A change the runtime refuses shows an error, and the queue returns to the runtime's state.
+
 The native owner retains an ordinary submitted input while its action is pending, including a sending queue row when the conversation is running. This presentation stays outside canonical transcript and queue indexes, survives placement changes, and hands off once to the matching saved request or canonical user message. Question replies do not create ordinary pending input or consume the message draft.
 
-A rejected queued input stays visible as unsent work. Dismiss restores its text, files and control settings while retaining newer work as a saved recovery. The host persists this recovery through the provider's existing `saveDraft` binding, so reloading can recover unsent work even after transient presentation has gone. No extra queue or execution service is needed.
+A rejected queued input returns its text and files to the composer, ahead of any newer typing, and stays visible as unsent work until delivered or dismissed. If it arrives after all, an unchanged composer goes back to what it held before. When delivery is unknown, the input also returns to the composer and sending waits until delivery is known. No extra queue or execution service is needed.
 
 Canonical session link resolution can call `sessionBrowser.commands.resolve` with
 `{ resources: ResourceRef[] }`. The provider returns readable, unarchived
@@ -387,8 +356,7 @@ identities and order; it does not insert queue rows into the transcript or its
 patch indexes. `ChatPanel.historyMessages` supplies this recall-only projection;
 ordinary callers continue to recall from `messages` by default.
 
-Draft hydration consumes the journal captured when its owner opens. Edits staged
-by that same owner while provider storage loads already belong to the live draft;
-they are not replayed as saved control overrides over a newer query result.
+Edits made while provider storage loads already belong to the live draft; they are
+not replayed as saved control overrides over a newer query result.
 
-*Updated at: 2026-11-07*
+*Updated at: 2026-11-28*

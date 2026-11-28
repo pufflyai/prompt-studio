@@ -1,6 +1,5 @@
 import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket } from "../helpers/planner-api";
-import { nativePublicTextEditor } from "../helpers/verify-public-text-editor";
 import { expect, test } from "../scripts/session-test";
 import { uiOrigin } from "../ui-server";
 import { leaveSidenavLevel } from "./helpers/sidenav-navigation";
@@ -15,6 +14,12 @@ test("Notes and Sidenav levels keep rows users pinned to the header", async ({ p
   expect(response.ok()).toBe(true);
   const project = await response.json();
   const ticket = await createPlannerTicket(request, uiOrigin, project.id, { content: "Sidenav level ticket" });
+  const noteResponse = await request.post(
+    `${uiOrigin}/v1/projects/${project.id}/extensions/commands/pstdio.notes.command.notes.create/execute`,
+    { data: { params: { title: "Level note" }, source: "api" } },
+  );
+  expect(noteResponse.ok()).toBe(true);
+  expect((await noteResponse.json()).outcome.status).toBe("success");
   const sessionResponse = await request.post(`${uiOrigin}/v1/sessions`, {
     data: {
       project_id: project.id,
@@ -58,17 +63,12 @@ test("Notes and Sidenav levels keep rows users pinned to the header", async ({ p
   await row("Notes").click();
   await expect(row("Sessions")).toBeVisible();
   await expect(headerRows).toHaveText(["Search", "Tickets", "Home"]);
-  await sidenav.getByText("Notes", { exact: true }).hover();
-  await sidenav.getByRole("button", { name: "New note", exact: true }).click();
-  const editor = nativePublicTextEditor(page);
-  await editor.fill("Level note");
   await expect(row("Level note")).toBeVisible({ timeout: 15_000 });
   // Individual notes are data; the Notes collection can be hidden from the customize menu.
   await row("Search").click({ button: "right" });
-  await page.getByRole("menuitem", { name: "Hide/show items" }).hover();
-  await expect(page.getByRole("menuitem", { name: "Notes", exact: true })).toBeVisible();
-  await expect(page.getByRole("menuitem", { name: "Level note", exact: true })).toHaveCount(0);
-  await page.keyboard.press("Escape");
+  await page.getByRole("menuitem", { name: "Hide/show items" }).click();
+  await expect(page.getByRole("button", { name: "Hide Notes", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^(Hide|Show) Level note$/ })).toHaveCount(0);
   await page.keyboard.press("Escape");
   await row("Level note").click();
   await expect(row("Level note")).toHaveAttribute("aria-selected", "true");
@@ -81,24 +81,29 @@ test("Notes and Sidenav levels keep rows users pinned to the header", async ({ p
   await expect(row("Tickets")).toHaveAttribute("aria-selected", "true");
   await row("Sessions").click();
   await expect(sidenav.getByText("Today", { exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/\/tickets$/);
   await row("Level session").click();
   await expect(page).toHaveURL(/\/extensions\/pstdio\.session-browser\/conversation\?resource=/);
+  const sessionUrl = page.url();
   await expect(headerRows).toHaveText(["Search", "Tickets", "Home"]);
   await row("Search").click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.keyboard.press("Escape");
 
-  // Leaving the level restores the last root-level page.
+  // Returning to project navigation keeps the session open in Main.
   await leaveSidenavLevel(page);
-  await expect(page).toHaveURL(/\/tickets$/);
+  await expect(page).toHaveURL(sessionUrl);
   await expect(row("Sessions")).toBeVisible();
 
   await row("Tickets").click();
   await page.getByTestId("renderer-card").filter({ hasText: ticket.title }).first().click();
+  await expect(page).toHaveURL(/\/extensions\/pstdio\.planner\/ticket\?resource=/);
+  const ticketUrl = page.url();
   await expect(sidenav.getByRole("option", { name: new RegExp(`^${ticket.shorthand} `) })).toBeVisible();
   await expect(headerRows).toHaveText(["Search", "Tickets", "Home"]);
   await expect(sidenav.getByRole("button", { name: "Help", exact: true })).toBeVisible();
   await expect(row("Settings")).toBeVisible();
   await leaveSidenavLevel(page);
+  await expect(page).toHaveURL(ticketUrl);
   await expect(row("Sessions")).toBeVisible();
 });

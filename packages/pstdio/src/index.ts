@@ -16,6 +16,9 @@ if (rawArgs.length === 1 && (rawArgs[0] === "--version" || rawArgs[0] === "-v"))
 if (rawArgs.length === 1 && rawArgs[0] === "extension-input-inspector") {
   const { runExtensionInputInspector } = await import("pstdio-api/extension-input-inspector");
   await runExtensionInputInspector();
+} else if (rawArgs.length === 1 && rawArgs[0] === "extension-watch-worker") {
+  const { runExtensionWatchWorker } = await import("pstdio-api/extension-watch-worker");
+  runExtensionWatchWorker();
 } else if (rawArgs.length === 1 && rawArgs[0] === "extension-backend-worker") {
   // Extension backend code runs here, outside the API process and without its environment secrets.
   const { runBackendWorker } = await import("pstdio-extensions/preparation-server");

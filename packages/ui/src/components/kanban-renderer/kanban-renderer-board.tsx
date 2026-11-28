@@ -53,6 +53,7 @@ export interface KanbanRendererBoardColumn {
 interface KanbanRendererBoardProps {
   onLoadMore?: () => void;
   loadingMore?: boolean;
+  pageCursor?: string | null;
   columns: KanbanRendererBoardColumn[];
   pendingCreations?: readonly KanbanRendererPendingCreation[];
   selectedItemId?: string | null;
@@ -68,6 +69,8 @@ interface KanbanRendererBoardProps {
 
 export const KanbanRendererBoard = (props: KanbanRendererBoardProps) => {
   const { columns, selectedItemId = null, onMoveItem, onMoveToGroup, onCreateStart, onColumnAction } = props;
+  // A page can append cards to a different column while this column's boundary stays visible.
+  const loadedPage = props.pageCursor ?? columns.reduce((count, column) => count + column.items.length, 0);
   const columnRecipe = useSlotRecipe({ key: "kanbanBoardColumn" });
   const columnStyles = columnRecipe();
 
@@ -103,6 +106,7 @@ export const KanbanRendererBoard = (props: KanbanRendererBoardProps) => {
   const handleDrop = (columnId: string) => (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     setActiveColumn(null);
+    setDraggedKey(null);
 
     const itemId = event.dataTransfer.getData("text/plain");
     if (!itemId) return;
@@ -156,6 +160,7 @@ export const KanbanRendererBoard = (props: KanbanRendererBoardProps) => {
           <BoardColumnCards
             onLoadMore={props.onLoadMore}
             loadingMore={props.loadingMore}
+            loadedPage={loadedPage}
             column={column}
             selectedItemId={selectedItemId}
             draggedKey={draggedKey}

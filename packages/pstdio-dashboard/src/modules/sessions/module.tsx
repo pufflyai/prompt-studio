@@ -1,4 +1,5 @@
 import type { WorkbenchModuleContribution } from "@pstdio/workbench";
+import { registerOpenSessionDraft } from "./open-session-draft";
 import { registerSessionProviderCompatibility } from "./session-provider-compatibility";
 import { registerSessionResourceRetention } from "./session-resource-retention";
 import { registerSessionResourceSync } from "./session-resource-sync";
@@ -14,11 +15,13 @@ export const createSessionsModule = () =>
         icon: "message-circle",
       });
       ctx.resources.registerKind({ kind: "session-draft", label: "Session draft", icon: "message-circle" });
+      const openDraft = registerOpenSessionDraft(ctx);
       const compatibility = registerSessionProviderCompatibility(ctx);
       const stopSync = registerSessionResourceSync(ctx);
       const stopRetention = registerSessionResourceRetention(ctx);
       return {
         dispose() {
+          openDraft.dispose();
           compatibility.dispose();
           stopSync();
           stopRetention();

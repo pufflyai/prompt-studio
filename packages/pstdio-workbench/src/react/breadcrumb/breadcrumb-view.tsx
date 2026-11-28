@@ -55,6 +55,7 @@ const WorkbenchBreadcrumbTitle = (props: { item: WorkbenchBreadcrumbItem; dragga
     <Tooltip content={title} overflowRef={clippedByTrail ? undefined : labelRef} positioning={{ placement: "bottom" }}>
       <HStack
         as="span"
+        alignItems="center"
         gap="2xs"
         minW="0"
         data-workbench-page-drag-handle={draggable || undefined}
@@ -68,7 +69,7 @@ const WorkbenchBreadcrumbTitle = (props: { item: WorkbenchBreadcrumbItem; dragga
         }
       >
         <WorkbenchBreadcrumbIcon item={item} />
-        <Text asChild minW="0" maxW="15rem" truncate>
+        <Text asChild layerStyle="navigationLabel" minW="0" maxW="15rem" lineHeight="1.25rem" truncate>
           <span ref={labelRef}>{title}</span>
         </Text>
       </HStack>

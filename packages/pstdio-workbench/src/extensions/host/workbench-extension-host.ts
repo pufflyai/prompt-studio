@@ -118,7 +118,11 @@ const registerMenus = (
             id: registration.contribution.slotId,
             kind: "menu",
             projectId: input.projectId,
-            context: { panelId: registration.contribution.id },
+            context: {
+              ...(executionContext?.slot?.id === registration.contribution.slotId ? executionContext.slot.context : {}),
+              projectId: input.projectId,
+              panelId: registration.contribution.id,
+            },
           }),
         }),
     }),

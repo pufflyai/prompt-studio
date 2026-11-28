@@ -103,6 +103,7 @@ for (const kind of ["streaming", "panels"] as const) {
         rmSync(root, { recursive: true, force: true });
       }
     },
-    PACKAGED_TEST_TIMEOUT,
+    // Setup, streaming, retained history and both recovery paths exceed 30 s together.
+    kind === "streaming" ? Math.max(PACKAGED_TEST_TIMEOUT, 60_000) : PACKAGED_TEST_TIMEOUT,
   );
 }

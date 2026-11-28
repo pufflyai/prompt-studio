@@ -19,6 +19,7 @@ import * as sessionsCommand from "./sessions";
 import { teamsCommand } from "./teams";
 import * as updateChannelCommand from "./update-channel";
 import * as viewsCommand from "./views";
+import * as workbenchCommand from "./workbench";
 import * as workspaceCommand from "./workspace";
 
 export const topLevelCommandModules = [
@@ -43,6 +44,7 @@ export const topLevelCommandModules = [
   sessionsCommand,
   teamsCommand,
   updateChannelCommand,
+  workbenchCommand,
   workspaceCommand,
 ];
 

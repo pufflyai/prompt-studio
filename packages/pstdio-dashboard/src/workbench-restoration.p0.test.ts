@@ -6,7 +6,6 @@ import { getCollection, getWriter, markInitialCollectionsSyncComplete } from "@/
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { createDashboardProjectSelectionPersistence } from "@/shared/app/project-selection-persistence";
-import { createDashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
 import {
   getDashboardExtensionsReadyProjectId,
   subscribeDashboardExtensionsReadyProject,
@@ -209,7 +208,7 @@ describe("createDashboardWorkbench restoration", () => {
     expect(second.layout.getLayout().regions.sidenav.size).toBe(333);
   });
 
-  test("restores the Side Panel presentation, its session, and the unsent chat draft", async () => {
+  test("restores the Side Panel presentation and its session", async () => {
     const storage = createStorage();
     seedSyncedRows();
     const first = createDashboardWorkbench({ storage });
@@ -217,19 +216,12 @@ describe("createDashboardWorkbench restoration", () => {
     await flushMicrotasks();
     await first.commands.executeCommand("dashboard.openSessionPanel", { resource: sessionResource });
     first.sidePanel.setMode("attached");
-    const drafts = createDashboardSessionDraftPersistence({
-      namespace: dashboardWorkbenchStorageNamespace,
-      storage,
-      projectSelection: { getSelectedProjectId: () => "project-1" },
-    });
-    drafts.setDraft("session-1", "unsent reply");
     await first.dispose();
     const second = createDashboardWorkbench({ storage });
     await flushMicrotasks();
     expect(second.sidePanel.getMode()).toBe("attached");
     expect(sidePanelSessionUris(second)).toEqual([resourceKey(sessionResource)]);
     expect(second.layout.listPanelInstances("side")[0]?.tabRetention).toBe("preview");
-    expect(drafts.getDraft("session-1")).toBe("unsent reply");
   });
   test("ignores a persisted session that no longer exists", async () => {
     const storage = createStorage();

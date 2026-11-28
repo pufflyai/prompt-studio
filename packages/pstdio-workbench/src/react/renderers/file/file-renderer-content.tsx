@@ -2,6 +2,7 @@ import { Box, Center, Flex, Image, Text } from "@chakra-ui/react";
 import type { FileSourcePosition } from "@pstdio/sdk/extensions";
 import { AlertMessage, EmptyState } from "@pstdio/ui";
 import { CodeEditor } from "@pstdio/ui/diff";
+import type { MarkdownEditorProps } from "@pstdio/ui/rich-text";
 import { type ReactNode, type RefObject, Suspense, useLayoutEffect } from "react";
 import type { FileRendererContent } from "../../../core";
 import type { NativeDocumentSession } from "../../../core/native-documents/native-document-session";
@@ -19,6 +20,8 @@ export interface FileRendererContentViewProps {
   editorKey: string;
   errorNotice: ReactNode;
   contributionCanSave: boolean;
+  selectionToolbar?: MarkdownEditorProps["selectionToolbar"];
+  onSourceSelection?: MarkdownEditorProps["onSourceSelection"];
   onActiveSectionChange?: (sectionId: string | null) => void;
   onChange: (value: string) => void;
   rendererRef: RefObject<HTMLDivElement | null>;

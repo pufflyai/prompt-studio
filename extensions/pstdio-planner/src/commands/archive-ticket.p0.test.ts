@@ -64,6 +64,33 @@ test("archive all queues cleanup only when the selected tickets have linked work
   expect(jobs).toBe(0);
 });
 
+test("dashboard archive queues workspace discovery and returns with the ticket archived", async () => {
+  const storage = createMemoryStorage();
+  await seedTicket(storage);
+  const [ctx, input] = await archiveArgs({
+    storage,
+    params: {},
+    overrides: { source: "dashboard", resource: { type: "ticket", id: "ticket-1" } },
+  });
+  let workspaceQueries = 0;
+  const query = ctx.workspaces.query;
+  ctx.workspaces.query = async (input) => {
+    workspaceQueries++;
+    return query(input);
+  };
+  let cleanupIds: unknown;
+  ctx.automation.enqueue = async ({ command, input }) => {
+    expect(command).toEqual(cleanupTicketWorkspacesCommand.ref);
+    cleanupIds = input.params?.ticketIds;
+    return queuedRun();
+  };
+
+  await expect(archiveTicketCommand.run(ctx, input)).resolves.toMatchObject({ id: "ticket-1", archived: true });
+  expect(cleanupIds).toEqual(["ticket-1"]);
+  expect(workspaceQueries).toBe(0);
+  expect((await ticketsCollection(storage).get("ticket-1"))?.archived).toBe(true);
+});
+
 test("archive all preserves durable cleanup when workspace discovery fails", async () => {
   const storage = createMemoryStorage();
   await putTicket(storage, makeTicket({ statusId: "done" }));

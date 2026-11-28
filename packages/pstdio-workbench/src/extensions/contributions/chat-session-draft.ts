@@ -1,6 +1,5 @@
 import type { ChatDraft } from "@pstdio/sdk/extensions";
 import { chatDraftSchema } from "pstdio-api-contracts";
-import { hydrateChatDraft } from "./chat-draft-recovery";
 import type { ChatSessionInput } from "./chat-session";
 import type { createChatSnapshot } from "./chat-snapshot";
 
@@ -95,7 +94,8 @@ export const createChatSessionDraft = (
   const applyHydration = (draft: ChatDraft) => {
     const current = input.read();
     const values = input.values.hydrate(current.values, draft.values);
-    input.publish({ ...(changes === 0 ? draft : hydrateChatDraft(current, draft)), values }, true);
+    // Text typed before the stored draft arrived wins; the stored copy is dropped.
+    input.publish({ ...(changes === 0 ? draft : current), values }, true);
   };
   return {
     storedDraft: { restore: applyHydration, reportError: fail },

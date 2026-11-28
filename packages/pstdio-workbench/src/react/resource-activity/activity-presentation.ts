@@ -14,7 +14,7 @@ export const activityChangeSummary = (entry: Pick<ResourceActivityEntry, "body" 
         .join("; ")
     : entry.body;
 
-export const activityActorName = (entry: ResourceActivityEntry) => {
+const activityActorName = (entry: ResourceActivityEntry) => {
   if (entry.author.type !== "system" || entry.author.name !== entry.author.extensionId) return entry.author.name;
   const name =
     entry.author.name
@@ -23,6 +23,10 @@ export const activityActorName = (entry: ResourceActivityEntry) => {
       ?.replace(/^pstdio-/, "") ?? "System";
   return name.charAt(0).toUpperCase() + name.slice(1).replaceAll("-", " ");
 };
+export const activityActor = (entry: ResourceActivityEntry) => ({
+  name: activityActorName(entry),
+  showAvatar: entry.author.type !== "user" || !entry.author.id.startsWith("device:"),
+});
 export const activityTime = (createdAt: string, now = Date.now()) => {
   const seconds = Math.max(0, (now - Date.parse(createdAt)) / 1000);
   if (seconds < 60) return "just now";

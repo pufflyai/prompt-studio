@@ -19,6 +19,7 @@ interface LevelNavigationHost {
       getState(): {
         projectId?: string;
         location?: PageLocation;
+        navigationLocation?: PageLocation | null;
         pages: Readonly<Record<string, WorkbenchPageContribution>>;
       };
     };
@@ -69,6 +70,7 @@ export const createLevelNavigation = (host: LevelNavigationHost) => {
     const state = host.pages.store.getState();
     const levels = resolveNavigationLevels({
       location: state.location,
+      navigationLocation: state.navigationLocation,
       pages: Object.values(state.pages),
       navigationTrees: host.navigationTrees,
     });
@@ -106,6 +108,7 @@ export const createLevelNavigation = (host: LevelNavigationHost) => {
       const state = host.pages.store.getState();
       return resourceNavigationStateScope({
         ...state,
+        location: state.navigationLocation === undefined ? state.location : (state.navigationLocation ?? undefined),
         pages: Object.values(state.pages),
         navigationTrees: host.navigationTrees,
       });

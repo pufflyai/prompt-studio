@@ -73,7 +73,7 @@ export const ActivityReply = (props: ActivityReplyProps) => {
     <Box paddingX="md" paddingY="sm" {...rootProps}>
       <Stack gap="xs">
         <ActivityCommentHeader actor={actor} timestamp={timestamp} actions={actions} />
-        <Box paddingLeft="32px">
+        <Box paddingLeft={actor.showAvatar === false ? "0" : "32px"}>
           <Text as="div" textStyle="label/S/regular" color="fg" overflowWrap="anywhere">
             {typeof children === "string" ? <LazyRichMessage defaultState={children} fullWidth /> : children}
           </Text>

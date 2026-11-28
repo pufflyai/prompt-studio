@@ -10,6 +10,7 @@ interface MenuWorkbenchOptions {
   menuMinPx?: number;
   tall?: boolean;
   embedded?: boolean;
+  activity?: boolean;
 }
 const createMenuWorkbench = (options: MenuWorkbenchOptions) => {
   const page = { extensionId: "preview", kind: "page" as const, id: "menus" };
@@ -23,7 +24,7 @@ const createMenuWorkbench = (options: MenuWorkbenchOptions) => {
   for (const side of options.both ? (["left", "right"] as const) : (["right"] as const)) {
     workbench.views.registerView({
       id: side,
-      title: `${side} inspector`,
+      title: options.activity ? "Activity" : `${side} inspector`,
       body: {
         kind: "react",
         render: () =>
@@ -45,6 +46,7 @@ const createMenuWorkbench = (options: MenuWorkbenchOptions) => {
       ownerViewId: "document",
       viewId: side,
       side,
+      purpose: options.activity ? "activity" : undefined,
       regionSize: options.menuMinPx ? { minPx: options.menuMinPx, maxPx: 320 } : undefined,
     });
   }
@@ -93,7 +95,7 @@ export const ReopenAttached: Story = {
 };
 export const FloatingWhenNarrow: Story = {
   id: "pstdio-workbench-reference-core-api-panel-menus--floating-when-narrow",
-  args: { width: 500, menus: { closed: ["right"] } },
+  args: { width: 500, menus: { closed: ["right"], activity: true } },
 };
 export const FloatingEmbeddedContent: Story = {
   id: "pstdio-workbench-reference-core-api-panel-menus--floating-embedded-content",
@@ -101,7 +103,7 @@ export const FloatingEmbeddedContent: Story = {
 };
 export const FloatingTallContent: Story = {
   id: "pstdio-workbench-reference-core-api-panel-menus--floating-tall-content",
-  args: { width: 500, menus: { closed: ["right"], tall: true } },
+  args: { width: 500, menus: { closed: ["right"], tall: true, activity: true } },
 };
 export const BothMenusAttached: Story = {
   id: "pstdio-workbench-reference-core-api-panel-menus--both-menus-attached",

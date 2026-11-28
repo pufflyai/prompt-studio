@@ -6,6 +6,7 @@ const StyledEditable = chakra(LexicalContentEditable);
 
 interface ContentEditableProps {
   ariaLabel?: string;
+  tabIndex?: number;
   onRef?: (elem: HTMLDivElement) => void;
   fullWidth?: boolean;
   padding?: string;
@@ -16,6 +17,7 @@ interface ContentEditableProps {
 
 export function ContentEditable({
   ariaLabel,
+  tabIndex,
   onRef,
   fullWidth = false,
   padding,
@@ -27,6 +29,7 @@ export function ContentEditable({
     <Box ref={onRef} width="100%" minH="100%" layerStyle={layerStyle} padding={padding}>
       <StyledEditable
         aria-label={ariaLabel}
+        tabIndex={tabIndex}
         data-testid="content-editable"
         height="fit-content"
         minH="100%"

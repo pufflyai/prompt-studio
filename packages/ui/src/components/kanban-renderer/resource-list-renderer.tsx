@@ -98,6 +98,7 @@ export const ResourceListRenderer = (props: ResourceListRendererProps) => {
         listKey={[settings.columnGrouping, ...(settings.subGroupings ?? [])].join("/")}
         onLoadMore={props.page?.result?.cursor ? props.page.onLoadMore : undefined}
         loadingMore={props.page?.loading}
+        pageCursor={props.page?.result?.cursor}
       />
       {props.createRow && props.onCreateRow && createGroup !== null ? (
         <KanbanRendererCreateDialog

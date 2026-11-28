@@ -29,6 +29,37 @@ beforeAll(() => {
   }
 }, BUILD_TIMEOUT);
 
+test.skipIf(process.platform !== "darwin")(
+  "the packaged macOS watch process discovers an existing extension folder",
+  async () => {
+    const home = mkdtempSync(join(tmpdir(), "pstdio-packaged-watch-"));
+    const path = join(home, "extensions");
+    const attached = Promise.withResolvers<unknown>();
+    const worker = Bun.spawn([PACKAGED_BINARY_PATH, "extension-watch-worker"], {
+      env: { ...process.env, PSTDIO_HOME: home, BUN_BE_BUN: undefined },
+      stdio: ["ignore", "ignore", "inherit"],
+      ipc: (message: { id?: number; event?: { sourcePath?: string; attachment?: boolean } }) => {
+        if (message.event?.attachment || message.id === 1) attached.resolve(message.event);
+      },
+    });
+    try {
+      mkdirSync(join(path, "tool"), { recursive: true });
+      worker.send({
+        id: 1,
+        task: "watch.update",
+        input: { id: "roots", kind: "roots", rows: [{ path, ownerRoot: home }] },
+      });
+      const result = await Promise.race([attached.promise, worker.exited.then((code) => ({ code }))]);
+      expect(result).toMatchObject({ sourcePath: path, attachment: true });
+    } finally {
+      worker.kill("SIGKILL");
+      await worker.exited;
+      rmSync(home, { recursive: true, force: true });
+    }
+  },
+  PACKAGED_TEST_TIMEOUT,
+);
+
 test(
   "serves the compiled dashboard at root and project routes with its bundled script",
   async () => {

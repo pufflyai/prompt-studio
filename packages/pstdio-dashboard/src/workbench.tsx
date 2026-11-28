@@ -54,6 +54,7 @@ interface CreateDashboardWorkbenchInput {
 
 type CreateDashboardModulesInput = {
   initialProjectId?: string;
+  openInitialSideChat?: boolean;
   performance?: PerformanceMonitoringController;
   projectTabs?: DesktopProjectTabs;
   projectSelectionPersistence?: DashboardProjectSelectionPersistence;
@@ -88,6 +89,7 @@ export const createDashboardModules = (input: CreateDashboardModulesInput & { se
     projectOpening.module,
     createBootstrapModule({
       projectSelectionPersistence: input.projectSelectionPersistence,
+      openInitialSideChat: input.openInitialSideChat,
     }),
   ];
 };
@@ -106,7 +108,8 @@ export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = 
     debounceMs: input.layoutDebounceMs,
   });
 
-  for (const { scope, layout } of persistence.layoutPersistence.listLayouts?.() ?? []) {
+  const savedLayouts = persistence.layoutPersistence.listLayouts?.() ?? [];
+  for (const { scope, layout } of savedLayouts) {
     const migrated = migrateLegacyTerminalLayout(layout);
     if (migrated !== layout) persistence.layoutPersistence.setLayout(migrated, scope);
   }
@@ -118,6 +121,8 @@ export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = 
   const urlProjectId = input.projectTabs
     ? undefined
     : pageLocationBrowser && readPageUrlProjectId(pageLocationBrowser.current().url);
+  const openInitialSideChat =
+    !urlProjectId && !projectSelectionPersistence.getSelectedProjectId() && savedLayouts.length === 0;
   if (urlProjectId) projectSelectionPersistence.setSelectedProjectId(urlProjectId);
   const workbench: ReturnType<typeof createWorkbench> = createWorkbench({
     active: input.active,
@@ -149,6 +154,7 @@ export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = 
     const modules = createDashboardModules({
       settings: workbench.settings,
       initialProjectId: input.projectTabs ? input.projectId : urlProjectId,
+      openInitialSideChat,
       performance: input.performance,
       projectTabs: input.projectTabs,
       setupHandoff: input.setupHandoff,

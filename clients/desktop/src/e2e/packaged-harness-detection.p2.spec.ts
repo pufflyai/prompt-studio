@@ -90,9 +90,14 @@ for (const shell of environments) {
       const project = await createPackagedProject(app, "Harness selection");
       await openPackagedProject(app.page, project);
       await app.page.emulateMedia({ reducedMotion: "reduce" });
-      await app.page.getByRole("option", { name: "Sessions", exact: true }).click();
-      const modelMenu = app.page.getByRole("button", { name: "Select model", exact: true });
-      const conversation = app.page.getByRole("log");
+      const sidenav = app.page.locator('[data-workbench-region="sidenav"]');
+      await sidenav.getByRole("option", { name: "Sessions", exact: true }).click();
+      await expect(sidenav.getByRole("button", { name: "Back to project", exact: true })).toBeVisible();
+      await sidenav.getByText("Sessions", { exact: true }).hover();
+      await sidenav.getByRole("button", { name: "New session", exact: true }).click();
+      const main = app.page.getByLabel("Main", { exact: true });
+      const modelMenu = main.getByRole("button", { name: "Select model", exact: true });
+      const conversation = main.getByRole("log");
       await expect(modelMenu).not.toContainText("Loading");
       for (const name of ["Claude Code", "OpenCode", "Codex"]) {
         await modelMenu.click();

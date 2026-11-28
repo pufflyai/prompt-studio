@@ -5,7 +5,7 @@ import { ensureTicketStorage } from "../data/read-migrated-tickets";
 import { ticketWithAttributes } from "../data/ticket-attributes";
 import type { Ticket } from "../data/types";
 import { readWorkflowStatuses, usableWorkflowStatuses } from "../data/workflow-statuses";
-import { withWriteGuard } from "../data/write-guard";
+import { withQueuedWriteGuard, withWriteGuard } from "../data/write-guard";
 import { emitPlannerTicketsChanged } from "../events";
 import { initializePlanPlacements } from "../timeline/commands/initialize-placements";
 import { movePlanPlacement, planPlacements, readPlanMetadata } from "../timeline/commands/placement-store";
@@ -17,13 +17,26 @@ export const moveTicketOnBoard = async (
     "storage" | "events" | "projectId" | "extensionId" | "settings" | "resources" | "commands" | "extensionId" | "files"
   >,
   input: KanbanRendererMove,
-) =>
-  withWriteGuard(ctx, "ticket-order", async () => {
-    const collection = ticketsCollection(ctx);
+) => {
+  const collection = ticketsCollection(ctx);
+  const { milestone, ...attributes } = input.attributes;
+  if (input.order === undefined && milestone === undefined) {
+    let changed = false;
+    const saved = await collection.changeStored(input.rowId, async (current) => {
+      const identity = await ctx.resources.identity({ kind: "ticket", id: input.rowId });
+      const next = identity ? await ticketWithAttributes(ctx.storage, current, attributes) : current;
+      changed = next !== current;
+      return changed ? { ...next, updatedAt: new Date().toISOString() } : current;
+    });
+    if (!saved || !changed) return { changed: 0 };
+    await emitPlannerTicketsChanged(ctx, { ticketId: input.rowId });
+    return { changed: 1 };
+  }
+
+  const { changed, planChanged } = await withQueuedWriteGuard(ctx, "ticket-order", async () => {
     await ensureTicketStorage(ctx);
     const existing = await collection.get(input.rowId);
-    if (!existing) return { changed: 0 };
-    const { milestone, ...attributes } = input.attributes;
+    if (!existing) return { changed: 0, planChanged: false };
     const moving = await ticketWithAttributes(ctx.storage, existing, attributes);
     const changes = new Map<string, Ticket>(
       (input.order ? await readTicketOrderChange(ctx, input.rowId, input.order.beforeRowId) : []).map((ticket) => [
@@ -44,8 +57,7 @@ export const moveTicketOnBoard = async (
           updatedAt: now,
         }));
       await savePlan?.();
-      if (changes.size || savePlan) await emitPlannerTicketsChanged(ctx, { ticketId: input.rowId });
-      return { changed: changes.size };
+      return { changed: changes.size, planChanged: Boolean(savePlan) };
     };
     if (milestone === undefined) return save();
     return withWriteGuard(ctx, "plan", async () => {
@@ -60,3 +72,6 @@ export const moveTicketOnBoard = async (
       });
     });
   });
+  if (changed || planChanged) await emitPlannerTicketsChanged(ctx, { ticketId: input.rowId });
+  return { changed };
+};

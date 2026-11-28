@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import type { CollectionPageRequest } from "@pstdio/sdk/extensions";
-import { appendRendererRows, loadRendererPage } from "./renderer-page-continuation";
+import { appendRendererRows, loadRendererPage, refreshRendererWindow } from "./renderer-page-continuation";
 
 const request: CollectionPageRequest = {
   limit: 100,
@@ -59,11 +59,38 @@ test("a cancelled continuation is not asked again", async () => {
   expect(calls).toBe(1);
 });
 
-test("a board keeps its shown rows and drops a row the newer page repeats", () => {
+test("a board keeps its shown rows and drops duplicate continuation rows", () => {
   const row = (id: string) => ({ id });
   expect(appendRendererRows([row("a"), row("b")], [row("b"), row("c")], (value) => value.id)).toEqual([
     row("a"),
     row("b"),
     row("c"),
+  ]);
+});
+
+test("a revision change between batches restarts the loaded window at its first page", async () => {
+  const reads: [number, string | undefined][] = [];
+  let revision = "r2";
+  const result = await refreshRendererWindow(
+    request,
+    async ({ offset = 0, revision: pinned }) => {
+      reads.push([offset, pinned]);
+      if (pinned === "r2") {
+        revision = "r3";
+        throw new Error("Collection query revision is stale; restart the query");
+      }
+      return {
+        rows: [`${revision} row ${offset}`],
+        page: { cursor: "next", revision, total: 300, filteredTotal: 300, groups: [] },
+      };
+    },
+    new AbortController().signal,
+  );
+  expect(result.rows).toEqual(["r3 row 0", "r3 row 100"]);
+  expect(reads).toEqual([
+    [0, undefined],
+    [100, "r2"],
+    [0, undefined],
+    [100, "r3"],
   ]);
 });

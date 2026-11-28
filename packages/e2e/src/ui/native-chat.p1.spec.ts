@@ -124,7 +124,9 @@ test("independent native chat paints and accepts input before history, then reta
     release();
     await expect(main.getByText("Native transcript", { exact: true })).toBeVisible();
     await expect(composer).toContainText("Unsent native draft");
-    await expect(main.getByText("Earlier saved work", { exact: true })).toBeVisible();
+    // Typing before the saved draft loaded wins; no restore prompt offers the older copy.
+    await expect(main.getByText("Earlier saved work", { exact: true })).toHaveCount(0);
+    await expect(main.getByRole("button", { name: "Restore saved draft" })).toHaveCount(0);
     const side = page.locator('[data-workbench-region="side"]');
     await page.getByRole("button", { name: "Show Side Panel", exact: true }).click();
     await expect(side.locator('[data-testid="content-editable"][contenteditable="true"]')).toBeVisible();
@@ -184,7 +186,6 @@ test("independent native chat paints and accepts input before history, then reta
       .toMatchObject({
         text: "Unsent native draft",
         attachments: [{ name: "draft.txt" }],
-        recovered: [{ text: "Earlier saved work" }],
       });
     await page.reload();
     await expect(composer).toContainText("Unsent native draft");

@@ -1,5 +1,6 @@
 import type { ViewFilterGroup, ViewSort } from "@pstdio/sdk/extensions";
 import type { ReactNode } from "react";
+import type { CollectionPageControl } from "../collection-view/collection-page";
 import { CollectionViewBar } from "../collection-view/collection-view-bar";
 import { withTitleField } from "../collection-view/collection-view-fields";
 import { DisplaySortControl } from "../collection-view/display-sort-control";
@@ -23,6 +24,7 @@ export interface KanbanRendererToolbarProps<TRow extends KanbanRendererRow = Kan
   resourceList?: boolean;
   rows: TRow[];
   storageKey: string;
+  page?: CollectionPageControl;
   itemLabel?: string;
   attributes: AttributeDescriptor[];
   defaultSettings?: Partial<KanbanRendererSettings>;
@@ -54,9 +56,17 @@ export const KanbanRendererToolbar = <TRow extends KanbanRendererRow>(props: Kan
   const { settings, setSettings, sorts, setSorts } = useKanbanRendererStore(storageKey, (state) => state, initialState);
   const categories = buildFilterCategories(attributes, rows);
   const optionsFor = (field: AttributeDescriptor): RuleValueOption[] => {
-    const counts = countFilterValues(rows, field.id, attributes);
+    const page = props.page?.result;
+    const statistic = page?.statistics?.[field.id];
+    const groups = page?.groups.filter(({ field: id, parent }) => id === field.id && !parent) ?? [];
+    const fullyLoaded = !props.page || (page && !page.cursor && (props.page.displayed?.offset ?? 0) === 0);
+    const counts =
+      statistic?.type === "top-values"
+        ? new Map(statistic.values.map(({ label, count }) => [label, count]))
+        : new Map(Object.entries(fullyLoaded ? countFilterValues(rows, field.id, attributes) : {}));
+    for (const group of groups) if (typeof group.value === "string") counts.set(group.value, group.count);
     const category = categories.find((entry) => entry.id === field.id);
-    return (category?.options ?? []).map((option) => ({ ...option, count: counts[option.value] ?? 0 }));
+    return (category?.options ?? []).map((option) => ({ ...option, count: counts.get(option.value) }));
   };
 
   return (

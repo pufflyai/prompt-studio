@@ -13,11 +13,14 @@ const projectModeStarted = (workbench: WorkbenchModuleContext) =>
     });
   });
 
-export const openDashboardSidePanel = async (workbench: WorkbenchModuleContext) => {
+export const openDashboardSidePanel = async (
+  workbench: WorkbenchModuleContext,
+  mode: "attached" | "floating" = "floating",
+) => {
   const viewId = contributionRefId(sessionBrowser.views.conversation);
   // The bubble belongs to the generic Side shell; Sessions only supplies its optional default tab.
   if (!workbench.views.getView(viewId)) {
-    workbench.sidePanel.setMode("floating");
+    workbench.sidePanel.setMode(mode);
     return;
   }
   await projectModeStarted(workbench);
@@ -36,5 +39,5 @@ export const openDashboardSidePanel = async (workbench: WorkbenchModuleContext) 
       { resource: workbench.getPrimaryResource() },
     );
   }
-  workbench.sidePanel.setMode("floating");
+  workbench.sidePanel.setMode(mode);
 };
