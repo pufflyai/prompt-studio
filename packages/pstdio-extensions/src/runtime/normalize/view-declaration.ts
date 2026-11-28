@@ -30,8 +30,9 @@ const body = z.discriminatedUnion("kind", [
       kind: z.literal("chat"),
       ...native,
       draftKey: z.string().min(1),
+      // Sessions releases before PS-1405 still declare these. Accept and drop them so those releases load.
       legacySessionDraft: z.boolean().optional(),
-      browserDraft: z.object({ acknowledgeRecovery: callbackSchema.optional() }).strict().optional(),
+      browserDraft: z.object({}).optional(),
       initial: chatRendererSnapshotSchema.optional(),
       query: callbackSchema,
       onAction: callbackSchema,

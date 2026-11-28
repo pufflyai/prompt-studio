@@ -78,10 +78,7 @@ const toNativeViewBody = (
       kind: "chat",
       ...common,
       draftKey: body.draftKey,
-      legacySessionDraft: body.legacySessionDraft,
-      browserDraft: body.browserDraft
-        ? { acknowledgeRecoveryHandlerId: handlers.acknowledgeRecoveryHandlerId as string | undefined }
-        : undefined,
+      browserDraft: body.browserDraft ? {} : undefined,
       initial: body.initial,
       queryHandlerId: String(handlers.queryHandlerId),
       actionHandlerId: String(handlers.actionHandlerId),

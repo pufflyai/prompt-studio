@@ -292,7 +292,7 @@ const NativeChatConversation = (props: NativeChatViewProps & { transcriptRevisio
             }
             actions={<NativeChatControls {...controlProps} />}
             composerHeader={<NativeChatComposerHeader state={state} session={session} pending={pendingActions} />}
-            conversationNotices={<NativeChatNotices host={host} state={state} session={session} />}
+            conversationNotices={<NativeChatNotices host={host} state={state} />}
             {...nativeChatAttachmentHandlers(conversation.readOnly, upload)}
             attachmentActions={
               <NativeChatAttachmentActions disabled={Boolean(conversation.readOnly) || uploading > 0} upload={upload} />

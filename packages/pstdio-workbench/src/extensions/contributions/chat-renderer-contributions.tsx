@@ -4,19 +4,20 @@ import type { ComponentType } from "react";
 import type { WorkbenchCore } from "../../core";
 import type { CommandParamFieldRenderer } from "../../react/command-palette/command-param-field";
 import type { NativeChatHostProps } from "../../react/renderers/chat/native-chat-host";
+import type { WorkbenchStorageLike } from "../../storage/local-storage-persistence-helpers";
 import type { RegisterWorkbenchExtensionContributionsInput } from "../host/workbench-extension-host-types";
-import type { LegacyChatDraftTransfer } from "./chat-legacy-draft";
 import { createChatOwnerRetention } from "./chat-owner-retention";
 import { createChatRendererOwner } from "./chat-renderer-owner";
 
 export interface ChatCommandTransport {
-  /** Stable runtime endpoint for durable unsent work; authority comes from the common query scope. */
+  /** Stable runtime endpoint that scopes each conversation's draft; authority comes from the common query scope. */
   chatDraftStorageScope?: string;
+  /** Where drafts are kept. Defaults to browser localStorage; desktop passes storage that survives a restart. */
+  chatDraftStorage?: WorkbenchStorageLike;
   /** Normalize host resource defaults for owner selection; invoking placement context stays unchanged. */
   resolveChatResource?(resource: ResourceRef, projectId: string): ResourceRef;
   /** Retain unchanged native owners when the host rebuilds a project contribution set. */
   chatRendererOwners?: ChatRendererOwners;
-  readLegacySessionDraft?: (projectId: string, draftKey: string) => LegacyChatDraftTransfer | undefined;
   createChatHost?: (workbench: WorkbenchCore, projectId?: string) => ComponentType<NativeChatHostProps>;
   streamChatCommand?(
     commandId: string,

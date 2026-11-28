@@ -4,7 +4,6 @@ import { AlertMessage, EmptyState } from "@pstdio/ui";
 import { ChatPanel } from "@pstdio/ui/chat-ui";
 import { useState } from "react";
 import { createChatSession } from "../../../extensions/contributions/chat-session";
-import { NativeChatDraftRecovery } from "./native-chat-draft-recovery";
 import type { NativeChatHostProps } from "./native-chat-host";
 import { NativeChatView } from "./native-chat-view";
 
@@ -31,19 +30,6 @@ export const OtherDevice = () => (
     submitDisabled
     readOnlyQueue
     messages={[{ id: "history", role: "assistant", parts: [{ type: "text", text: "History from another device." }] }]}
-  />
-);
-export const RecoveredDraft = () => (
-  <ChatPanel
-    {...composer}
-    messages={[]}
-    chatInputDefaultValue="New typing"
-    conversationNotices={
-      <NativeChatDraftRecovery
-        recovered={[{ text: "Earlier saved work", attachments: [{ id: "file", name: "notes.txt" }], values: {} }]}
-        onRestore={() => undefined}
-      />
-    }
   />
 );
 

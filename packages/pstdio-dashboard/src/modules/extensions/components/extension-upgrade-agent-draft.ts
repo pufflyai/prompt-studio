@@ -1,9 +1,9 @@
 import { contributionRefId, sessionBrowser } from "@pstdio/sdk/extensions";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench";
+import { seedChatBrowserDraft } from "@pstdio/workbench/extensions";
 import type { ExtensionUpgradeReview, ExtensionUpgradeReviewFile } from "pstdio-api-contracts";
-import { getApiClient } from "@/lib/api";
-import { dashboardWorkbenchStorageNamespace } from "@/shared/app/dashboard-workbench-storage-keys";
-import { createDashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
+import { buildAbsoluteApiUrl, getApiClient } from "@/lib/api";
+import { dashboardChatDraftStorage } from "@/shared/app/chat-draft-storage";
 
 const maxPromptBytes = 96 * 1024;
 const maxFiles = 12;
@@ -64,24 +64,33 @@ export const openExtensionUpgradeAgentDraft = async (
   const { workbench } = input;
   if (!extensionUpgradeAgentAvailable(workbench)) throw new Error("The session composer is unavailable here.");
   const text = await promptFor(projectId, instanceId, review, instructions);
-  const id = `new-upgrade-${review.id}-${crypto.randomUUID()}`;
-  const drafts = createDashboardSessionDraftPersistence({
-    namespace: dashboardWorkbenchStorageNamespace,
-    projectSelection: { getSelectedProjectId: () => projectId },
+  const resource = {
+    id: `new-upgrade-${review.id}-${crypto.randomUUID()}`,
+    type: "session-draft",
+    extensionId: "pstdio",
+    projectId,
+    label: "Extension upgrade review",
+    metadata: { upgradeReviewId: review.id },
+  };
+  const discardUnopened = seedChatBrowserDraft({
+    workbench,
+    resource,
+    viewId: contributionRefId(sessionBrowser.views.conversation),
+    extensionId: sessionBrowser.views.conversation.extensionId,
+    storageScope: buildAbsoluteApiUrl("/"),
+    storage: dashboardChatDraftStorage(),
+    draft: { text, attachments: [], values: {} },
   });
-  drafts.setDraft(id, text);
-  await workbench.navigation.openTarget({
-    kind: "panel",
-    panel: sessionBrowser.panels.conversation,
-    open: "pin",
-    resource: {
-      id,
-      type: "session-draft",
-      extensionId: "pstdio",
-      projectId,
-      label: "Extension upgrade review",
-      metadata: { upgradeReviewId: review.id },
-    },
-  });
+  try {
+    await workbench.navigation.openTarget({
+      kind: "panel",
+      panel: sessionBrowser.panels.conversation,
+      open: "pin",
+      resource,
+    });
+  } catch (error) {
+    discardUnopened();
+    throw error;
+  }
   if (workbench.sidePanel.getMode() === "closed") workbench.sidePanel.setMode("floating");
 };

@@ -1,20 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { WorkbenchStorageLike } from "@pstdio/workbench/storage";
 import { createDesktopWorkbenchStorage, type DesktopWorkbenchStorageBridge } from "./desktop-workbench-storage";
-
-const createStorage = () => {
-  const values = new Map<string, string>();
-  const storage: WorkbenchStorageLike = {
-    getItem: (key) => values.get(key) ?? null,
-    setItem: (key, value) => {
-      values.set(key, value);
-    },
-    removeItem: (key) => {
-      values.delete(key);
-    },
-  };
-  return storage;
-};
 
 const createBridge = (values: Record<string, string> = {}) => {
   const changes: Array<[string, string | null]> = [];
@@ -30,7 +15,7 @@ const createBridge = (values: Record<string, string> = {}) => {
 describe("createDesktopWorkbenchStorage", () => {
   test("hydrates saved workbench values and forwards every later change", async () => {
     const { bridge, changes } = createBridge({ "dashboard-wb2:selected-project:global": "project-one" });
-    const storage = await createDesktopWorkbenchStorage(bridge, createStorage());
+    const storage = await createDesktopWorkbenchStorage(bridge);
 
     expect(storage?.getItem("dashboard-wb2:selected-project:global")).toBe("project-one");
     storage?.setItem("dashboard-wb2:layout:project/project-one", '{"version":5}');
@@ -50,14 +35,12 @@ describe("createDesktopWorkbenchStorage", () => {
     expect(await createDesktopWorkbenchStorage(undefined)).toBeUndefined();
   });
 
-  test("keeps session drafts in browser storage instead of sending them to Electron", async () => {
+  test("sends unsent chat drafts to Electron so they survive a restart", async () => {
     const { bridge, changes } = createBridge();
-    const browserStorage = createStorage();
-    const storage = await createDesktopWorkbenchStorage(bridge, browserStorage);
+    const storage = await createDesktopWorkbenchStorage(bridge);
 
-    storage?.setItem("dashboard-wb2:session-drafts:project-one", '{"session-one":"private draft"}');
+    storage?.setItem("pstdio-workbench:chat-draft:session-one", '{"text":"half-written"}');
 
-    expect(browserStorage.getItem("dashboard-wb2:session-drafts:project-one")).toBe('{"session-one":"private draft"}');
-    expect(changes).toEqual([]);
+    expect(changes).toEqual([["pstdio-workbench:chat-draft:session-one", '{"text":"half-written"}']]);
   });
 });

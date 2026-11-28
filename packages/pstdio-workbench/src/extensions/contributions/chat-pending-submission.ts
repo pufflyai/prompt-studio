@@ -17,7 +17,8 @@ export const createChatPendingSubmission = (
   failure: undefined as string | undefined,
   unresolved: undefined as UnresolvedSubmissionError | undefined,
   failureDismissed: false,
-  recoveryAdded: false,
+  /** Composer edit count when delivery became unknown; a later delivery clears that unchanged draft. */
+  draftEdits: undefined as number | undefined,
   echoed: false,
   values: action.values,
   knownMessages: new Set(messages.flatMap((message) => [message.id, chatMessageIdentity(message)])),
