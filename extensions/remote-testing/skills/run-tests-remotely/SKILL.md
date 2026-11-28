@@ -5,7 +5,7 @@ metadata:
   version: 0.1.0
 ---
 
-Use cloud workspaces as the primary place to run agent tests, including focused red/green checks and `test:review`. Remote testing runs a test command on a cloud machine. It uploads your working tree as Git sees it: committed files, your uncommitted edits and new files that are not ignored. It omits ignored untracked files such as `node_modules` and build output; tracked files and reachable Git history are included. Inspect the selected files and history for secrets before uploading. Your machine stays free while the tests run.
+Use cloud workspaces as the primary place to run agent tests, including focused red/green checks and `test:review`. Remote testing runs a test command on a cloud machine. It uploads your working tree as Git sees it: committed files, your uncommitted edits and new files that are not ignored. It omits ignored untracked files such as `node_modules` and build output; tracked files and candidate and comparison-base Git history are included. Inspect the selected files and history for secrets before uploading. Your machine stays free while the tests run.
 
 ## Check that it is available
 
@@ -71,3 +71,5 @@ Environments expire at the approved template's deadline. Stop the ones you start
 Pass `--path` for the target worktree. Use `--ref <branch-or-commit>` to test an exact commit, or `--branch-template true` to publish a version for the current worktree including uncommitted edits. For a Prompt Studio instance, use `pst pocketcoder.remote-testing preview run --path <worktree> [--ref <branch-or-commit>]`. When it returns a workspace ID, run `pst pocketcoder.remote-testing preview open --workspace-id <id>` to obtain a browser link on the configured operator device. Share the expiring link only with the intended viewer.
 
 Each Kito preview receives an independent HTTPS origin, invitation, browser session and app state. Multiple previews can stay open together within actual cloud capacity; never stop another session's preview to open yours. New certificates may take several minutes to become ready. Save `workspaceId`, `url` and `expiresAt` separately for each preview; keep the invitation URLs private. Reopening does not extend the preview lifetime.
+
+Source history covers the selected candidate and comparison base, with refs pointing into those histories. The default base is `origin/main` (then local `main` or `master` when available). Pass `--base <ref>` to the remote command for another comparison base, and use the same base in `test:review`. Fetch it on the host before upload. Unrelated workspace branch histories stay on the host.

@@ -121,3 +121,5 @@ the producer journal. Keep both browser caches and that journal on the workspace
 Apply these values to the published default template and both approved branch bases.
 
 For branch launches, install approved rendered manifests as `branch-templates/tests.json` and `branch-templates/preview.json` in this extension's project storage. Configure **PocketCoder branch templates** with a finite `templates:write` key scoped to `remote-tests-branch` and `prompt-studio-preview-branch`. Configure the runner key to launch both branch families. Both keys stay on the Prompt Studio host.
+
+Source history covers the selected candidate and comparison base, with refs pointing into those histories. The default base is `origin/main` (then local `main` or `master` when available). Pass `--base <ref>` to the remote command for another comparison base, and use the same base in `test:review`. Fetch it on the host before upload. Unrelated workspace branch histories stay on the host.

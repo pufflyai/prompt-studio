@@ -111,3 +111,37 @@ test("keeps the committed branch archive available while it is in use", async ()
   expect(await Bun.file(path).exists()).toBe(false);
   expect(sha256).toMatch(/^[0-9a-f]{64}$/);
 });
+
+test("uploads the selected comparison history without unrelated workspace branches", async () => {
+  const root = await mkdtemp(join(tmpdir(), "remote-testing-comparison-"));
+  directories.push(root);
+  const run = async (...args: string[]) =>
+    (await localProcess.runOrThrow({ command: ["git", "-C", root, ...args] })).stdout.trim();
+  await run("init", "--template=", "-q");
+  await writeFile(join(root, "file.txt"), "candidate");
+  await run("add", ".");
+  await run("-c", "user.name=t", "-c", "user.email=t@example.com", "commit", "-qm", "candidate");
+  const tree = await run("rev-parse", "HEAD^{tree}");
+  const commit = async (message: string) =>
+    run("-c", "user.name=t", "-c", "user.email=t@example.com", "commit-tree", tree, "-m", message);
+  const base = await commit("comparison");
+  await run("update-ref", "refs/remotes/origin/release", base);
+  await run("update-ref", "refs/heads/unrelated-workspace", await commit("unrelated"));
+  const out = await mkdtemp(join(tmpdir(), "remote-testing-comparison-out-"));
+  directories.push(out);
+  await withSourceArchive(
+    localProcess,
+    root,
+    "HEAD",
+    async ({ archive }) => {
+      await localProcess.runOrThrow({ command: ["tar", "-xzf", archive.name!, "-C", out] });
+      const selected = await localProcess.runOrThrow({ command: ["git", "-C", out, "rev-parse", "origin/release"] });
+      expect(selected.stdout.trim()).toBe(base);
+      const omitted = await localProcess.run({
+        command: ["git", "-C", out, "show-ref", "--verify", "refs/heads/unrelated-workspace"],
+      });
+      expect(omitted.exitCode).not.toBe(0);
+    },
+    "origin/release",
+  );
+});

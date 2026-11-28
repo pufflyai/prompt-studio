@@ -1,4 +1,5 @@
 {
+  "remote-testing.comparison-base": "Base de comparaison (par défaut : origin/main)",
   "remote-testing.kito-workflow.title": "Clé API Kito",
   "remote-testing.kito-workflow.description": "Utiliser Kito pour le stockage des sources et les liens d’aperçu.",
   "remote-testing.preview-helper.title": "Assistant d’URL d’aperçu",

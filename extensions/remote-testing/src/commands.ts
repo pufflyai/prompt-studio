@@ -72,6 +72,7 @@ export const run = defineCommand({
       ),
     }),
     ref: params.text({ label: l10n("remote-testing.git-ref-default-working-tree", "Git ref (default: working tree)") }),
+    base: params.text({ label: l10n("remote-testing.comparison-base", "Comparison base (default: origin/main)") }),
     branchTemplate: params.boolean({
       label: l10n("remote-testing.publish-a-template-for-this-snapshot", "Publish a template for this snapshot"),
       default: false,
@@ -111,6 +112,7 @@ export const run = defineCommand({
         sessionId: input.sessionId,
         keepEnvironment: input.keepEnvironment,
         ref: input.ref,
+        base: input.base,
         branchTemplate: input.branchTemplate,
       },
       ctx.signal,

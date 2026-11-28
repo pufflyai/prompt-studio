@@ -15,6 +15,7 @@ export async function withSourceArchive<T>(
   root: string,
   ref: string | undefined,
   use: (source: SourceArchive) => Promise<T>,
+  base?: string,
 ) {
   const revision = await process
     .runOrThrow({
@@ -31,7 +32,8 @@ export async function withSourceArchive<T>(
   const directory = await mkdtemp(join(tmpdir(), "remote-testing-"));
   try {
     const tar = join(directory, "source.tar");
-    const history = revision !== "working-tree" ? await prepareHistory(process, root, revision, directory) : undefined;
+    const history =
+      revision !== "working-tree" ? await prepareHistory(process, root, revision, directory, base) : undefined;
     const files = ref
       ? await archiveCommit(process, history!, revision, tar)
       : await archiveTree(process, root, directory, tar);
@@ -95,7 +97,13 @@ async function archiveTree(process: ExtensionProcessApi, root: string, directory
 
 // Fetch into a new repository instead of copying .git: local config, hooks,
 // credentials, reflogs and linked-worktree paths must stay on the host.
-async function prepareHistory(process: ExtensionProcessApi, root: string, revision: string, directory: string) {
+async function prepareHistory(
+  process: ExtensionProcessApi,
+  root: string,
+  revision: string,
+  directory: string,
+  comparison?: string,
+) {
   const shallow = await process.runOrThrow({
     command: ["git", "-C", root, "rev-parse", "--is-shallow-repository"],
     timeoutMs: 10_000,
@@ -107,16 +115,49 @@ async function prepareHistory(process: ExtensionProcessApi, root: string, revisi
     process.runOrThrow({ command: ["git", "-C", history, ...args], timeoutMs: 300_000 });
   await process.runOrThrow({ command: ["git", "init", "--template=", "-q", history], timeoutMs: 10_000 });
   await git("symbolic-ref", "HEAD", "refs/cloud-upload/head");
-  await git(
-    "fetch",
-    "--no-write-fetch-head",
-    "--no-tags",
-    root,
-    revision,
-    "+refs/heads/*:refs/heads/*",
-    "+refs/remotes/*:refs/remotes/*",
-    "+refs/tags/*:refs/tags/*",
-  );
+  // Keep complete history for this candidate and the main comparison base.
+  // Unrelated workspaces can have large, private branch histories of their own.
+  let base = revision;
+  if (comparison) {
+    const result = await process.runOrThrow({
+      command: ["git", "-C", root, "rev-parse", "--verify", "--end-of-options", `${comparison}^{commit}`],
+      timeoutMs: 10_000,
+    });
+    base = result.stdout.trim();
+  }
+  for (const candidate of comparison
+    ? []
+    : ["refs/remotes/origin/main", "refs/heads/main", "refs/remotes/origin/master", "refs/heads/master"]) {
+    const result = await process.run({
+      command: ["git", "-C", root, "rev-parse", "--verify", `${candidate}^{commit}`],
+      timeoutMs: 10_000,
+    });
+    if (result.exitCode === 0) {
+      base = result.stdout.trim();
+      break;
+    }
+  }
+  const listed = await process.runOrThrow({
+    command: [
+      "git",
+      "-C",
+      root,
+      "for-each-ref",
+      `--merged=${revision}`,
+      `--merged=${base}`,
+      "--format=%(refname)",
+      "refs/heads",
+      "refs/remotes",
+      "refs/tags",
+    ],
+    timeoutMs: 60_000,
+  });
+  const refs = listed.stdout
+    .trim()
+    .split("\n")
+    .filter(Boolean)
+    .map((ref) => `+${ref}:${ref}`);
+  await git("fetch", "--no-write-fetch-head", "--no-tags", root, revision, base, ...refs);
   await git("update-ref", "refs/cloud-upload/head", revision);
   await git("reset", "--mixed", "--quiet", revision);
   await rm(join(history, ".git", "hooks"), { recursive: true, force: true });
