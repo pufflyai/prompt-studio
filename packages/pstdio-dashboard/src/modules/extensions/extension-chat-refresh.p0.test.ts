@@ -75,7 +75,7 @@ test("keeps a native draft owner during an unrelated extension addition while hy
     retain(): () => void;
     changeDraft(update: { text: string }): void;
     flushDraft(): Promise<void>;
-    getSnapshot(): { draft: { text: string; recovered?: { text: string }[] } };
+    getSnapshot(): { draft: { text: string } };
   };
   const render = () => {
     const body = workbench.views.getView(viewId)!.body;
@@ -104,10 +104,8 @@ test("keeps a native draft owner during an unrelated extension addition while hy
     expect(signals.every((signal) => !signal.aborted)).toBe(true);
     loaded.resolve();
     await first.flushDraft();
-    expect(first.getSnapshot().draft).toMatchObject({
-      text: "Unsent native draft",
-      recovered: [{ text: "Earlier saved work" }],
-    });
+    // Typing that started before the saved draft arrived wins.
+    expect(first.getSnapshot().draft).toMatchObject({ text: "Unsent native draft" });
     expect(saved.at(-1)).toMatchObject(first.getSnapshot().draft);
     // Only unfinished reads need cancellation; completed reads keep their settled signal.
     queryRead = refreshing;

@@ -22,15 +22,12 @@ commands delegate to the installed provider; they contain no second chat/list
 implementation. Disabling the provider removes its presentation while core data
 and running work remain intact. Missing targets use normal unavailable feedback.
 
-The native host stores draft text, attachment references, and composer settings in
-the browser. Each browser can compose independently in the same session, including
-when execution runs on another device. Sessions opts into the generic native-chat
-`browserDraft` contract; existing provider-managed chat drafts keep their own loader
-and saver. Browser-local legacy drafts are carried forward after a local save.
-Old provider record/blob drafts and native inputs predating browser ownership remain
-recoverable. Recovery is acknowledged only after every body is durably stored in
-the browser. Old provider records and files remain intact, with a receipt for the
-exact recovered bytes so a concurrent older client cannot lose its later work.
+The native host keeps one unsent draft per conversation: its text, attachment
+references and composer settings. On desktop it survives a restart. Each browser
+composes independently in the same session, including when execution runs on another
+device; drafts are not synchronized or recovered across browsers or devices.
+Sessions opts into the generic native-chat `browserDraft` contract; existing
+provider-managed chat drafts keep their own loader and saver.
 Successful submission still uses the session owner. Generic layout remains the owner of selected
 panels and page/panel conversion. See [native chat](../extensions/0028-native-chat.md)
 and the [provider README](../../../extensions/pstdio-session-browser/README.md).

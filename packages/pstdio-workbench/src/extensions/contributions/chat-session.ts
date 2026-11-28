@@ -2,16 +2,8 @@ import type { ChatDraft, ChatRendererAction, ChatRendererSnapshot, ControlValueM
 import type { SessionMessage } from "@pstdio/ui/chat-ui";
 import { chatRendererSnapshotSchema } from "pstdio-api-contracts";
 import { type ChatActionOperations, executeChatAction, trackChatActionExecution } from "./chat-action-operations";
-import {
-  canReplaceRecoveredChatDraft,
-  chatDraftContentKey,
-  hydrateChatDraft,
-  rebaseChatRecoveryKey,
-  recoverChatDraft,
-} from "./chat-draft-recovery";
 import { createChatDraftRestoration, hasUnresolvedChatSubmission } from "./chat-draft-restoration";
 import { createChatEventReader } from "./chat-event-reader";
-import { clearDeliveredChatRecoveries } from "./chat-failed-submission";
 import { type ChatQueryContext, createChatFiniteRead } from "./chat-finite-read";
 import { type ChatPendingSubmission, createChatSubmissionPresentation } from "./chat-pending-submission";
 import { createChatSessionDraft } from "./chat-session-draft";
@@ -37,20 +29,18 @@ export interface ChatSessionInput {
   watch?(signal: AbortSignal): AsyncIterable<unknown> & { result?: Promise<unknown> };
   loadDraft?(): Promise<unknown>;
   saveDraft?(draft: ChatDraft): Promise<unknown>;
-  /** Stage edits synchronously until the provider acknowledges the asynchronous save. */
+  /** Keep each edit synchronously, before the asynchronous save settles. */
   stageDraft?(draft: ChatDraft): void;
-  acknowledgeRecovery?(draft: ChatDraft): Promise<unknown>;
 }
 
+/** A provider draft replaces the composer only when nobody typed while the action ran. */
 const applyChatActionDraft = (
   drafts: ReturnType<typeof createChatSessionDraft>,
-  current: ChatDraft,
   incoming: ChatDraft | undefined,
   expectedEdits: number,
   capturedSave?: ChatSessionInput["saveDraft"],
 ) => {
-  if (incoming)
-    drafts.change(drafts.edits() === expectedEdits ? incoming : hydrateChatDraft(current, incoming), capturedSave);
+  if (incoming && drafts.edits() === expectedEdits) drafts.change(incoming, capturedSave);
 };
 
 const initialChatState = (initial?: ChatRendererSnapshot) => ({
@@ -159,8 +149,6 @@ export const createChatSession = (input: ChatSessionInput) => {
   const actions = new Set<Promise<unknown>>();
   let retired = false;
   const retiredState = initialChatState();
-  // Unchanged composer writes may replace the object without creating newer work.
-  let recoverableDraft: string | undefined;
   const merge = (
     incoming: ChatRendererSnapshot,
     issued = ++clock,
@@ -170,31 +158,22 @@ export const createChatSession = (input: ChatSessionInput) => {
   ) => {
     const pending = state.pending;
     const merged = snapshots.merge(state, incoming, issued, expectedValues, action);
-    // Host control defaults do not create a new composer draft; explicit user edits still fence recovery.
-    recoverableDraft = rebaseChatRecoveryKey(recoverableDraft, state.draft, merged.state.draft);
     const transcriptOnly = isTranscriptUpdate(hasLoaded, incoming);
     hasLoaded = true;
     publish({ ...merged.state, loading: false }, transcriptOnly);
-    const recovery = clearDeliveredChatRecoveries(state.draft, pending ?? [], state.pending);
-    if (recovery.pending !== state.pending) publish({ pending: recovery.pending });
-    if (recovery.recovery) drafts.change(recovery.recovery);
+    // A failed message arrived after all; take its returned text back out of an unchanged composer.
+    const delivered = pending?.find(
+      (item) =>
+        item.returned?.draftEdits === drafts.edits() &&
+        !state.pending?.some((next) => next.message.id === item.message.id),
+    );
+    if (delivered?.returned) drafts.change(delivered.returned.previous);
     if (expectedValues && merged.valuesChanged) drafts.changed(capturedSave);
   };
   const reader = createChatEventReader({
     reserve: () => ++clock,
     merge,
     messages: () => state.conversation.messages ?? [],
-    recover: (recovered) => {
-      drafts.change(
-        recoverChatDraft(
-          state.draft,
-          recovered,
-          canReplaceRecoveredChatDraft(state.draft, drafts.changes(), recoverableDraft),
-        ),
-      );
-      recoverableDraft = undefined;
-      void input.acknowledgeRecovery?.(recovered).catch(fail);
-    },
   });
   const pin = () => (finite.query.isDisposed() ? () => {} : finite.query.subscribe(() => {}, { automatic: false }));
   const drafts = createChatSessionDraft({
@@ -247,7 +226,7 @@ export const createChatSession = (input: ChatSessionInput) => {
     const pending = removed(state.pending);
     if (pending) publish({ pending });
     if (result.snapshot) merge(result.snapshot, issued, expectedValues, action, capturedSave);
-    applyChatActionDraft(drafts, state.draft, result.draft, changed, capturedSave);
+    applyChatActionDraft(drafts, result.draft, changed, capturedSave);
     return result;
   };
   const submit = createChatSubmissionRunner({
@@ -257,9 +236,6 @@ export const createChatSession = (input: ChatSessionInput) => {
     publish: (update) => publish({ ...update, ...(update.sending ? { error: drafts.error() } : {}) }),
     changeDraft: drafts.change,
     fail,
-    markRecoverable: () => {
-      recoverableDraft = chatDraftContentKey(state.draft);
-    },
   });
   const run = (action: ChatRendererAction, handler = input.action) => {
     if (retired) return Promise.reject(new Error("Chat authority is closed"));
@@ -307,8 +283,6 @@ export const createChatSession = (input: ChatSessionInput) => {
       ...input,
       active: () => !retired,
       read: readState,
-      values: snapshots.values,
-      changeDraft: drafts.change,
       publish,
     }),
     run,

@@ -85,7 +85,7 @@ test("question replies do not create a pending queue or consume the ordinary dra
   expect(session.getSnapshot().draft.attachments).toEqual([file]);
 });
 
-test("a rejected queued send stays recoverable until dismissed and survives durable recovery", async () => {
+test("a rejected queued send returns to the composer and leaves it if it arrives later", async () => {
   const saved: unknown[] = [];
   const session = createChatSession({
     initial: { streaming: true },
@@ -97,24 +97,20 @@ test("a rejected queued send stays recoverable until dismissed and survives dura
       saved.push(draft);
     },
   });
-  session.changeDraft({ text: "", attachments: [], values: action.values });
+  // The composer clears its text on send but still holds the sent file.
+  session.changeDraft({ text: "", attachments: [file], values: action.values });
   await expect(session.run(action)).rejects.toThrow("Could not send");
-  expect(session.getSnapshot().draft.text).toBe("");
+  expect(session.getSnapshot().draft).toEqual({ text: action.text, attachments: [file], values: action.values });
   expect(session.getSnapshot().pending?.[0]?.failure).toBe("Could not send");
   expect(session.getSnapshot().messages).toMatchObject([{ role: "user", delivery: "unsent" }]);
   await session.flushDraft();
-  expect(saved.at(-1)).toMatchObject({
-    recovered: [{ text: action.text, attachments: [file], values: action.values }],
+  expect(saved.at(-1)).toEqual(session.getSnapshot().draft);
+  session.accept({
+    revision: 1,
+    snapshot: { queuedFollowUps: [{ id: "delivered", prompt: action.text, attachments: [file] }] },
   });
-  session.changeDraft({ text: "Newer work", attachments: [{ id: "B", name: "B.txt" }], values: { model: "A" } });
-  session.restoreSubmission(session.getSnapshot().pending![0]!.message.id);
   expect(session.getSnapshot().pending).toBeUndefined();
-  expect(session.getSnapshot().draft).toMatchObject({ text: action.text, attachments: [file], values: action.values });
-  expect(session.getSnapshot().draft.recovered).toContainEqual({
-    text: "Newer work",
-    attachments: [{ id: "B", name: "B.txt" }],
-    values: { model: "A" },
-  });
+  expect(session.getSnapshot().draft).toMatchObject({ text: "", attachments: [] });
 });
 
 test("identical queued sends claim separate receipts across refresh and canonical handoff", async () => {
@@ -178,7 +174,7 @@ test("a quickly consumed queue is acknowledged by canonical history, not an unre
   expect(session.getSnapshot().queuedFollowUps).toEqual([]);
 });
 
-test("late delivery clears only a failure's own durable recovery and never offers delivered input for resubmission", async () => {
+test("late delivery never offers delivered input for resubmission and keeps newer typing", async () => {
   const session = createChatSession({
     initial: { streaming: true },
     query: async () => ({}),
@@ -190,7 +186,6 @@ test("late delivery clears only a failure's own durable recovery and never offer
     text: "Newer body",
     attachments: [],
     values: { model: "A" },
-    recovered: [{ text: "Earlier recovery", attachments: [], values: {} }],
   });
   await expect(session.run(action)).rejects.toThrow("Transport failed");
   expect(session.getSnapshot().pending?.[0]?.failure).toBe("Transport failed");
@@ -201,7 +196,6 @@ test("late delivery clears only a failure's own durable recovery and never offer
   expect(session.getSnapshot().pending).toBeUndefined();
   expect(session.getSnapshot().messages).toEqual([]);
   expect(session.getSnapshot().draft.text).toBe("Newer body");
-  expect(session.getSnapshot().draft.recovered).toEqual([{ text: "Earlier recovery", attachments: [], values: {} }]);
 });
 
 test("queued receipt survives independent empty-queue and replaced canonical prompt events", async () => {
@@ -296,32 +290,25 @@ test("an acknowledged queue receipt cannot steal the earlier ordinary input's de
   expect(session.getSnapshot().pending).toBeUndefined();
 });
 
-test("identical failed inputs share recovery until their last acknowledgement without deleting prior saved work", async () => {
-  for (const preexisting of [false, true]) {
-    const failed = { text: action.text, attachments: action.attachments, values: action.values };
-    const session = createChatSession({
-      initial: { streaming: true },
-      query: async () => ({}),
-      action: async () => {
-        throw new Error("Delivery uncertain");
-      },
-    });
-    if (preexisting) session.changeDraft({ recovered: [failed] });
-    await session.run(action).catch(() => {});
-    await session.run(action).catch(() => {});
-    expect(session.getSnapshot().draft.recovered).toHaveLength(1);
-    session.dismissSubmission(session.getSnapshot().pending![1]!.message.id);
-    const first = { id: "one", prompt: action.text, attachments: action.attachments };
-    session.accept({ revision: 1, snapshot: { queuedFollowUps: [first] } });
-    expect(session.getSnapshot().pending).toHaveLength(1);
-    expect(session.getSnapshot().draft.recovered).toHaveLength(1);
-    session.accept({ revision: 2, snapshot: { queuedFollowUps: [first, { ...first, id: "two" }] } });
-    expect(session.getSnapshot().pending).toBeUndefined();
-    expect(session.getSnapshot().draft.recovered ?? []).toHaveLength(preexisting ? 1 : 0);
-  }
+test("a repeated failed send keeps one receipt, which a late delivery still claims", async () => {
+  const session = createChatSession({
+    initial: { streaming: true },
+    query: async () => ({}),
+    action: async () => {
+      throw new Error("Delivery uncertain");
+    },
+  });
+  await session.run(action).catch(() => {});
+  await session.run(action).catch(() => {});
+  expect(session.getSnapshot().pending).toHaveLength(1);
+  session.accept({
+    revision: 1,
+    snapshot: { queuedFollowUps: [{ id: "one", prompt: action.text, attachments: action.attachments }] },
+  });
+  expect(session.getSnapshot().pending).toBeUndefined();
 });
 
-test("dismissing an unsent message preserves both the current draft and the failed input", async () => {
+test("dismissing an unsent message keeps the composer and shows its files", async () => {
   const session = createChatSession({
     initial: { streaming: true },
     query: async () => ({}),
@@ -334,19 +321,28 @@ test("dismissing an unsent message preserves both the current draft and the fail
   const unrelated = { id: "file-B", name: "B.txt" };
   session.changeDraft({ text: "Keep typing", attachments: [file, unrelated] });
   const { draft, pending } = session.getSnapshot();
-  expect(visibleChatDraftAttachments(draft.attachments, pending)).toEqual([unrelated]);
+  // The failed input's file is back in the composer, so nothing stays hidden.
+  expect(visibleChatDraftAttachments(draft.attachments, pending)).toEqual([file, unrelated]);
   session.dismissSubmission(session.getSnapshot().pending![0]!.message.id);
   const dismissed = session.getSnapshot();
   expect(dismissed.pending?.[0]?.failureDismissed).toBe(true);
   expect(dismissed.draft).toEqual(draft);
-  expect(visibleChatDraftAttachments(dismissed.draft.attachments, dismissed.pending)).toEqual([unrelated]);
-  expect(draft.recovered).toContainEqual({ text: action.text, attachments: action.attachments, values: action.values });
-  session.restoreDraft(0);
-  expect(session.getSnapshot().pending).toBeUndefined();
-  expect(session.getSnapshot().draft).toMatchObject({ text: action.text, attachments: [file] });
-  expect(session.getSnapshot().draft.recovered).toContainEqual({
-    text: "Keep typing",
-    attachments: [unrelated],
-    values: draft.values,
+  expect(visibleChatDraftAttachments(dismissed.draft.attachments, dismissed.pending)).toEqual([file, unrelated]);
+});
+
+test("sending a returned message again replaces its failed copy", async () => {
+  let fail = true;
+  const session = createChatSession({
+    initial: { streaming: true },
+    query: async () => ({}),
+    action: async () => {
+      if (fail) throw new Error("Could not send");
+      return {};
+    },
   });
+  await expect(session.run(action)).rejects.toThrow("Could not send");
+  expect(session.getSnapshot().pending?.filter((item) => item.failure)).toHaveLength(1);
+  fail = false;
+  await session.run(action);
+  expect(session.getSnapshot().pending?.some((item) => item.failure)).toBeFalsy();
 });

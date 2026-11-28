@@ -23,11 +23,6 @@ test("large logical updates are lossless, atomic and bounded with worst-size env
   for (const frame of frames)
     expect(new TextEncoder().encode(JSON.stringify(frame)).byteLength).toBeLessThanOrEqual(64 * 1024);
   expect(decode(frames)).toEqual(event);
-  const recovery: ChatRendererEvent = {
-    revision: 1,
-    recoverDraft: { text: "x".repeat(80 * 1024), attachments: [], values: {} },
-  };
-  expect(decode([...chatRendererStreamFrames(recovery)])).toEqual(recovery);
 });
 
 test("the 64 KiB boundary passes small events unchanged and frames only larger logical updates", () => {

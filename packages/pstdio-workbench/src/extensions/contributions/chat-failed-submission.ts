@@ -1,44 +1,13 @@
 import type { ChatDraft } from "@pstdio/sdk/extensions";
-import { chatDraftContentKey, hydrateChatDraft, restoreChatDraft } from "./chat-draft-recovery";
-import { type ChatPendingSubmission, visibleChatDraftAttachments } from "./chat-pending-submission";
 
-export const restoreFailedChatSubmission = (
-  draft: ChatDraft,
-  pending: ChatPendingSubmission[] | undefined,
-  id: string,
-) => {
-  const failed = pending?.find((item) => item.message.id === id && item.failure);
-  if (!failed) return;
-  const visibleDraft = { ...draft, attachments: visibleChatDraftAttachments(draft.attachments, failed) };
-  const index = draft.recovered?.findIndex((saved) => chatDraftContentKey(saved) === chatDraftContentKey(failed)) ?? -1;
-  const restored =
-    index < 0
-      ? hydrateChatDraft({ text: failed.text, attachments: failed.attachments, values: failed.values }, visibleDraft)
-      : restoreChatDraft(visibleDraft, index);
-  return { draft: restored, pending: pending?.filter((item) => item !== failed) };
-};
-
-/** Transfer shared recovery ownership until the last failed input is delivered. */
-export const clearDeliveredChatRecoveries = (
-  draft: ChatDraft,
-  before: ChatPendingSubmission[],
-  after?: ChatPendingSubmission[],
-) => {
-  const delivered = before.filter(
-    (item) =>
-      item.failure && item.recoveryAdded && !after?.some((remaining) => remaining.message.id === item.message.id),
-  );
-  const keys = new Set(delivered.map(chatDraftContentKey));
-  let pending = after;
-  if (keys.size)
-    pending = after?.map((item) =>
-      item.failure && keys.has(chatDraftContentKey(item)) ? { ...item, recoveryAdded: true } : item,
-    );
-  const removable = new Set(
-    [...keys].filter((key) => !pending?.some((item) => item.failure && chatDraftContentKey(item) === key)),
-  );
-  const recovery = removable.size
-    ? { recovered: draft.recovered?.filter((saved) => !removable.has(chatDraftContentKey(saved))) }
-    : undefined;
-  return { pending, recovery };
+/** Put failed input back in the composer ahead of any newer typing. Input already there is left alone. */
+export const returnFailedChatInput = (draft: ChatDraft, failed: Pick<ChatDraft, "text" | "attachments">) => {
+  const known = new Set(draft.attachments.map((attachment) => attachment.id));
+  const attachments = failed.attachments.filter((attachment) => !known.has(attachment.id));
+  if (!attachments.length && (!failed.text || draft.text.includes(failed.text))) return draft;
+  return {
+    ...draft,
+    text: draft.text.includes(failed.text) ? draft.text : [failed.text, draft.text].filter(Boolean).join("\n\n"),
+    attachments: [...attachments, ...draft.attachments],
+  };
 };

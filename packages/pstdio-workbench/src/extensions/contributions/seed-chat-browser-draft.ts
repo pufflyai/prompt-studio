@@ -1,6 +1,7 @@
 import type { ChatDraft, ResourceRef } from "@pstdio/sdk/extensions";
 import type { WorkbenchCoreContributionContext } from "../../core";
 import { getWorkbenchQueries } from "../../core/workbench-queries";
+import type { WorkbenchStorageLike } from "../../storage/local-storage-persistence-helpers";
 import { chatBrowserDraftKey, chatDraftOwnerKey } from "./chat-browser-draft-key";
 import { seedLocalChatDraft } from "./chat-local-drafts";
 
@@ -11,6 +12,8 @@ export const seedChatBrowserDraft = (input: {
   viewId: string;
   extensionId: string;
   storageScope: string;
+  /** The same storage the chat view keeps drafts in; browser localStorage when omitted. */
+  storage?: WorkbenchStorageLike;
   draft: ChatDraft;
 }) => {
   const { resource, viewId, extensionId, storageScope, workbench, draft } = input;
@@ -18,5 +21,5 @@ export const seedChatBrowserDraft = (input: {
   if (!projectId || resource.projectId !== projectId) throw new Error("The draft belongs to another project.");
   const scope = { ...getWorkbenchQueries(workbench).getScope(), projectId, extensionId };
   const owner = chatDraftOwnerKey(projectId, viewId, resource, resource.id);
-  return seedLocalChatDraft(chatBrowserDraftKey(storageScope, scope, owner), draft);
+  return seedLocalChatDraft(chatBrowserDraftKey(storageScope, scope, owner), draft, input.storage);
 };

@@ -3,9 +3,7 @@ import type { ChatRendererSnapshot } from "@pstdio/sdk/extensions";
 import { ActionErrorSlot, AlertMessage, UnresolvedSubmission } from "@pstdio/ui";
 import type { OperationStatus } from "../../../core/registries/mutations/operation-types";
 import type { TrackedChatAction } from "../../../extensions/contributions/chat-action-operations";
-import { chatDraftContentKey } from "../../../extensions/contributions/chat-draft-recovery";
 import type { ChatSession } from "../../../extensions/contributions/chat-session";
-import { NativeChatDraftRecovery } from "./native-chat-draft-recovery";
 import type { NativeChatHostServices } from "./native-chat-host";
 import type { useNativeChatActions } from "./use-native-chat-actions";
 
@@ -14,30 +12,13 @@ interface NativeChatNoticesProps {
   state: ReturnType<ChatSession["getSnapshot"]>;
   session: ChatSession;
 }
-export const NativeChatNotices = ({ host, state, session }: NativeChatNoticesProps) => {
-  const {
-    draft,
-    pending,
-    conversation: { notice },
-  } = state;
+export const NativeChatNotices = ({ host, state }: Omit<NativeChatNoticesProps, "session">) => {
+  const { notice } = state.conversation;
   return (
     <>
       {host.account?.notice}
       {(host.messages ?? state.messages).length > 0 ? (host.account?.setup ?? host.account?.progress) : null}
       {host.linkNotice}
-      <NativeChatDraftRecovery
-        recovered={draft.recovered}
-        hidden={(saved) =>
-          Boolean(
-            pending?.some(
-              (item) =>
-                (item.unresolved?.recovery.isRetained() || (item.failure && !item.failureDismissed)) &&
-                chatDraftContentKey(item) === chatDraftContentKey(saved),
-            ),
-          )
-        }
-        onRestore={session.restoreDraft}
-      />
       {notice ? <Text>{notice}</Text> : null}
     </>
   );
@@ -67,7 +48,6 @@ export const NativeChatErrors = ({ state, session }: Omit<NativeChatNoticesProps
               status="error"
               title="Message not sent"
               onClose={() => session.dismissSubmission(item.message.id)}
-              endElement={<Button onClick={() => session.restoreSubmission(item.message.id)}>Restore draft</Button>}
             >
               {item.failure}
             </AlertMessage>

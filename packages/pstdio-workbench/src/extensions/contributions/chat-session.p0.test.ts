@@ -42,73 +42,6 @@ test("message fork failures preserve existing connection feedback and other acti
   expect(session.getSnapshot().error).toBe("Refresh failed");
 });
 
-test("post-submit native recovery preserves drafts that were already recovered", async () => {
-  const earlier = { text: "Earlier work", attachments: [{ id: "B", name: "B.txt" }], values: { model: "B" } };
-  const failed = { text: "Send work", attachments: [{ id: "A", name: "A.txt" }], values: { model: "A" } };
-  let saved: unknown;
-  const session = createChatSession({
-    query: async () => ({}),
-    action: async () => undefined,
-    saveDraft: async (draft) => {
-      saved = draft;
-    },
-  });
-  session.changeDraft({ ...failed, recovered: [earlier] });
-  await session.run({ type: "submit", ...failed });
-  session.accept({ revision: 0, recoverDraft: { ...failed, recovered: [] } });
-  await session.flushDraft();
-  expect(saved).toEqual({ ...failed, recovered: [earlier] });
-});
-
-test("native recovery retains hydrated unsent work even without a local edit", async () => {
-  const newer = { text: "Saved newer body", attachments: [{ id: "B", name: "B.txt" }], values: { model: "B" } };
-  const older = { text: "Failed older body", attachments: [{ id: "A", name: "A.txt" }], values: { model: "A" } };
-  let saved: unknown;
-  const session = createChatSession({
-    query: async () => ({}),
-    action: async () => undefined,
-    loadDraft: async () => newer,
-    saveDraft: async (draft) => {
-      saved = draft;
-    },
-  });
-  const release = session.retain();
-  await Promise.resolve();
-  await Promise.resolve();
-  expect(session.getSnapshot().draft).toEqual(newer);
-  session.accept({ revision: 0, recoverDraft: older });
-  await session.flushDraft();
-  expect(saved).toEqual({ ...newer, recovered: [older] });
-  release();
-});
-
-test("late native-operation recovery saves failed work without replacing a newer draft after the view closes", async () => {
-  let saved: unknown;
-  const session = createChatSession({
-    query: async () => ({}),
-    action: async () => undefined,
-    saveDraft: async (draft) => {
-      saved = draft;
-    },
-  });
-  const failed = { text: "Native objective", attachments: [{ id: "A", name: "A.txt" }], values: { model: "B" } };
-  session.accept({ revision: 1, recoverDraft: failed });
-  await session.flushDraft();
-  expect(saved).toEqual(failed);
-  session.changeDraft({ text: "New work", attachments: [{ id: "B", name: "B.txt" }], values: { model: "C" } });
-  session.dispose();
-  session.accept({ revision: 2, recoverDraft: failed });
-  await session.flushDraft();
-  expect(saved).toMatchObject({
-    text: "New work",
-    attachments: [{ id: "B" }],
-    values: { model: "C" },
-    recovered: [failed],
-  });
-  session.accept({ revision: 2, recoverDraft: failed });
-  expect(session.getSnapshot().draft.recovered).toHaveLength(1);
-});
-
 test("degraded queues block edits while questions and stop remain available and preserve typing", async () => {
   const actions: string[] = [];
   const session = createChatSession({
@@ -179,32 +112,6 @@ test("late draft hydration cannot replace typing; save order preserves the lates
   await session.flushDraft();
   expect(session.getSnapshot().draft.text).toBe("typing");
   expect(saved.at(-1)).toBe("typing");
-  release();
-});
-
-test("typing before hydration preserves the older saved text and files for recovery", async () => {
-  const previous = { text: "Saved work", attachments: [{ id: "old-file", name: "old.txt" }], values: {} };
-  const hydration = deferred<typeof previous>();
-  const saved: unknown[] = [];
-  const session = createChatSession({
-    query: async () => ({}),
-    action: async () => undefined,
-    loadDraft: () => hydration.promise,
-    saveDraft: async (draft) => {
-      saved.push(draft);
-    },
-  });
-  const release = session.retain();
-  session.changeDraft({ text: "New typing" });
-  await Promise.resolve();
-  expect(saved).toEqual([]);
-  hydration.resolve(previous);
-  await session.flushDraft();
-  expect(session.getSnapshot().draft).toMatchObject({ text: "New typing", recovered: [previous] });
-  expect(saved.at(-1)).toMatchObject({ text: "New typing", recovered: [previous] });
-  session.restoreDraft(0);
-  await session.flushDraft();
-  expect(session.getSnapshot().draft).toMatchObject({ ...previous, recovered: [{ text: "New typing" }] });
   release();
 });
 
@@ -428,21 +335,6 @@ test("answering a native question preserves the unsent message and its files", a
   expect(session.getSnapshot().draft).toEqual(draft);
 });
 
-test("restoring fewer controls releases removed ownership and keeps the recovered draft editable", () => {
-  const session = createChatSession({ query: async () => ({}), action: async () => undefined });
-  session.changeDraft({ text: "Current", values: { model: "A", effort: "high" } });
-  session.accept({ revision: 1, recoverDraft: { text: "Legacy", attachments: [], values: { effort: "low" } } });
-  session.restoreDraft(0);
-  session.accept({ revision: 2, snapshot: { values: { model: "B", effort: "default" } } });
-  expect(() => session.changeDraft({ text: "Legacy edited" })).not.toThrow();
-  expect(session.getSnapshot().draft.values).toEqual({ model: "B", effort: "low" });
-  session.accept({ revision: 3, snapshot: { values: { model: "C", effort: "default" } } });
-  expect(session.getSnapshot().draft.values).toEqual({ model: "C", effort: "low" });
-  expect(session.getSnapshot().draft.recovered).toEqual([
-    { text: "Current", attachments: [], values: { model: "A", effort: "high" } },
-  ]);
-});
-
 test("provider values can clear an unchanged intent and persist without another keystroke", async () => {
   let saved: unknown;
   const session = createChatSession({
@@ -646,23 +538,6 @@ test("hydration preserves explicitly edited control keys alongside other saved s
   release();
 });
 
-test("restoring a draft claims its settings even when they equal untouched query defaults", async () => {
-  const hydration = deferred<{ text: string; attachments: []; values: { model: string } }>();
-  const session = createChatSession({
-    query: async () => ({ values: { model: "A" } }),
-    loadDraft: () => hydration.promise,
-    action: async () => undefined,
-  });
-  const release = session.retain();
-  await session.query.read();
-  session.accept({ revision: 0, recoverDraft: { text: "Recovered work", attachments: [], values: { model: "A" } } });
-  session.restoreDraft(0);
-  hydration.resolve({ text: "Older saved work", attachments: [], values: { model: "B" } });
-  await new Promise((done) => setTimeout(done, 0));
-  expect(session.getSnapshot().draft).toMatchObject({ text: "Recovered work", values: { model: "A" } });
-  release();
-});
-
 test("a held submission belongs to its shared owner, shows files once and reconciles a canonical echo", async () => {
   const held = deferred<unknown>();
   const attachment = { id: "A", name: "diagram.png", url: "/files/A", mediaType: "image/png" };
@@ -717,7 +592,7 @@ test("a failed held submission restores its text and files after its presentatio
   expect(session.getSnapshot().draft).toMatchObject({ text: "Keep this", attachments: [attachment] });
 });
 
-test("rejected pending work cannot overwrite a newer draft and never enters canonical patch indexes", async () => {
+test("rejected pending work returns ahead of a newer draft and never enters canonical patch indexes", async () => {
   let reject!: (error: Error) => void;
   const held = new Promise((_, fail) => {
     reject = fail;
@@ -736,9 +611,8 @@ test("rejected pending work cannot overwrite a newer draft and never enters cano
   reject(new Error("Unavailable"));
   await expect(pending).rejects.toThrow("Unavailable");
   expect(session.getSnapshot().draft).toMatchObject({
-    text: "Newer",
-    attachments: [{ id: "B" }],
-    recovered: [{ text: "Old", attachments: [{ id: "A" }] }],
+    text: "Old\n\nNewer",
+    attachments: [{ id: "A" }, { id: "B" }],
   });
   expect(session.getSnapshot().messages).toHaveLength(1);
 });

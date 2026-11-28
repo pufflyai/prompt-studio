@@ -150,11 +150,11 @@ test("an unconfirmed native follow-up stays attached to its conversation across 
     await render("other-thread", "other").run(action);
     expect(writes).toEqual(["thread", "other-thread"]);
     const operations = getWorkbenchOperations(getWorkbenchQueries(workbench));
-    expect(reopened.getSnapshot().draft.recovered?.map(({ text }) => text)).toEqual([action.text]);
+    expect(reopened.getSnapshot().draft.text).toBe(action.text);
     operations.discard(operations.getSnapshot().recovery[0]!.id);
     expect(reopened.hasUnresolvedSubmission()).toBe(false);
     expect(reopened.getSnapshot().pending).toBeUndefined();
-    expect(reopened.getSnapshot().draft.recovered).toEqual([]);
+    expect(reopened.getSnapshot().draft.text).toBe(action.text);
   } finally {
     lost.resolve();
     registration.dispose();

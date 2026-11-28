@@ -1,7 +1,7 @@
 import { contributionRefId, sessionBrowser, workbenchCommands } from "@pstdio/sdk/extensions";
 import type { WorkbenchModuleContext } from "@pstdio/workbench";
 import { seedChatBrowserDraft } from "@pstdio/workbench/extensions";
-import { buildAbsoluteApiUrl } from "@/lib/api";
+import { dashboardChatDraftScope, dashboardChatDraftStorage } from "@/shared/app/chat-draft-storage";
 
 export const registerOpenSessionDraft = (ctx: WorkbenchModuleContext) =>
   ctx.commands.registerCommand<{ text: string; label?: string }>(
@@ -28,7 +28,8 @@ export const registerOpenSessionDraft = (ctx: WorkbenchModuleContext) =>
           resource,
           viewId,
           extensionId: sessionBrowser.views.conversation.extensionId,
-          storageScope: buildAbsoluteApiUrl("/"),
+          storageScope: dashboardChatDraftScope(),
+          storage: dashboardChatDraftStorage(),
           draft: { text: input.text, attachments: [], values: {} },
         });
         try {

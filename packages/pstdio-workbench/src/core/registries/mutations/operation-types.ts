@@ -32,8 +32,6 @@ export interface OperationInput<T> {
   releaseOnDiscard?: boolean;
   showPending?: true;
   onDiscard?(): void;
-  /** Allow the owning account to discard an exact persisted draft after the write authority retires. */
-  onDiscardAfterRetirement?: true;
   /** Preserve a submitted draft without dispatching its write. */
   unsentError?: Error;
   /** Retain only edits that differ from an already reconciled write. */

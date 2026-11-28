@@ -23,6 +23,7 @@ import { BrowserAppHeader } from "@/modules/projects/components/browser-app-head
 import type { DesktopProjectTabsController } from "@/modules/projects/desktop-project-tabs-controller";
 import { createProjectSetupHandoff } from "@/modules/projects/setup/project-setup-handoff";
 import { createDesktopUpgrade, DesktopUpgradeConfirmation } from "@/modules/updates/desktop-upgrade";
+import { keepDashboardChatDraftsIn } from "@/shared/app/chat-draft-storage";
 import { dashboardWorkbenchStorageNamespace } from "@/shared/app/dashboard-workbench-storage-keys";
 import { createDashboardPageLocationBrowser, readPageUrlProjectId } from "@/shared/app/page-location-browser";
 import { createDashboardProjectSelectionPersistence } from "@/shared/app/project-selection-persistence";
@@ -92,6 +93,7 @@ const renderDashboard = async () => {
     createDesktopWorkbenchStorage(window.promptStudioDesktop),
     createDesktopProjectTabs(window.promptStudioDesktop),
   ]);
+  keepDashboardChatDraftsIn(storage);
   const desktopLifecycle = resolveDesktopLifecycleBridge(window.promptStudioDesktop);
   const workbenches = projectTabs
     ? startDesktopProjectWorkbenches(projectTabs.controller, storage)

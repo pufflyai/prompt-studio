@@ -1,4 +1,4 @@
-import type { ChatQueuedRequest, ChatRendererAction } from "@pstdio/sdk/extensions";
+import type { ChatAttachment, ChatQueuedRequest, ChatRendererAction } from "@pstdio/sdk/extensions";
 import type { UnresolvedSubmissionError } from "@pstdio/ui";
 import { applySessionMessagePatch, type SessionMessage } from "@pstdio/ui/chat-ui";
 import { createPendingChatQueuePresentation } from "./chat-pending-queue";
@@ -17,7 +17,8 @@ export const createChatPendingSubmission = (
   failure: undefined as string | undefined,
   unresolved: undefined as UnresolvedSubmissionError | undefined,
   failureDismissed: false,
-  recoveryAdded: false,
+  /** The composer before failed input returned to it; a late delivery restores it if nothing changed since. */
+  returned: undefined as { draftEdits: number; previous: { text: string; attachments: ChatAttachment[] } } | undefined,
   echoed: false,
   values: action.values,
   knownMessages: new Set(messages.flatMap((message) => [message.id, chatMessageIdentity(message)])),
@@ -168,7 +169,8 @@ export const visibleChatDraftAttachments = (
   attachments: ChatPendingSubmission["attachments"],
   pending?: ChatPendingSubmission | ChatPendingSubmission[],
 ) => {
-  const submitted = pending ? [pending].flat() : [];
+  // Failed input is back in the composer, so its files show there again.
+  const submitted = pending ? [pending].flat().filter((item) => !item.failure) : [];
   return attachments.filter(
     (attachment) => !submitted.some((item) => item.attachments.some((sent) => sent.id === attachment.id)),
   );

@@ -15,7 +15,6 @@ test("an independent extension declares native chat with normal private callback
     body: {
       kind: "chat",
       draftKey: "new",
-      legacySessionDraft: true,
       initial: {
         messages: [],
         operations: [{ id: "connection", label: "Check connection", refresh: true }],
@@ -64,7 +63,6 @@ test("an independent extension declares native chat with normal private callback
   expect(metadata.views[0]?.body).toMatchObject({
     kind: "chat",
     draftKey: "new",
-    legacySessionDraft: true,
     initial: {
       messages: [],
       operations: [{ id: "connection", label: "Check connection", refresh: true }],
@@ -84,15 +82,15 @@ test("an independent extension declares native chat with normal private callback
   expect(runtime.privateHandlers.filter((handler) => handler.rendererKind === "chat")).toHaveLength(6);
 });
 
-test("independent browser drafts publish their recovery callback and require host support", () => {
-  const acknowledgeRecovery = async () => undefined;
+test("browser drafts require host support, and older Sessions declarations still load", () => {
   const view = defineView({
     id: "conversation",
     title: "Conversation",
     body: {
       kind: "chat",
       draftKey: "compose",
-      browserDraft: { acknowledgeRecovery },
+      // Sessions releases before PS-1405 declared these; they are accepted and dropped.
+      ...({ legacySessionDraft: true, browserDraft: { acknowledgeRecovery: async () => undefined } } as object),
       query: async () => ({}),
       onAction: async () => undefined,
     },
@@ -117,15 +115,10 @@ test("independent browser drafts publish their recovery callback and require hos
   const metadata = workbenchExtensionMetadataSchema.parse(
     JSON.parse(JSON.stringify(createWorkbenchExtensionMetadata({ runtime }))),
   );
-  expect(metadata.views[0]?.body).toMatchObject({
-    browserDraft: { acknowledgeRecoveryHandlerId: "acme.chat.view.conversation.chat.acknowledgeRecovery" },
-  });
-  expect(runtime.privateHandlers).toContainEqual(
-    expect.objectContaining({
-      id: "acme.chat.view.conversation.chat.acknowledgeRecovery",
-      rendererKind: "chat",
-      handler: acknowledgeRecovery,
-    }),
+  expect(metadata.views[0]?.body).toMatchObject({ browserDraft: {} });
+  expect(metadata.views[0]?.body).not.toHaveProperty("legacySessionDraft");
+  expect(runtime.privateHandlers.map(({ id }) => id)).not.toContain(
+    "acme.chat.view.conversation.chat.acknowledgeRecovery",
   );
   expect(checkExtensionHostCompatibility(runtime, dashboardExtensionHostCapabilities).diagnostics).toEqual([]);
   const { "view.chat.browser-draft.v1": _browserDraft, ...capabilities } =

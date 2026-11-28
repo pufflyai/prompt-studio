@@ -214,7 +214,7 @@ test("closing a core drains the final draft clear derived from its accepted subm
   registration.dispose();
 });
 
-test("authority retirement clears retained private chat state and partitions pending draft recovery", async () => {
+test("authority retirement clears retained private chat state", async () => {
   const previous = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
   const values = new Map<string, string>();
   Object.defineProperty(globalThis, "localStorage", {
@@ -260,7 +260,6 @@ test("authority retirement clears retained private chat state and partitions pen
     expect(next).not.toBe(first);
     expect(next.getSnapshot().draft.text).toBe("");
     await expect(first.run({ type: "stop" })).rejects.toThrow("authority is closed");
-    expect(values.size).toBe(1);
   } finally {
     registration.dispose();
     owners.dispose();
@@ -347,7 +346,7 @@ test("independent live query roots cannot reuse another authority's retained cha
   two.dispose();
 });
 
-test("retired recovery controls cannot admit new writes while accepted work drains", async () => {
+test("a retired owner cannot write its draft while accepted work drains", async () => {
   const queries = createScopedQueryClient({ runtimeId: "runtime", accountId: "one", extensionId: "host" });
   const core = createWorkbench({ queries });
   const reply = Promise.withResolvers<unknown>();
@@ -366,12 +365,11 @@ test("retired recovery controls cannot admit new writes while accepted work drai
   const session = render(core).props.session,
     release = session.retain();
   await session.query.read();
-  session.changeDraft({ text: "Current", recovered: [{ text: "Private recovery", attachments: [], values: {} }] });
+  session.changeDraft({ text: "Current" });
   await session.flushDraft();
   const action = session.run({ type: "stop" });
   queries.setAuthority({ accountId: "two" });
-  session.restoreDraft(0);
-  session.restoreSubmission("retired");
+  session.changeDraft({ text: "After retirement" });
   await session.flushDraft();
   expect(writes).toEqual(["Current"]);
   reply.resolve({});

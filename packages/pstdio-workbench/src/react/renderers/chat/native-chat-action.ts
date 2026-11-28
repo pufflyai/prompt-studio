@@ -21,7 +21,7 @@ export const runNativeChatAction = (
       : handler,
   );
 
-/** A failed queued input already belongs to the owner's durable recovery, not the editor's catch-and-restore path. */
+/** The owner already returned a failed queued input to the composer; the editor must not restore it again. */
 export const handoffNativeChatInput = async (session: ChatSession, send: () => Promise<unknown>) => {
   const failures = new Set(
     session
