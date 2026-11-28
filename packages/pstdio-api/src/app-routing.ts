@@ -8,6 +8,7 @@ import { createAssetRoutes } from "./features/assets/routes";
 import { bearerTokenFrom, MAX_INPUT_BYTES } from "./features/automation/automation-policy";
 import { createAutomationRoutes } from "./features/automation/routes";
 import type { RouteDeps } from "./features/deps";
+import { OAUTH_CALLBACK_PATH } from "./features/extensions/connection-oauth/consent";
 import { createExtensionWebviewAssetRoutes } from "./features/extensions/extension-webview-asset-routes";
 import { createExtensionRoutes } from "./features/extensions/routes";
 import { createFilesystemRoutes } from "./features/filesystem/routes";
@@ -173,6 +174,9 @@ const registerApiMiddleware = (
       await next();
       return;
     }
+    // Providers navigate to the callback without the runtime bearer header. The callback
+    // consumes an expiring state challenge tied to this host principal and callback URL.
+    if (c.req.method === "GET" && c.req.path === OAUTH_CALLBACK_PATH) return next();
     if (!isMachineAutomationPath(c.req.path) && !isRuntimeRequestAuthorized(c.req.raw, security)) {
       await deps.automationService.auditDeniedRoute(bearerTokenFrom(c.req.raw), c.req.path).catch(() => undefined);
       return c.json({ error: "Unauthorized" }, 401);

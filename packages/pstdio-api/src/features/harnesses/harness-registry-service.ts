@@ -69,11 +69,15 @@ export const toAvailabilityInfo = (detection: {
   ...(detection.reason ? { reason: detection.reason } : {}),
 });
 
+const unavailableConnection = async () => {
+  throw new Error("Extension connections are not available in this host.");
+};
+
 const createUnavailableConnections = () =>
   ({
-    request: async () => {
-      throw new Error("Extension connections are not available in this host.");
-    },
+    request: unavailableConnection,
+    oauthStatus: unavailableConnection,
+    callTool: unavailableConnection,
     stream: async function* () {
       yield await Promise.reject(new Error("Extension connections are not available in this host."));
     },

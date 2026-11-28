@@ -78,6 +78,12 @@ interface NestedExecuteOrigin {
 }
 
 const unavailableConnections: ExtensionConnectionsApi = {
+  oauthStatus: async () => {
+    throw new Error("Extension connections are not available.");
+  },
+  callTool: async () => {
+    throw new Error("Extension connections are not available.");
+  },
   request: async () => {
     throw new Error("Extension connections are not available in this host.");
   },

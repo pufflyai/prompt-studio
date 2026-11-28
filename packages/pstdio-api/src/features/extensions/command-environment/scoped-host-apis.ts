@@ -17,6 +17,15 @@ import { createWorkspaceTerminal } from "./workspace-terminal";
 import { createWorkspacesApi } from "./workspaces";
 
 const withConnectionSignal = (connections: ExtensionConnectionsApi, signal: AbortSignal): ExtensionConnectionsApi => ({
+  oauthStatus: (connectionId) => {
+    signal.throwIfAborted();
+    return connections.oauthStatus(connectionId);
+  },
+  callTool: (connectionId, input) =>
+    connections.callTool(connectionId, {
+      ...input,
+      signal: input.signal ? AbortSignal.any([signal, input.signal]) : signal,
+    }),
   request: <TBody>(connectionId: string, input: Parameters<ExtensionConnectionsApi["request"]>[1]) =>
     connections.request<TBody>(connectionId, {
       ...input,

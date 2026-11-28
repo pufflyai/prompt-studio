@@ -10,6 +10,7 @@ import type {
   FileIconThemeContribution,
   HarnessProvider,
   KeybindingContribution,
+  McpExtensionConnection,
   ModeContribution,
   NavigationItemContribution,
   NavigationTreeContribution,
@@ -21,6 +22,7 @@ import type {
   ResourceHierarchyProvider,
   ResourceKindDefinition,
   ResourceKindRef,
+  RestOAuthExtensionConnection,
   ScheduleContribution,
   SettingsPanelContribution,
   SettingsSectionContribution,
@@ -244,11 +246,17 @@ export const defineHarness = defineContribution("harness") as <Definition extend
   definition: Definition,
 ) => Definition & ContributionDefinition<"harness">;
 
-export const defineConnection = defineContribution("connection") as <
-  Definition extends Omit<ExtensionConnectionContribution, "ref">,
->(
-  definition: Definition,
-) => Definition & ContributionDefinition<"connection">;
+export const defineConnection = defineContribution("connection") as {
+  <Definition extends Omit<ExtensionConnectionContribution, "ref">>(
+    definition: Definition,
+  ): Definition & ContributionDefinition<"connection">;
+  <Definition extends Omit<RestOAuthExtensionConnection, "ref">>(
+    definition: Definition,
+  ): Definition & ContributionDefinition<"connection">;
+  <Definition extends Omit<McpExtensionConnection, "ref">>(
+    definition: Definition,
+  ): Definition & ContributionDefinition<"connection">;
+};
 
 export const defineResourceHierarchyProvider = (definition: Omit<ResourceHierarchyProvider, "ref">) => ({
   ...definition,

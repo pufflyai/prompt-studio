@@ -71,6 +71,10 @@ export const createTestHarnessRegistry = (
       },
       net: { findFreePort: async () => 0 },
       connections: {
+        oauthStatus: async () => ({ status: "disconnected" as const }),
+        callTool: async () => {
+          throw new Error("No test connection configured.");
+        },
         request: async () => {
           throw new Error("No test connection configured.");
         },

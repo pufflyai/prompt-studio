@@ -22,7 +22,20 @@ export type ExtensionConnectionStreamEvent =
   | { type: "data"; data: Uint8Array }
   | { type: "end" };
 
+export type ExtensionOAuthStatus =
+  | { status: "disconnected" | "authorizing" | "reconnect_required" }
+  | { status: "connected"; grantId: string; scopes: string[]; expiresAt: string | null };
+
+export interface ExtensionMcpToolCall {
+  name: string;
+  arguments?: JsonObject;
+  timeoutMs?: number;
+  signal?: AbortSignal;
+}
+
 export interface ExtensionConnectionsApi {
+  oauthStatus(connectionId: string): Promise<ExtensionOAuthStatus>;
+  callTool(connectionId: string, input: ExtensionMcpToolCall): Promise<JsonObject>;
   request<TBody = JsonValue>(
     connectionId: string,
     input: ExtensionConnectionRequest,

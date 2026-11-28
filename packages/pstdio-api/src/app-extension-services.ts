@@ -43,7 +43,7 @@ import { upgrade049Tools } from "./startup/upgrade-0-49-tools";
 
 interface WireExtensionServicesInput {
   whenQuiet?: (run: () => void) => () => void;
-  accountService: Pick<ReturnType<typeof createNativeAccount>, "isExtensionManaged">;
+  accountService: Pick<ReturnType<typeof createNativeAccount>, "isExtensionManaged" | "status">;
   preferences: ReturnType<typeof createPreferencesDBService>;
   config: AppConfig["extensions"];
   db: DbClient;
@@ -122,6 +122,11 @@ export const wireAppExtensionServices = async (input: WireExtensionServicesInput
   const extensionConnectionService = createExtensionConnectionService({
     connectionsDBService: input.extensionConnectionsDBService,
     secretStore: input.dependencies.connectionSecretStore ?? createFileConnectionSecretStore(input.storageRoot),
+    oauthOwner: async () => {
+      const { login, signInRequired } = await input.accountService.status();
+      if (signInRequired) throw new Error("Sign in to Prompt Studio to use this connection.");
+      return login ? JSON.stringify([login.managerOrigin, login.accountId]) : "local";
+    },
     getContribution: async ({ projectId, extensionId, connectionId }) => {
       const snapshot = await extensionRuntimeCatalog.get(projectId);
       return snapshot.runtime.connections.find(

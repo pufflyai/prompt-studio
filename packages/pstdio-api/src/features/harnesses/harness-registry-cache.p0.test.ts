@@ -32,6 +32,10 @@ const buildFakeRegistry = (records: RuntimeHarnessRecord[]): HarnessRegistry =>
     },
     net: { findFreePort: async () => 0 },
     connections: {
+      oauthStatus: async () => ({ status: "disconnected" as const }),
+      callTool: async () => {
+        throw new Error("No test connection configured.");
+      },
       request: async () => {
         throw new Error("No test connection configured.");
       },
@@ -264,6 +268,10 @@ describe("harness registry project scope", () => {
     const service = makeService({
       snapshot: () => fakeSnapshot(1, [createTestHarnessRecord("remote", { provider: { start } as never })]),
       createConnectionsApi: () => ({
+        oauthStatus: async () => ({ status: "disconnected" }),
+        callTool: async () => {
+          throw new Error("No test connection configured.");
+        },
         request: request as unknown as ExtensionConnectionsApi["request"],
         stream: async function* () {
           yield { type: "end" as const };
