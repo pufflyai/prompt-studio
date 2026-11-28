@@ -2,14 +2,21 @@ import { existsSync, realpathSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 
-const installedPackage = (name: string) => {
-  const manifest = createRequire(import.meta.url).resolve("@openai/codex/package.json");
-  return createRequire(manifest).resolve(`${name}/package.json`);
+const wrapperManifest = () => {
+  // A provision hook can load the worker before its private node_modules is linked.
+  // Bun caches that missing directory for package resolution. Resolve the manifest by path.
+  try {
+    return realpathSync(new URL("../node_modules/@openai/codex/package.json", import.meta.url));
+  } catch {
+    return createRequire(import.meta.url).resolve("@openai/codex/package.json");
+  }
 };
+
+const installedPackage = (name: string) => createRequire(wrapperManifest()).resolve(`${name}/package.json`);
 
 export const isPrivateCodexLauncher = (command: string) => {
   try {
-    return realpathSync(command) === createRequire(import.meta.url).resolve("@openai/codex/bin/codex.js");
+    return realpathSync(command) === realpathSync(join(dirname(wrapperManifest()), "bin", "codex.js"));
   } catch {
     return false;
   }
