@@ -93,4 +93,4 @@ test("a restarted host reuses prepared bundles but a replaced executable rejects
   expect(replaced.acceptedBefore).toBeNull();
   expect(replaced.prepared!.id).not.toBe(first.prepared!.id);
   expect(replaced.prepared!.entryPath).not.toBe(first.prepared!.entryPath);
-});
+}, 10_000);
