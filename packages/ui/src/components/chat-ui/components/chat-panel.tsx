@@ -199,7 +199,6 @@ export const ChatPanel = (props: ChatPanelProps) => {
   const hasMessages = merged.length > 0;
   const messageListKey = conversationKey ?? merged[0]?.id;
   const messageListIdentity = hasMessages ? (messageListKey ?? "active-conversation") : null;
-  const userMessageCount = merged.reduce((count, message) => count + (message.role === "user" ? 1 : 0), 0);
   const { groups, leadingResponses } = groupMessagesByTurn(merged);
   const [expandedStickyMessageIds, setExpandedStickyMessageIds] = useState(() => new Set<string>());
   const [readyMessageListKey, setReadyMessageListKey] = useState<string | null>(null);
@@ -247,14 +246,12 @@ export const ChatPanel = (props: ChatPanelProps) => {
     onSelect: onQueuedFollowUpSelect,
     onDiscard: onQueuedFollowUpDiscard,
   });
-
   const toggleStickyMessageExpanded = (messageId: string) =>
     setExpandedStickyMessageIds((current) => {
       const next = new Set(current);
       if (!next.delete(messageId)) next.add(messageId);
       return next;
     });
-
   return (
     <ChatImageHistoryContext value={indexChatImageSources(messages, linkHandler)}>
       <ChatLinkProvider handler={linkHandler}>
@@ -262,12 +259,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
           <Flex className="ps-chat-panel" css={panelStyles}>
             <ChatPrimitives.Root key={messageListKey} containerType="inline-size">
               <ChatOutlineHost enabled={merged.length > 2} onAvailable={setOutlineHost} />
-              <AutoScroll
-                conversationKey={messageListKey ?? null}
-                userMessageCount={userMessageCount}
-                reading={props.reading}
-                latest={merged.at(-1)}
-              />
+              <AutoScroll conversationKey={messageListKey ?? null} messages={merged} reading={props.reading} />
               <ChatPrimitives.Viewport visibility={isMessageViewportReady ? "visible" : "hidden"}>
                 {hasMessages ? (
                   <>

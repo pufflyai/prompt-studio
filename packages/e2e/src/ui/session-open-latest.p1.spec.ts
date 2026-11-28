@@ -39,6 +39,7 @@ test("opens a session at its latest reply and keeps the reading position when re
   const tab = side.getByRole("tab", { name: "Long conversation", exact: true });
   const viewport = side.getByRole("log").locator(':scope > [data-scope="scroll-area"] > [data-part="viewport"]');
   const gap = () => viewport.evaluate((element) => element.scrollHeight - element.clientHeight - element.scrollTop);
+  const scrollTop = () => viewport.evaluate((element) => element.scrollTop);
   const latestStep = side.getByText(/^Step 30\./).last();
   await expect(latestStep).toBeInViewport();
   await expect.poll(gap).toBeLessThanOrEqual(2);
@@ -48,6 +49,7 @@ test("opens a session at its latest reply and keeps the reading position when re
   await expect(side.getByRole("button", { name: "Scroll to latest message" })).toBeVisible();
   await expect.poll(gap).toBeGreaterThan(20);
   await viewport.evaluate((element) => element.setAttribute("data-e2e-retained", ""));
+  const readingAt = await scrollTop();
   const another = await addSideNewSession(page);
   await another.click({ button: "right" });
   await switchSession(page, "Another conversation");
@@ -56,7 +58,8 @@ test("opens a session at its latest reply and keeps the reading position when re
   await expect(tab).toHaveAttribute("aria-selected", "true");
   await expect(viewport).toHaveAttribute("data-e2e-retained", "");
   await expect(side.getByRole("button", { name: "Scroll to latest message" })).toBeVisible();
-  expect(await gap()).toBeGreaterThan(20);
+  // Revealed rows can be re-measured by a few pixels; a PageUp moves several hundred.
+  expect(Math.abs((await scrollTop()) - readingAt)).toBeLessThanOrEqual(40);
 
   // A reply arrived while away: returning lands on it.
   await side.getByRole("tab", { name: "Another conversation", exact: true }).click();
@@ -65,6 +68,9 @@ test("opens a session at its latest reply and keeps the reading position when re
     data: { prompt: "Replay __fake_long_stream__" },
   });
   expect(followUp.ok()).toBe(true);
+  await expect
+    .poll(async () => (await (await request.get(`${apiBase}/v1/sessions/${longSessionId}`)).json()).status)
+    .not.toBe("completed");
   await completed(longSessionId);
   await tab.click();
   await expect(viewport).toHaveAttribute("data-e2e-retained", "");
@@ -84,6 +90,7 @@ test("opens a session at its latest reply and keeps the reading position when re
   // Hiding the panel and following a link back with nothing new keeps the reading position.
   await viewport.press("PageUp");
   await expect.poll(gap).toBeGreaterThan(20);
+  const hiddenAt = await scrollTop();
   await page.getByRole("button", { name: "Hide Side Panel", exact: true }).click();
   await expect(viewport).toBeHidden();
   await page.getByRole("option", { name: "Another conversation", exact: true }).click();
@@ -95,5 +102,5 @@ test("opens a session at its latest reply and keeps the reading position when re
   await link.click();
   await expect(viewport).toBeVisible();
   await expect(side.getByRole("button", { name: "Scroll to latest message" })).toBeVisible();
-  expect(await gap()).toBeGreaterThan(20);
+  expect(Math.abs((await scrollTop()) - hiddenAt)).toBeLessThanOrEqual(40);
 });

@@ -100,8 +100,8 @@ export const NativeChatView = (props: NativeChatViewProps) => (
 );
 
 const NativeChatContent = (props: NativeChatViewProps) => {
-  // The reader is on this conversation only while its placement is both open and selected.
-  const reading = props.placementOpen !== false && props.placementSelected !== false;
+  // The reader is on this conversation only while its placement is open, selected and shown.
+  const reading = props.visible !== false && props.placementOpen !== false && props.placementSelected !== false;
   const { key, ...presentation } = useNativeChatPresentation({
     initial: {
       session: props.session,
