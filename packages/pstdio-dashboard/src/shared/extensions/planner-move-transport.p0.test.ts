@@ -23,6 +23,8 @@ test("sent Planner card moves survive page unload within the browser's keepalive
     await Promise.all([first, second]);
     await send("blocked");
     expect(fetch.mock.calls.at(-1)?.[1]?.keepalive).toBe(true);
+    await executeExtensionCommand("project", "pstdio.planner.command.get-ticket", { params: { id: "ticket" } });
+    expect(fetch.mock.calls.at(-1)?.[1]?.keepalive).toBeUndefined();
   } finally {
     writes.resolve();
     fetch.mockRestore();

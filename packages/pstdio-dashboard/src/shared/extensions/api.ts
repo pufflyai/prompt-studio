@@ -1,7 +1,6 @@
 import type { CommandExecuteRequest } from "@pstdio/sdk/api";
-import { createClient } from "@pstdio/sdk/client";
 import type { ScopedQuery } from "@pstdio/sdk/extensions";
-import { apiClientOptions, getApiClient } from "@/lib/api";
+import { getApiClient } from "@/lib/api";
 import { getProjectExtensionQueries } from "./project-extension-queries";
 
 const readCatalog = async <T>(query: ScopedQuery<T>) => {
@@ -14,33 +13,13 @@ const readCatalog = async <T>(query: ScopedQuery<T>) => {
 };
 export const getProjectExtensionMetadata = (projectId: string) =>
   readCatalog(getProjectExtensionQueries(projectId).metadata);
-const plannerBoardMove = /^(?:pstdio\.planner|pstdio\.pstdio-planner)\.view\.tickets\.kanban\.onMove$/;
-const maximumKeepaliveBytes = 64 * 1024;
-let pendingKeepaliveBytes = 0;
-
-const fetchPlannerBoardMove = async (url: RequestInfo | URL, init?: RequestInit) => {
-  const bytes = typeof init?.body === "string" ? new TextEncoder().encode(init.body).byteLength : 0;
-  if (!bytes || pendingKeepaliveBytes + bytes > maximumKeepaliveBytes) return fetch(url, init);
-  pendingKeepaliveBytes += bytes;
-  try {
-    // Once sent, a card move can finish even when reloading destroys the workbench.
-    return await fetch(url, { ...init, keepalive: true });
-  } finally {
-    pendingKeepaliveBytes -= bytes;
-  }
-};
 
 export const executeExtensionCommand = (
   projectId: string,
   commandId: string,
   body: Omit<CommandExecuteRequest, "projectId">,
   signal?: AbortSignal,
-) => {
-  const client = plannerBoardMove.test(commandId)
-    ? createClient({ ...apiClientOptions(), fetch: fetchPlannerBoardMove as typeof fetch })
-    : getApiClient();
-  return client.extensions.execute(commandId, { ...body, projectId }, { signal });
-};
+) => getApiClient().extensions.execute(commandId, { ...body, projectId }, { signal });
 // Returns the command's value, or throws its failure.
 export const executeExtensionCommandValue = async <T = unknown>(
   projectId: string,
