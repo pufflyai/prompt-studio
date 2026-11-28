@@ -32,7 +32,7 @@ interface Pending {
 export const createOAuthConsent = (deps: {
   now: () => number;
   fetchFn: typeof fetch;
-  resolve: (input: ConnectionKey) => Promise<OAuthGrantScope>;
+  resolve: (input: ConnectionKey, expected?: string) => Promise<OAuthGrantScope>;
   assertCurrent: (input: ConnectionKey, principal: string, binding: string) => Promise<void>;
   save: (flow: Pending, provider: OAuthProvider, tokens: OAuthTokens, assertFlow: () => Promise<void>) => Promise<void>;
 }) => {
@@ -54,8 +54,9 @@ export const createOAuthConsent = (deps: {
       throw new ConnectionInputError("This authorization request has expired or was cancelled.");
   };
 
-  const start = async (input: ConnectionKey, redirectUri: string) => {
-    const { principal, key, slot, target } = await resolve(input);
+  const start = async (input: ConnectionKey, redirectUri: string, expected?: string) => {
+    const { principal, key, slot, target } = await resolve(input, expected);
+    await assertCurrent(input, principal, target.binding);
     expire();
     const previous = pending.get(slot);
     if (previous) removePending(previous);

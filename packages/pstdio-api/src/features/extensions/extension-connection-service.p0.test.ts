@@ -9,7 +9,7 @@ import {
 } from "./extension-connection-service.test-fixture";
 
 describe("extension connection service", () => {
-  test("records an HTTP error response as a failed health check", async () => {
+  test("sends declared health check headers and records an HTTP error", async () => {
     let lastCheck: { ok: boolean; status: number | null; error: string | null; checkedAt: string } | null = null;
     const service = createExtensionConnectionService({
       connectionsDBService: {
@@ -25,8 +25,16 @@ describe("extension connection service", () => {
         delete: async () => {},
         listRefs: async () => ["secret-1"],
       },
-      getContribution: async () => contribution,
-      fetch: (async () => Response.json({ error: "unauthorized" }, { status: 401 })) as unknown as typeof fetch,
+      getContribution: async () => ({
+        ...contribution,
+        check: { ...contribution.check!, headers: { "notion-version": "2025-09-03", authorization: "ignored" } },
+      }),
+      fetch: (async (_request: unknown, input?: RequestInit) => {
+        const headers = new Headers(input?.headers);
+        const valid =
+          headers.get("notion-version") === "2025-09-03" && headers.get("authorization") === "Bearer credential-canary";
+        return Response.json({ error: valid ? "unauthorized" : "wrong headers" }, { status: valid ? 401 : 400 });
+      }) as unknown as typeof fetch,
     });
 
     const checked = await service.check({

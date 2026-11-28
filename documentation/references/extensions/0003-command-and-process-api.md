@@ -428,6 +428,13 @@ declare that exact origin in `auth.authorizationServerOrigin`. Discovered OAuth
 endpoints must use the trusted authorization server origin. OAuth and resource
 requests never follow redirects.
 
+In **Project Settings**, open **Extensions**, select the extension, and find the
+provider in **Connections**. **Connect** and **Reconnect** open the provider in
+the browser. **Disconnect** removes the current account's grant from this host.
+Use the host event
+`eventRef({ extensionId: "pstdio.host", id: "connection-oauth.changed" })`
+to refresh views when a grant is saved, disconnected, or invalidated.
+
 The host SDK exposes management on `client.extensions`:
 
 - `startConnectionOAuth(projectId, extensionId, connectionId)` returns an
@@ -440,7 +447,10 @@ The host SDK exposes management on `client.extensions`:
   `grantId`. Scope cached data to this grant ID. Check it before and after the read
   and store the result only if the grant is still connected and its ID matches.
 - `disconnectConnectionOAuth(projectId, extensionId, connectionId)` discards pending
-  authorization and the current owner's local grant. It also requests provider
+  authorization and the current owner's local grant. The start and disconnect
+  methods accept the displayed account as a fourth argument, or `null` when
+  using the local principal. The host rejects an operation if the account has since
+  changed. Disconnect also requests provider
   revocation when the provider advertises or declares that endpoint.
 
 Grants belong to the project, extension, connection and active Prompt Studio

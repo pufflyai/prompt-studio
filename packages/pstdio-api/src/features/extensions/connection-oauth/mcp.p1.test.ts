@@ -91,6 +91,7 @@ test("MCP OAuth discovers the issuer, registers a client, and scopes named tools
   try {
     let owner = "account-alice";
     let now = Date.now();
+    const grantChanges: string[] = [];
     const secretStore = createMemoryConnectionSecretStore();
     await createProjectsDBService(db.db).create({ id: "project-a", name: "Project A" });
     await createProjectsDBService(db.db).create({ id: "project-b", name: "Project B" });
@@ -107,6 +108,7 @@ test("MCP OAuth discovers the issuer, registers a client, and scopes named tools
       secretStore,
       getContribution: async () => contribution,
       oauthOwner: async () => owner,
+      onOAuthGrantChanged: (key) => grantChanges.push(key.connectionId),
       now: () => now,
     });
     const named = { projectId: "project-a", extensionId: "test.crm", connectionId: "crm" };
@@ -122,6 +124,12 @@ test("MCP OAuth discovers the issuer, registers a client, and scopes named tools
     untrustedRegistration = true;
     await expect(service.oauth.start(named, redirectUri)).rejects.toThrow("outside the declared trusted origin");
     expect(registrations).toBe(0);
+    owner = "account-bob";
+    await expect(service.oauth.start(named, redirectUri, "account-alice")).rejects.toThrow("account changed");
+    await expect(service.oauth.disconnect(named, "account-alice")).rejects.toThrow("account changed");
+    expect(registrations).toBe(0);
+    expect(grantChanges).toEqual([]);
+    owner = "account-alice";
     untrustedRegistration = false;
 
     const expired = await start();
@@ -140,6 +148,7 @@ test("MCP OAuth discovers the issuer, registers a client, and scopes named tools
     expect(tokenExchanges).toBe(0);
     owner = "account-alice";
     await service.oauth.accept({ ...callback, code: "accepted" });
+    expect(grantChanges).toEqual(["crm"]);
     const alice = await api.oauthStatus("crm");
     expect(alice).toMatchObject({ status: "connected", grantId: expect.any(String) });
     expect(JSON.stringify(alice)).not.toContain(credential);

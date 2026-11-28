@@ -211,7 +211,14 @@ describe("createWorkbenchExtensionMetadata", () => {
       allowedPathPrefixes: ["/v1/workspaces"],
       check: { method: "GET", path: "/v1/workspaces/health" },
     });
-    const runtime = normalizeExtensionSources([source(defineExtension({ connections: [connection] }))]);
+    const oauth = defineConnection({
+      id: "crm",
+      label: "CRM",
+      transport: "mcp",
+      auth: { type: "oauth", resourceUrl: "https://crm.example.test/mcp", scopes: ["read"] },
+      allowedTools: ["read_accounts"],
+    });
+    const runtime = normalizeExtensionSources([source(defineExtension({ connections: [connection, oauth] }))]);
     const metadata = createWorkbenchExtensionMetadata({ runtime, resolveWebview: () => null });
     expect(metadata.connections).toEqual([
       {
@@ -222,6 +229,14 @@ describe("createWorkbenchExtensionMetadata", () => {
         authType: "bearer",
         supportsCheck: true,
         scope: "global",
+      },
+      {
+        id: "pstdio.lab.connection.crm",
+        localId: "crm",
+        extensionId: "pstdio.lab",
+        label: "CRM",
+        authType: "oauth",
+        supportsCheck: false,
       },
     ]);
   });

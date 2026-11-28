@@ -297,20 +297,17 @@ export const createWorkbenchExtensionMetadata = (
   commandPaletteResources: compact(input.runtime.commandPaletteResources.map(toCommandPaletteResource)),
   keybindings: input.runtime.keybindings.map(toKeybindingRecord),
   settingsDefinitions: input.runtime.settings.map(toSettingDefinitionRecord),
-  connections: input.runtime.connections.flatMap((record) =>
-    record.contribution.auth.type === "oauth"
-      ? []
-      : [
-          {
-            id: record.id,
-            localId: record.localId,
-            extensionId: record.extensionId,
-            label: record.contribution.label,
-            authType: record.contribution.auth.type,
-            supportsCheck: record.contribution.transport === "http" && Boolean(record.contribution.check),
-            ...(record.contribution.scope ? { scope: record.contribution.scope } : {}),
-          },
-        ],
-  ),
+  connections: input.runtime.connections.map((record) => ({
+    id: record.id,
+    localId: record.localId,
+    extensionId: record.extensionId,
+    label: record.contribution.label,
+    authType: record.contribution.auth.type,
+    supportsCheck:
+      record.contribution.auth.type !== "oauth" &&
+      record.contribution.transport === "http" &&
+      Boolean(record.contribution.check),
+    ...(record.contribution.scope ? { scope: record.contribution.scope } : {}),
+  })),
   diagnostics: [...input.runtime.diagnostics],
 });

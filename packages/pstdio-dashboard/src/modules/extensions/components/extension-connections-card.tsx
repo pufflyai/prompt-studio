@@ -12,6 +12,8 @@ import {
   useExtensionConnections,
 } from "../data/use-extension-connections";
 
+import { ExtensionOAuthConnectionRow } from "./extension-oauth-connection-row";
+
 interface ExtensionConnectionRowProps {
   projectId: string;
   definition: ConnectionDefinition;
@@ -167,18 +169,30 @@ export const ExtensionConnectionsCard = (props: { projectId: string; definitions
           {t("projectSettings.extensionsPanel.connections.description")}
         </Text>
       </Stack>
-      {definitions.map((definition) => (
-        <ExtensionConnectionRow
-          key={JSON.stringify([connections.authority, projectId, definition.id])}
-          projectId={projectId}
-          definition={definition}
-          savedSignIns={connections.data?.savedSignIns}
-          configured={connections.data?.connections.find(
-            (connection) =>
-              connection.extensionId === definition.extensionId && connection.connectionId === definition.localId,
-          )}
-        />
-      ))}
+      {definitions.map((definition) => {
+        const key = JSON.stringify([connections.authority, projectId, definition.id]);
+        if (definition.authType === "oauth")
+          return (
+            <ExtensionOAuthConnectionRow
+              key={key}
+              projectId={projectId}
+              definition={definition}
+              authority={connections.authority}
+            />
+          );
+        return (
+          <ExtensionConnectionRow
+            key={key}
+            projectId={projectId}
+            definition={definition}
+            savedSignIns={connections.data?.savedSignIns}
+            configured={connections.data?.connections.find(
+              (connection) =>
+                connection.extensionId === definition.extensionId && connection.connectionId === definition.localId,
+            )}
+          />
+        );
+      })}
     </Stack>
   );
 };
