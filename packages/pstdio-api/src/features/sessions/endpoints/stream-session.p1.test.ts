@@ -484,12 +484,14 @@ describe("session stream active session replay", () => {
     expect(getPatchTextParts(snapshotPatch)).toEqual(["FIRST", "FIRST DONE", "SECOND"]);
 
     expect(events[2]?.data).toEqual({ op: "replace", path: "/approval_requests", value: [] });
-    const livePatch = events[3]?.data as JsonPatch;
-    expect(livePatch).toMatchObject({
-      op: "add",
-      path: "/messages/3",
-    });
-    expect((livePatch.value as { parts: Array<{ text?: string }> }).parts[0]?.text).toBe("SECOND DONE");
+    expect(events[3]?.event).toBe("patch");
+    // A paused consumer may receive a coalesced snapshot instead of an incremental patch.
+    const updatedMessages = applyConversationPatch(
+      [...(snapshotPatch.value as SessionMessage[])],
+      events[3]?.data as JsonPatch,
+    );
+    expect(updatedMessages.map(({ id }) => id)).toEqual(["m1", "m2", "m3", "m4"]);
+    expect(updatedMessages[3]?.parts[0]).toMatchObject({ text: "SECOND DONE" });
 
     // Let the resumed run settle before closing so its exit handling doesn't hit a closed db.
     for (let attempt = 0; attempt < 50; attempt += 1) {
