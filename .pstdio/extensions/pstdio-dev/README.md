@@ -130,7 +130,7 @@ When enabled, the automation checks every five minutes for pull requests that Gi
 
 The Release Dry Run workflow verifies the next stable candidate at 09:00 and 21:00 UTC. When enabled, this automation checks every ten minutes for the newest finished dry run. If it failed, the automation creates a workspace from `origin/main` and starts one session with the [fix-release-pipeline](skills/fix-release-pipeline/SKILL.md) skill and the run's failed jobs. The session fixes every failure in one pull request, merges it after review, and starts one confirmation dry run.
 
-Only one repair or escalation session runs at a time. A failed run gets at most one repair session, and a newer failure replaces older ones that have not started. When the same job fails three dry runs in a row, the automation starts an escalation session instead. That session changes no code: it files a planner ticket with the evidence and asks the maintainer to decide. Later repairs leave escalated jobs alone. The command needs an authenticated `gh` CLI.
+Only one repair or escalation session runs at a time, and a session waiting for input still counts. A failed run gets at most one repair session. A newer run, including a rerun that is still going, replaces older failures. When the same job fails three dry runs in a row with a repair after each, the automation starts an escalation session instead. That session changes no code: it files a planner ticket with the evidence and asks the maintainer to decide. Later repairs in the same red streak leave escalated jobs alone. The command needs an authenticated `gh` CLI.
 
 ## Skills
 

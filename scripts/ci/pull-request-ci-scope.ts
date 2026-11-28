@@ -56,8 +56,13 @@ const prioritiesFor = (stage: ReturnType<typeof stageFor>): TestPriority[] => {
 const runsFileCheck = (stage: ReturnType<typeof stageFor>, touched: boolean) =>
   stage === "full" || (stage !== "main" && touched);
 
-const coverageForScope = (input: CiScopeInput, production: boolean, channel: string) =>
-  input.coverage ?? (production && channel === "nightly");
+// Every signed release validation (dry run, stable, patch) measures source coverage for the badge,
+// and so does a manual source-only rehearsal with the nightly channel.
+const measuresSourceCoverage = (production: boolean, releaseChannel: string, signedCandidate: boolean) =>
+  production && (signedCandidate || releaseChannel === "nightly");
+
+const coverageForScope = (input: CiScopeInput, production: boolean, channel: string, signedCandidate: boolean) =>
+  input.coverage ?? measuresSourceCoverage(production, channel, signedCandidate);
 
 const desktopRows = (
   releaseChannel: string,
@@ -122,11 +127,6 @@ const requiredEditedRows = (
   return selectEditedTests(edited, input.packages, covered).filter((row) => row.platform === "linux");
 };
 
-// Every signed release validation (dry run, stable, patch) measures source coverage for the badge,
-// and so does a manual source-only rehearsal with the nightly channel.
-const measuresSourceCoverage = (production: boolean, releaseChannel: string, signedCandidate: boolean) =>
-  production && (signedCandidate || releaseChannel === "nightly");
-
 export const resolveBaseScope = (input: CiScopeInput) => {
   const { event, changedFiles, packages, tests, profile, releaseChannel = "stable", signedCandidate = false } = input;
   for (const file of tests) priorityFromFile(file);
@@ -143,7 +143,7 @@ export const resolveBaseScope = (input: CiScopeInput) => {
   // One Linux build per run feeds every host job that builds packages; each job still builds what it misses.
   const sharedBuild = affectedOwners.map((name) => `--scope ${name}`).join(" ");
   const integrationOwners = integrationOwnersFor(packages, code, shared || production);
-  const coverage = coverageForScope(input, production, releaseChannel);
+  const coverage = coverageForScope(input, production, releaseChannel, signedCandidate);
   const requiredProfile = stage === "pull_request" || stage === "merge_queue";
   const checkOwners = requiredProfile ? packages.map((pkg) => pkg.name).sort() : affectedOwners;
   const matrices = selectCiTests(tests, packages, affectedOwners, prioritiesFor(stage), input.timingSnapshot, coverage);
@@ -179,7 +179,7 @@ export const resolveBaseScope = (input: CiScopeInput) => {
     production,
     changedFiles,
     requiredProfile,
-    sourceCoverage: measuresSourceCoverage(production, releaseChannel, signedCandidate),
+    sourceCoverage: coverage,
     affectedOwners,
     integrationOwners,
     // Both gates include edited behavior tests; platform diagnostics remain outside the universal Linux profile.

@@ -36,7 +36,7 @@ const repairPrompt = (run: VerifyRun, failed: string[], escalated: string[]) =>
     "Before fixing a failed test, compare it with the previous dry runs of Release Packages. If it passed in another dry run and neither the test nor the code it covers changed between the two candidates, it is a flake: quarantine it under ADR 0101 with both run links, an owner and removal criteria, or delete it when it has no clear owner. Do not change product code for a flake.",
     "Follow CLAUDE.md and the timeout policy in documentation/guidance/0004-ci.md, rules 0004.3.3 and 0004.3.4. Do not skip a test, add retries, or change a benchmark budget or benchmark execution allowance.",
     "Open the pull request, drive its CI green, get an independent review, and merge it. Never merge or queue a pull request labeled `benchmark`; leave it for a person.",
-    "After the merge, wait until the head of changeset-release/main is a Version Packages commit whose parent is your merge commit, then start exactly one confirmation run with `gh workflow run release-dry-run.yml --ref main`. Never dispatch a stable release.",
+    "After the merge, wait until the head of changeset-release/main is a Version Packages commit built on your merge commit or a later main commit, then start exactly one confirmation run with `gh workflow run release-dry-run.yml --ref main`. Never dispatch a stable release.",
     "Report what you fixed, what you quarantined or deleted, and the confirmation run.",
   ]
     .filter(Boolean)
@@ -92,13 +92,14 @@ export const repairDryRunCommand = defineCommand({
         "databaseId,displayTitle,status,conclusion,url",
       ]),
     ) as VerifyRun[];
-    // Newest first. Cancelled runs say nothing about the candidate.
-    const runs = listed.filter(
-      (item) =>
-        item.displayTitle.startsWith(VERIFY_TITLE) && item.status === "completed" && item.conclusion !== "cancelled",
+    // Newest first. Cancelled runs say nothing about the candidate. A newest run that is still going,
+    // including a rerun of a failed one, supersedes every older failure.
+    const verifyRuns = listed.filter(
+      (item) => item.displayTitle.startsWith(VERIFY_TITLE) && item.conclusion !== "cancelled",
     );
-    const latest = runs[0];
-    if (!latest || latest.conclusion === "success") return { sessionIds: [] };
+    const latest = verifyRuns[0];
+    if (!latest || latest.status !== "completed" || latest.conclusion === "success") return { sessionIds: [] };
+    const runs = verifyRuns.filter((item) => item.status === "completed");
     // One repair at a time: a newer failure waits until the current repair ends, then supersedes older runs.
     if ((await sessionExists(REPAIR_TITLE, true)) || (await sessionExists(ESCALATE_TITLE, true)))
       return { sessionIds: [] };
@@ -106,9 +107,15 @@ export const repairDryRunCommand = defineCommand({
     if (await sessionExists(repairTitle)) return { sessionIds: [] };
 
     const failed = await failedJobs(run, latest.databaseId);
-    const streak = runs.slice(0, PERSISTENT_RUNS);
+    const firstGreen = runs.findIndex((item) => item.conclusion === "success");
+    const red = firstGreen === -1 ? runs : runs.slice(0, firstGreen);
+    const streak = red.slice(0, PERSISTENT_RUNS);
     let persistent: string[] = [];
-    if (streak.length === PERSISTENT_RUNS && streak.every((item) => item.conclusion !== "success")) {
+    // Escalate only after a repair followed each earlier failure in the streak.
+    const repaired = await Promise.all(
+      streak.slice(1).map((item) => sessionExists(`${REPAIR_TITLE}${item.databaseId}`)),
+    );
+    if (streak.length === PERSISTENT_RUNS && repaired.every(Boolean)) {
       persistent = failed;
       for (const earlier of streak.slice(1)) {
         const earlierFailed = new Set(await failedJobs(run, earlier.databaseId));
@@ -116,6 +123,7 @@ export const repairDryRunCommand = defineCommand({
       }
     }
 
+    await run(["git", "fetch", "origin", "main"]);
     const workspace = async () =>
       ctx.workspaces.create({
         shorthand_base: "RELEASE",
@@ -123,7 +131,8 @@ export const repairDryRunCommand = defineCommand({
         params: { base: "origin/main" },
       });
     if (persistent.length) {
-      const title = `${ESCALATE_TITLE}${persistent.join(", ")}`;
+      // One escalation per red streak: a later streak of the same failures escalates again.
+      const title = `${ESCALATE_TITLE}${persistent.join(", ")} (red since run ${red.at(-1)?.databaseId})`;
       if (!(await sessionExists(title))) {
         const session = await ctx.sessions.create({
           title,
@@ -136,7 +145,6 @@ export const repairDryRunCommand = defineCommand({
     const remaining = failed.filter((job) => !persistent.includes(job));
     // Every failure is already with a person.
     if (!remaining.length && persistent.length) return { sessionIds: [] };
-    await run(["git", "fetch", "origin", "main"]);
     const session = await ctx.sessions.create({
       title: repairTitle,
       prompt: repairPrompt(

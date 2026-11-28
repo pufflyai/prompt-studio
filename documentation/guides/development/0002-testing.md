@@ -415,7 +415,7 @@ On 2026-10-28 the user approved a 60-second Windows allowance for two packaged c
 
 ## Desktop benchmarks
 
-Use [Write a benchmark](0016-writing-benchmarks.md#desktop-benchmarks) for packaging commands, shared helpers, sampling, desktop workloads and budget evidence. The [nonfunctional requirements](../../guidance/0003-nonfunctional-requirements.md) set mandatory product targets. Regular performance coverage runs in nightly CI and stable-release validation.
+Use [Write a benchmark](0016-writing-benchmarks.md#desktop-benchmarks) for packaging commands, shared helpers, sampling, desktop workloads and budget evidence. The [nonfunctional requirements](../../guidance/0003-nonfunctional-requirements.md) set mandatory product targets. Regular performance coverage runs in the twice-daily release dry run and stable-release validation.
 
 Installed harness compatibility resolves and pins npm versions before execution. When `latest` equals `minimum` and both lanes are scheduled, the required minimum lane owns their single execution; a latest-only invocation still executes. The installed Pi compatibility suite retains its tool/session-resume case. Its failing cold detection/model case was removed with the quarantine cleanup.
 

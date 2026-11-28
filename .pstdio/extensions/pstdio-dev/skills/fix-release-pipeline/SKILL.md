@@ -83,7 +83,7 @@ A failure that appears only after a merge is a regression in that merge. Find th
 
 ## 5. Prove stability
 
-- "Green" means `publish_nightly` (or `certify`) succeeds **and** the production validation jobs pass.
+- "Green" means the release dry run (`verify`) or the `stable` run passes `certify` with every production validation job. A nightly is green when `publish_nightly` succeeds; it no longer runs production validation.
 - "Stable" means at least two or three consecutive complete runs with no new failures and no flakes. Keep one run going while fixes land.
 - Record follow-ups for anything quarantined, overridden or left as a known limitation on the coordination issue before calling the pipeline ready.
 
