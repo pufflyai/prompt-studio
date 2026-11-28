@@ -5,6 +5,8 @@ import { defineCommand, defineSchedule } from "@pstdio/sdk/extensions";
 const VERIFY_TITLE = "Release Packages · verify ";
 const REPAIR_TITLE = "Repair release dry run: ";
 const ESCALATE_TITLE = "Escalate release dry run: ";
+// Matrix job names can contain commas, so escalation titles separate jobs with semicolons.
+const JOB_SEPARATOR = "; ";
 // A check that failed this many dry runs in a row, with a repair after each, goes to a person.
 const PERSISTENT_RUNS = 3;
 const ACTIVE = ["in_progress", "awaiting_input", "queued"] as const;
@@ -109,14 +111,27 @@ export const repairDryRunCommand = defineCommand({
     const failed = await failedJobs(run, latest.databaseId);
     const firstGreen = runs.findIndex((item) => item.conclusion === "success");
     const red = firstGreen === -1 ? runs : runs.slice(0, firstGreen);
+    // Escalated jobs stay with the maintainer until a green dry run ends the red streak. The
+    // escalation session titles are the record: they name the jobs and the run the streak began with.
+    const streakTag = `(red since run ${red.at(-1)?.databaseId})`;
+    const escalations = await ctx.sessions.query({ search: streakTag, includeArchived: true, limit: 200 });
+    const escalated = new Set(
+      escalations.items
+        .filter((session) => session.title.startsWith(ESCALATE_TITLE) && session.title.endsWith(streakTag))
+        .flatMap((session) => session.title.slice(ESCALATE_TITLE.length, -streakTag.length - 1).split(JOB_SEPARATOR)),
+    );
+    const open = failed.filter((job) => !escalated.has(job));
+    // Every failure is already with a person.
+    if (failed.length && !open.length) return { sessionIds: [] };
+
     const streak = red.slice(0, PERSISTENT_RUNS);
     let persistent: string[] = [];
     // Escalate only after a repair followed each earlier failure in the streak.
     const repaired = await Promise.all(
       streak.slice(1).map((item) => sessionExists(`${REPAIR_TITLE}${item.databaseId}`)),
     );
-    if (streak.length === PERSISTENT_RUNS && repaired.every(Boolean)) {
-      persistent = failed;
+    if (open.length && streak.length === PERSISTENT_RUNS && repaired.every(Boolean)) {
+      persistent = open;
       for (const earlier of streak.slice(1)) {
         const earlierFailed = new Set(await failedJobs(run, earlier.databaseId));
         persistent = persistent.filter((job) => earlierFailed.has(job));
@@ -131,26 +146,19 @@ export const repairDryRunCommand = defineCommand({
         params: { base: "origin/main" },
       });
     if (persistent.length) {
-      // One escalation per red streak: a later streak of the same failures escalates again.
-      const title = `${ESCALATE_TITLE}${persistent.join(", ")} (red since run ${red.at(-1)?.databaseId})`;
-      if (!(await sessionExists(title))) {
-        const session = await ctx.sessions.create({
-          title,
-          prompt: escalationPrompt(streak, persistent),
-          workspaceId: (await workspace()).id,
-        });
-        return { sessionIds: [session.id] };
-      }
+      const session = await ctx.sessions.create({
+        title: `${ESCALATE_TITLE}${persistent.join(JOB_SEPARATOR)} ${streakTag}`,
+        prompt: escalationPrompt(streak, persistent),
+        workspaceId: (await workspace()).id,
+      });
+      return { sessionIds: [session.id] };
     }
-    const remaining = failed.filter((job) => !persistent.includes(job));
-    // Every failure is already with a person.
-    if (!remaining.length && persistent.length) return { sessionIds: [] };
     const session = await ctx.sessions.create({
       title: repairTitle,
       prompt: repairPrompt(
         latest,
-        remaining.length ? remaining : ["(no job failed; read validation_results)"],
-        persistent,
+        open.length ? open : ["(no job failed; read validation_results)"],
+        failed.filter((job) => escalated.has(job)),
       ),
       workspaceId: (await workspace()).id,
     });

@@ -32,9 +32,16 @@ jobs:
       - name: Verify the version PR head once
         run: |
           set -euo pipefail
-          candidate=$(gh pr list --head changeset-release/main --base main --state open --json headRefOid --jq '.[0].headRefOid // empty')
+          # The verify run gets release signing secrets, so the candidate must be this repository's own
+          # branch head. A fork PR can use the same branch name; never select one.
+          candidate=$(gh pr list --head changeset-release/main --base main --state open --json headRefOid,isCrossRepository \
+            --jq 'map(select(.isCrossRepository | not)) | .[0].headRefOid // empty')
           if [ -z "$candidate" ]; then
             echo "Skipped: no open Changesets version PR, so there is no stable candidate to verify." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if ! branch=$(gh api "repos/$GH_REPO/git/ref/heads/changeset-release/main" --jq .object.sha 2>/dev/null) || [ "$branch" != "$candidate" ]; then
+            echo "Skipped: version PR head $candidate is not the head of this repository's changeset-release/main." | tee -a "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
           subject=$(gh api "repos/$GH_REPO/commits/$candidate" --jq '.commit.message | split("\n")[0]')
